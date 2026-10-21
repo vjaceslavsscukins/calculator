@@ -41,7 +41,8 @@ function randomState(r) {
   return {
     layout, walls, room: { height: 2500 + Math.floor(r() * 500), wall: '#fff', floor: 'oakL' }, modules: mods, disc: pick(r, [0, 5, 12.5]), extra: [],
     mat: { corpus: pick(r, ref.DEFAULT_CAT.corpus).id, facade: pick(r, ref.DEFAULT_CAT.facade).id, milling: pick(r, ref.DEFAULT_CAT.milling).id, fLow: 'k1', fUp: 'k4',
-      handle: pick(r, ['bar', 'gola', 'push']), drawers: pick(r, ['legrabox', 'tandembox']), drawerColor: 'silk', top: pick(r, ref.DEFAULT_CAT.top).id, splash: r() < 0.5 },
+      handle: pick(r, ['bar', 'gola', 'push']), // TANDEMBOX здесь не берём: его детали ящика заменены размерами из ведомостей технолога, они проверяются отдельным тестом ниже
+      drawers: 'legrabox', drawerColor: 'silk', top: pick(r, ref.DEFAULT_CAT.top).id, splash: r() < 0.5 },
   };
 }
 // числа сравниваем с допуском на порядок сложения, остальное — строго
@@ -184,4 +185,39 @@ test('фасадный бок: боковина из ЛДСП заменяетс
   // у модуля без корпуса (посудомойка) опция ничего не меняет
   const dw = run({ ...mk({}), modules: [{ ...mk({}).modules[0], type: 'base_dw', w: 600, endL: true }] });
   assert.equal(dw.A.mods[0].panels.length, 0);
+});
+
+// Эталон: комплектовочные ведомости технолога (Blum TANDEMBOX antaro, длина направляющих 500, модули глубиной 510).
+// Дно ящика (Ш − 108) × 492, задняя стенка из ЛДСП (Ш − 120) × 183 (D), 151 (C), 68 (M).
+test('ящики TANDEMBOX: детали совпадают с ведомостями технолога, внутренний ящик считается отдельно', () => {
+  const mk = (type, w) => ({
+    layout: 'I', walls: { A: 3000, B: 2000, C: 2000 }, room: { height: 2700, wall: '#fff', floor: 'oakL' }, disc: 0, extra: [], nextId: 5,
+    modules: [{ id: 'm1', type, wall: 'A', w, h: 720, d: 510, blind: 'left', corpus: null, facade: null, light: false, cut: { sink: false, hob: false, pipe: false } }],
+    mat: { corpus: cur.DEFAULT_CAT.corpus[0].id, facade: cur.DEFAULT_CAT.facade[0].id, milling: cur.DEFAULT_CAT.milling[0].id, fLow: 'k1', fUp: 'k4', handle: 'bar', drawers: 'tandembox', drawerColor: 'silk', top: cur.DEFAULT_CAT.top[0].id, splash: false },
+  });
+  const parts = (type, w) => {
+    const S = mk(type, w);
+    return cur.panelsOf(S.modules[0], S).filter((p) => /ящика/.test(p.n)).map((p) => `${p.n} ${p.a}×${p.b} ×${p.q}`).sort().join(' | ');
+  };
+  // 2 ящика: два высоких ящика D
+  assert.equal(parts('base_drawers2', 600), 'Дно ящика 492×492 ×2 | Задняя стенка ящика 480×183 ×2');
+  assert.equal(parts('base_drawers2', 500), 'Дно ящика 392×492 ×2 | Задняя стенка ящика 380×183 ×2');
+  // 2 ящика с внутренним: C сверху, D снизу, внутри D ящик M (задние стенки 151, 183 и 68)
+  const exp = (w) => ['Дно ящика ' + (w - 108) + '×492 ×1', 'Дно ящика ' + (w - 108) + '×492 ×1', 'Дно ящика ' + (w - 108) + '×492 ×1',
+    'Задняя стенка ящика ' + (w - 120) + '×151 ×1', 'Задняя стенка ящика ' + (w - 120) + '×183 ×1', 'Задняя стенка ящика ' + (w - 120) + '×68 ×1'].sort().join(' | ');
+  assert.equal(parts('base_drawers2_inner', 600), exp(600));
+  assert.equal(parts('base_drawers2_inner', 800), exp(800));
+  // внутренний ящик — отдельный комплект ящика в фурнитуре (3 ящика на 2 фасада)
+  const S = mk('base_drawers2_inner', 600), A = cur.calcAll(S, cur.DEFAULT_PRICES, cur.DEFAULT_CAT);
+  assert.equal(A.mods[0].hw.slide, 3);
+  assert.equal(A.mods[0].facs.length, 2);
+  const two = mk('base_drawers2', 600), B = cur.calcAll(two, cur.DEFAULT_PRICES, cur.DEFAULT_CAT);
+  assert.equal(B.mods[0].hw.slide, 2);
+});
+
+test('шаблон ящика: неверный класс ящика отклоняется', () => {
+  const t = JSON.parse(JSON.stringify(cur.BUILTIN_TEMPLATES.find((x) => x.code === 'base_drawers2_inner')));
+  assert.equal(cur.validateTemplate({ ...t, code: 'my_inner_ok' }).join(';'), '');
+  t.code = 'my_inner_bad'; t.facades[0].box = 'X';
+  assert.match(cur.validateTemplate(t).join(';'), /класс ящика/);
 });
