@@ -46,7 +46,6 @@ button{cursor:pointer}
 .mark{width:36px;height:36px;border-radius:10px;background:var(--pri);color:var(--pri-ink);display:grid;place-items:center;flex:none}
 .brand-name{font-weight:600;font-size:16px;letter-spacing:-.01em;line-height:1.2}
 .brand-sub{color:var(--muted);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.top-flag{font-size:12px;background:var(--warn-soft);color:var(--warn);padding:4px 10px;border-radius:999px;font-weight:500;white-space:nowrap}
 .hdr-total{text-align:right;flex:none}
 .lbl{font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:600}
 .hdr-total .num{font-size:26px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.02em;line-height:1.1}
@@ -70,8 +69,17 @@ button{cursor:pointer}
 .tech-imgs figure{margin:0}.tech-imgs img{width:100%;border-radius:10px;border:1px solid var(--line);display:block}
 .tech-imgs figcaption{font-size:12px;color:var(--muted);margin-top:4px}
 .t .mrow td{background:var(--sunk);font-weight:600;font-size:12px}
-.top-sketch{margin-left:auto}
-.top-kp{margin-right:4px}
+.top-print{margin-left:auto;margin-right:4px}
+.menu{position:relative}
+.menu>summary{list-style:none;cursor:pointer;user-select:none}
+.menu>summary::-webkit-details-marker{display:none}
+.menu>summary::after{content:'';display:inline-block;margin-left:8px;border:4px solid transparent;border-top-color:currentColor;border-bottom:0;vertical-align:2px}
+.menu-pop{position:absolute;right:0;top:calc(100% + 6px);z-index:40;min-width:230px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:8px}
+.menu-pop>.btn,.menu-pop>.gbtn{width:100%;text-align:left}
+.menu-pop .mrow{display:flex;flex-direction:column;gap:5px}
+.menu-pop .mlbl{font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.menu-pop .viewseg{flex-wrap:wrap}
+.lbl-note{text-transform:none;letter-spacing:0;color:var(--warn)}
 .modbar{position:absolute;z-index:3;display:flex;align-items:center;gap:2px;background:var(--glass);backdrop-filter:blur(10px);border:1px solid var(--line);border-radius:12px;padding:3px;box-shadow:var(--shadow);transform:translateX(-50%);white-space:nowrap}
 .modbar[hidden]{display:none}
 .modbar .nm{font-size:12px;color:var(--muted);padding:0 8px 0 6px;max-width:160px;overflow:hidden;text-overflow:ellipsis}
@@ -328,8 +336,7 @@ dialog.dlg::backdrop{background:rgba(20,18,15,.5)}
 }
 @media (max-width: 560px){
   .hdr-total{text-align:left}
-  .top-flag{display:none}
-  .top-kp,.top-sketch{display:none}
+  .top-print{display:none}
   .cards{grid-template-columns:repeat(2,minmax(0,1fr))}
   .row3{grid-template-columns:1fr 1fr}
 }
@@ -388,11 +395,13 @@ dialog.dlg::backdrop{background:rgba(20,18,15,.5)}
       </div>
     </div>
     <button class="btn top-proj" data-act="proj-open" id="btnProj" data-s="off" title="Проекты: создать, открыть, сохранить в общую базу">Проекты<span class="sdot" aria-hidden="true"></span><span class="sr-only" id="projStatus" aria-live="polite"></span></button>
-    <span class="top-flag">Цены примерные. Свои загружаются во вкладке «Прайс и каталоги»</span>
-    <button class="btn top-sketch" data-act="print-sketch" title="Печать картинки для показа клиенту">Печать эскиза</button>
-    <button class="btn pri top-kp" data-act="print-kp">Печать КП</button>
+    <details class="menu top-print" id="printMenu"><summary class="btn pri" aria-haspopup="true">Печать</summary>
+      <div class="menu-pop">
+        <button class="btn" data-act="print-kp">Коммерческое предложение</button>
+        <button class="btn" data-act="print-sketch" title="Картинка кухни для показа клиенту">Эскиз кухни</button>
+      </div></details>
     <div class="hdr-total">
-      <div class="lbl">Итого для клиента</div>
+      <div class="lbl">Итого для клиента <span class="lbl-note" title="Свои цены загружаются во вкладке «Прайс и каталоги»">· цены примерные</span></div>
       <div class="num" id="hdrTotal">0 ₽</div>
       <div class="hdr-split" id="hdrSplit"></div>
     </div>
@@ -401,8 +410,8 @@ dialog.dlg::backdrop{background:rgba(20,18,15,.5)}
   <main class="work" id="work" data-side="shown">
     <aside class="side" aria-label="Меню проекта">
       <div class="ltabs" role="tablist">
-        <button class="ltab" role="tab" id="lt-room" data-act="ltab" data-v="room">Помещение</button>
-        <button class="ltab" role="tab" id="lt-catalog" data-act="ltab" data-v="catalog">Каталог</button>
+        <button class="ltab" role="tab" id="lt-room" data-act="ltab" data-v="room">Комната</button>
+        <button class="ltab" role="tab" id="lt-catalog" data-act="ltab" data-v="catalog">Модули</button>
         <button class="ltab" role="tab" id="lt-module" data-act="ltab" data-v="module">Модуль</button>
         <button class="ltab" role="tab" id="lt-mat" data-act="ltab" data-v="mat">Материалы</button>
       </div>
@@ -418,23 +427,24 @@ dialog.dlg::backdrop{background:rgba(20,18,15,.5)}
             <button class="gbtn" id="btnSide" data-act="toggle-side" title="Скрыть меню: больше места для картинки">‹ Меню</button>
             <div class="seg viewseg" id="camSeg" role="group" aria-label="Вид"></div>
           </div>
-          <div class="srow">
-            <div class="seg viewseg" id="viewSeg" role="group" aria-label="Вид модулей">
+        </div>
+        <div class="modbar" id="modbar" hidden></div>
+        <div class="stage-tools">
+          <button class="gbtn" id="btnUndo" data-act="undo" disabled title="Отменить (Ctrl+Z)">Отменить</button>
+          <button class="gbtn" id="btnRedo" data-act="redo" disabled title="Повторить (Ctrl+Shift+Z)">Повторить</button>
+          <details class="menu viewmenu" id="viewMenu"><summary class="gbtn" aria-haspopup="true">Вид</summary>
+            <div class="menu-pop">
+              <div class="mrow"><span class="mlbl">Режим</span><div class="seg viewseg" id="viewSeg" role="group" aria-label="Вид модулей">
               <button data-act="view" data-v="color" title="Обычный цветной вид">Цвет</button>
               <button data-act="view" data-v="xray" title="Прозрачные панели: видны полки, ящики и фурнитура">Прозрачный</button>
               <button data-act="view" data-v="lines" title="Только контуры деталей">Контуры</button>
               <button data-act="view" data-v="carcass" title="Корпуса без фасадов">Без фасадов</button>
-            </div>
-          </div>
-        </div>
-        <div class="modbar" id="modbar" hidden></div>
-        <div class="stage-tools">
-          <label class="gbtn bright" title="Яркость картинки. Влияет и на печать эскиза: уменьшите, если получается слишком светло"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="3"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3 3l1.4 1.4M11.6 11.6L13 13M13 3l-1.4 1.4M4.4 11.6L3 13"/></svg><input type="range" id="bright" min="40" max="140" step="5" value="100" aria-label="Яркость картинки"></label>
-          <button class="gbtn" id="btnUndo" data-act="undo" disabled title="Отменить (Ctrl+Z)">Отменить</button>
-          <button class="gbtn" id="btnRedo" data-act="redo" disabled title="Повторить (Ctrl+Shift+Z)">Повторить</button>
-          <button class="gbtn" id="btnOpen" data-act="open-all" aria-pressed="false">Открыть всё</button>
-          <button class="gbtn" id="btnDims" data-act="toggle-dims" aria-pressed="false">Размеры</button>
-          <button class="gbtn" data-act="reset-view">Сбросить вид</button>
+            </div></div>
+              <div class="mrow"><span class="mlbl">Яркость</span><label class="gbtn bright" title="Яркость картинки. Влияет и на печать эскиза: уменьшите, если получается слишком светло"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="3"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3 3l1.4 1.4M11.6 11.6L13 13M13 3l-1.4 1.4M4.4 11.6L3 13"/></svg><input type="range" id="bright" min="40" max="140" step="5" value="100" aria-label="Яркость картинки"></label></div>
+              <button class="gbtn" id="btnOpen" data-act="open-all" aria-pressed="false">Открыть всё</button>
+              <button class="gbtn" id="btnDims" data-act="toggle-dims" aria-pressed="false">Размеры</button>
+              <button class="gbtn" data-act="reset-view">Сбросить вид</button>
+            </div></details>
         </div>
         <div class="stage-hint" id="stageHint">Вращение: перетаскивание. Выбранный шкаф можно переставить, потянув за него. Двойной клик по дверце или ящику открывает только его.</div>
       </div>
@@ -443,7 +453,7 @@ dialog.dlg::backdrop{background:rgba(20,18,15,.5)}
         <div class="dockbar">
           <div class="tabs" role="tablist">
             <button class="tab" role="tab" id="tb-smeta" data-act="tab" data-v="smeta">Смета</button>
-            <button class="tab" role="tab" id="tb-bom" data-act="tab" data-v="bom">Материалы</button>
+            <button class="tab" role="tab" id="tb-bom" data-act="tab" data-v="bom" title="Что и сколько заказать: листы, фасады, фурнитура">Закупка</button>
             <button class="tab" role="tab" id="tb-tech" data-act="tab" data-v="tech">Технологу</button>
             <button class="tab" role="tab" id="tb-prices" data-act="tab" data-v="prices">Прайс и каталоги</button>
           </div>
@@ -1037,7 +1047,7 @@ function deepMerge(base, over){
 function load(key){ try { const s = localStorage.getItem(key); return s ? JSON.parse(s) : null; } catch(e){ return null; } }
 function store(key, v){ try { localStorage.setItem(key, JSON.stringify(v)); } catch(e){} if (key === KS) projectChanged(); }
 // Проекты: общая база для тестирования. Настройки подключения лежат в браузере, данные проектов на сервере (kitchen-api, PostgreSQL).
-const BUILD = '21.10.2026, сборка 6'; // меняется при каждом выпуске: по ней видно, какая версия открыта
+const BUILD = '21.10.2026, сборка 7'; // меняется при каждом выпуске: по ней видно, какая версия открыта
 const KSRV = 'kitchen.server.v1', API_DEFAULT = 'https://kitchen-api-c112.onrender.com';
 const PKEYS = ['client', 'order', 'layout', 'walls', 'room', 'mat', 'disc', 'modules', 'nextId', 'extra', 'kp'];
 let srv = Object.assign({url:API_DEFAULT, code:'', name:'', role:''}, load(KSRV) || {});
@@ -1179,6 +1189,8 @@ function swatchRow(list, cur, act, key, extra = ''){
   return `<div class="swatches">${extra}${list.map(c => `<button class="sw" data-act="${act}" data-k="${key}" data-v="${esc(c.id ?? c.hex)}" aria-pressed="${(c.id ?? c.hex) === cur}" aria-label="${esc(c.name)}" title="${esc(c.name)}" style="background:${swBg(c)}"></button>`).join('')}</div>`;
 }
 function renderLeft(){
+  if (S.ltab === 'module' && !selMod()) S.ltab = 'catalog';
+  $('lt-module').hidden = !selMod();
   ['room','catalog','module','mat'].forEach(t => $('lt-' + t).setAttribute('aria-selected', String(S.ltab === t)));
   const f = {room:leftRoom, catalog:leftCatalog, module:leftModule, mat:leftMat}[S.ltab] || leftCatalog;
   keepFocus(() => { $('lbody').innerHTML = f(); });
@@ -2205,7 +2217,7 @@ function ensureRefs(){
   S.modules.forEach(m => { if (m.corpus && !C.corpus.some(r => r.id === m.corpus)) m.corpus = null; if (m.facade && !C.fcolor.some(r => r.id === m.facade)) m.facade = null; if (!m.cut) m.cut = {sink:false, hob:false, pipe:false}; });
 }
 
-document.addEventListener('click', e => {
+document.addEventListener('click', e => { document.querySelectorAll('details.menu[open]').forEach(d => { if (!d.contains(e.target)) d.open = false; }); if (e.target.closest && e.target.closest('.menu-pop [data-act="print-kp"], .menu-pop [data-act="print-sketch"]')){ const d = e.target.closest('details.menu'); if (d) d.open = false; }
   const b = e.target.closest('[data-act]');
   if (!b){ const tr = e.target.closest('#tab-smeta tr[data-id]'); if (tr) selectMod(tr.dataset.id); return; }
   const act = b.dataset.act, v = b.dataset.v, k = b.dataset.k, m = selMod();
