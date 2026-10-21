@@ -60,7 +60,7 @@ export function createRelay({ webhook, token, projects = createProjects({ store:
     const t0 = Date.now(); let path = '-', code = 500;
     try {
       const url = new URL(req.url, 'http://relay');
-      path = url.pathname.replace(/\/\d{3,}$/, '/<id>').replace(/\/[0-9a-f]{8}-[0-9a-f-]{27}$/, '/<id>');
+      path = url.pathname.replace(/\/\d{3,}$/, '/<id>').replace(/\/[0-9a-f]{8}-[0-9a-f-]{27}/g, '/<id>');
       if (url.pathname === '/healthz') { code = 200; return reply(res, 200, 'ok'); }
       // общая база проектов: своя проверка токена и доступа из браузера (CORS); Битрикс эти маршруты не затрагивают
       if (await projects(req, res, url, reply, take)) { code = res.statusCode; return; }
@@ -88,11 +88,17 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   let server;
   try {
     // PostgreSQL, если задан DATABASE_URL; иначе файл (на бесплатном Render он стирается при перезапуске) или ничего
-    const store = DATABASE_URL ? await createPgStore(DATABASE_URL, { ssl: DATABASE_SSL !== '0' }) : PROJECTS_FILE ? new MemoryStore({ file: PROJECTS_FILE }) : null;
-    if (!store) console.log('Проекты: хранилище не задано (DATABASE_URL или PROJECTS_FILE), маршруты /projects отвечают 503');
+    // Ошибка базы не должна ронять чтение из Битрикса: проекты тогда отвечают 503, остальное работает
+    let store = null;
+    if (DATABASE_URL) {
+      if (!/^postgres(ql)?:\/\//.test(DATABASE_URL)) console.error('Проекты: DATABASE_URL должен начинаться с postgresql:// (строка подключения из Render → PostgreSQL → Internal Database URL). Проекты отключены.');
+      else { try { store = await createPgStore(DATABASE_URL, { ssl: DATABASE_SSL !== '0' }); } catch (e) { console.error('Проекты: не удалось подключиться к базе (' + String(e.message).replace(/postgres(ql)?:\/\/\S+/g, '***') + '). Проекты отключены.'); } }
+    } else if (PROJECTS_FILE) store = new MemoryStore({ file: PROJECTS_FILE });
+    if (!store) console.log('Проекты: хранилище не работает или не задано (DATABASE_URL), маршруты /projects отвечают 503');
     else if (!DATABASE_URL) console.log('Проекты: хранятся в файле, при перезапуске на бесплатном Render они пропадут. Для общей базы задайте DATABASE_URL');
     const origins = (ALLOWED_ORIGINS || 'https://kitchen-prototype.onrender.com').split(',').map(x => x.trim()).filter(Boolean);
-    const projects = createProjects({ store, tokens: [PROJECTS_TOKEN, RELAY_TOKEN], origins });
+    if (store && (!PROJECTS_TOKEN || PROJECTS_TOKEN.length < 16)) console.log('Проекты: PROJECTS_TOKEN не задан или короче 16 знаков, завести пользователей нельзя');
+    const projects = createProjects({ store, adminToken: PROJECTS_TOKEN || '', origins });
     server = createRelay({ webhook: BITRIX24_WEBHOOK_URL || '', token: RELAY_TOKEN || '', projects });
   } catch (e) { console.error('Не запустились:', e.message); process.exit(1); }
   server.listen(Number(PORT), '0.0.0.0', () => console.log(`kitchen-api слушает порт ${PORT}`));

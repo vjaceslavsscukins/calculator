@@ -159,6 +159,8 @@ input[type=color]{width:36px;height:30px;padding:2px;border:1px solid var(--line
 .card:hover{border-color:var(--accent);box-shadow:0 4px 14px rgba(28,27,25,.1);transform:translateY(-1px)}
 .card[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
 .card svg{width:100%;height:64px;pointer-events:none}
+.dprev{display:block;width:100%;height:auto;border-radius:10px;margin:8px 0 6px;background:linear-gradient(180deg,#ECE9E2,#DDD9D0)}
+.dprev.ph{min-height:120px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:12.5px}
 .card .cthumb{width:100%;height:112px;object-fit:contain;pointer-events:none;display:block;border-radius:8px;background:linear-gradient(180deg,#ECE9E2,#DDD9D0)}
 .cards{grid-template-columns:repeat(2,minmax(0,1fr))}
 .card .cn{font-size:11.5px;line-height:1.25;font-weight:500;pointer-events:none}
@@ -951,8 +953,8 @@ function store(key, v){ try { localStorage.setItem(key, JSON.stringify(v)); } ca
 // Проекты: общая база для тестирования. Настройки подключения лежат в браузере, данные проектов на сервере (kitchen-api, PostgreSQL).
 const KSRV = 'kitchen.server.v1', API_DEFAULT = 'https://kitchen-api-c112.onrender.com';
 const PKEYS = ['client', 'order', 'layout', 'walls', 'room', 'mat', 'disc', 'modules', 'nextId', 'extra', 'kp'];
-let srv = Object.assign({url:API_DEFAULT, code:'', author:''}, load(KSRV) || {});
-const proj = {list:null, busy:'', err:'', timer:null, saving:false, dirty:false, saved:'', loading:false, conflict:null};
+let srv = Object.assign({url:API_DEFAULT, code:'', name:'', role:''}, load(KSRV) || {});
+const proj = {list:null, users:null, issued:null, busy:'', err:'', timer:null, saving:false, dirty:false, saved:'', loading:false, conflict:null};
 
 const KTPL = 'kitchen.templates.v1';
 setTemplates(load(KTPL) || []);
@@ -1014,28 +1016,35 @@ const thumbs = {}; let thumbTimer = null;
 const thumbSig = () => [S.mat.corpus, S.mat.facade, S.mat.milling, S.mat.fLow, S.mat.fUp, S.mat.handle, S.mat.hwColor, S.mat.drawers, S.mat.drawerColor, Object.keys(TYPES).length].join('|');
 function thumbGet(type){ const t = thumbs[thumbSig()]; return t && t[type] || ''; }
 // Рисует один модуль на нейтральном фоне с выдвинутыми ящиками. Возвращает адрес картинки или пустую строку.
-function renderThumb(type){
+function renderThumb(type, o = {}){
   if (!has3D || !scene || !renderer || !root) return '';
   const t = TYPES[type]; if (!t || t.gap) return '';
-  const sig = thumbSig(); (thumbs[sig] = thumbs[sig] || {});
-  if (thumbs[sig][type]) return thumbs[sig][type];
+  const sig = thumbSig(), key = o.key || type; (thumbs[sig] = thumbs[sig] || {});
+  if (thumbs[sig][key]) return thumbs[sig][key];
   const m = {id:'th_' + type, type, wall:'A', w:t.w, h:t.h, d:t.d, blind:'left', corpus:null, facade:null, light:false, cut:defCut(type)};
   const nAnim = anims.length, nDisp = disposables.length, opened = [];
-  facadesOf(m, S).forEach((f, i) => { if (f.k === 'drawer'){ const id = m.id + ':' + i; if (!openSet.has(id)){ openSet.add(id); opened.push(id); } } });
+  if (o.open) facadesOf(m, S).forEach((f, i) => { if (f.k === 'drawer'){ const id = m.id + ':' + i; if (!openSet.has(id)){ openSet.add(id); opened.push(id); } } });
   let url = '', g = null; const old = renderer.getSize(new THREE.Vector2()), rootWas = root.visible, helperWas = helper && helper.visible;
   try {
     g = buildModule(m, {x:0, wall:'A'});
     g.position.set(0, 0, 0); g.rotation.set(0, 0, 0); root.visible = false; if (helper) helper.visible = false; scene.add(g);
-    const w = 360, h = 300, box3 = new THREE.Box3().setFromObject(g), size = box3.getSize(new THREE.Vector3()), c = box3.getCenter(new THREE.Vector3());
+    const w = o.w || 360, h = o.h || 300, box3 = new THREE.Box3().setFromObject(g), size = box3.getSize(new THREE.Vector3()), c = box3.getCenter(new THREE.Vector3());
     const cam = new THREE.PerspectiveCamera(26, w / h, .1, 60), fov = cam.fov * Math.PI / 180;
-    const dir = new THREE.Vector3(.5, .3, 1).normalize(), r = Math.max(size.x * .56, size.y * .5, .22);
+    const dir = new THREE.Vector3(...(o.dir || [.5, .3, 1])).normalize(), r = Math.max(size.x * .56, size.y * .5, .22);
     cam.position.copy(c).addScaledVector(dir, r / Math.tan(fov / 2) * 1.02 + size.z / 2); cam.lookAt(c); cam.updateProjectionMatrix();
     renderer.setSize(w, h, false); renderer.render(scene, cam); url = renderer.domElement.toDataURL('image/png');
   } catch(e){ url = ''; }
   if (g){ scene.remove(g); g.traverse(o => { if (o.geometry) o.geometry.dispose(); }); }
   root.visible = rootWas; if (helper) helper.visible = helperWas; renderer.setSize(old.x, old.y, false);
   opened.forEach(id => openSet.delete(id)); anims.length = nAnim; disposables.length = nDisp;
-  return thumbs[sig][type] = url;
+  return thumbs[sig][key] = url;
+}
+// Рисунок ящика выбранной системы (выдвинут), показывается в «Материалах» под выбором системы.
+const DPREV = {key:'drawer-preview', open:true, dir:[.28, .62, 1], w:480, h:300};
+function drawerPreviewHtml(){ const u = (thumbs[thumbSig()] || {})[DPREV.key]; return u ? `<img class="dprev" id="dprev" alt="Ящик ${esc(DRAWERS[S.mat.drawers].n)}" src="${u}">` : `<div class="dprev ph" id="dprev">${has3D ? 'Рисуем ящик…' : 'Рисунок доступен в 3D-режиме'}</div>`; }
+function scheduleDrawerPreview(){
+  if (!has3D || (thumbs[thumbSig()] || {})[DPREV.key]) return;
+  setTimeout(() => { if (S.ltab !== 'mat') return; const u = renderThumb('base_drawers2_inner', DPREV), el = $('dprev'); if (u && el){ const im = new Image(); im.className = 'dprev'; im.id = 'dprev'; im.alt = 'Ящик ' + DRAWERS[S.mat.drawers].n; im.src = u; el.replaceWith(im); } }, 30);
 }
 // Картинки делаем по одной после отрисовки списка, чтобы каталог открывался сразу.
 function scheduleThumbs(){
@@ -1087,6 +1096,7 @@ function renderLeft(){
   const f = {room:leftRoom, catalog:leftCatalog, module:leftModule, mat:leftMat}[S.ltab] || leftCatalog;
   keepFocus(() => { $('lbody').innerHTML = f(); });
   if (S.ltab === 'catalog') scheduleThumbs();
+  if (S.ltab === 'mat') scheduleDrawerPreview();
 }
 function fillHtml(){
   let h = '';
@@ -1243,7 +1253,8 @@ function leftMat(){
   </div>
   <div class="sec"><h3>Фурнитура Blum</h3>
     <div class="small muted">Петли CLIP top BLUMOTION, подъёмники AVENTOS HK top.</div>
-    <div class="field"><span class="flabel">Система ящиков</span><div class="seg">${Object.entries(DRAWERS).map(([k, v]) => `<button data-act="mat" data-k="drawers" data-v="${k}" aria-pressed="${S.mat.drawers === k}">${v.n} · ${nf0.format(P.blum[k])} ₽</button>`).join('')}</div></div>
+    <div class="field"><span class="flabel">Система ящиков</span><div class="seg">${Object.entries(DRAWERS).map(([k, v]) => `<button data-act="mat" data-k="drawers" data-v="${k}" aria-pressed="${S.mat.drawers === k}">${v.n} · ${nf0.format(P.blum[k])} ₽</button>`).join('')}</div>
+      ${drawerPreviewHtml()}<span class="small muted">Так выглядит ящик выбранной системы. В детали идут размеры из ведомостей технолога.</span></div>
     <div class="field"><span class="flabel">Цвет ящиков: <span class="swname">${esc((dr.colors.find(c => c.id === S.mat.drawerColor) || dr.colors[0]).name)}</span></span>${swatchRow(dr.colors, S.mat.drawerColor, 'mat', 'drawerColor')}</div>
     <div class="small muted">Чтобы увидеть ящики, нажмите «Открыть всё» над 3D-видом.</div>
   </div>
@@ -1810,7 +1821,7 @@ async function printKP(){
 
 
 /* ---------------- проекты: общая база для тестирования ---------------- */
-const srvOn = () => !!srv.code;
+const srvOn = () => !!srv.code && srv.role !== 'admin';
 const projJson = () => JSON.stringify(PKEYS.map(k => S[k]));
 // Отпечаток сохранённого состояния лежит в S (и переживает перезагрузку страницы), чтобы не перезаписывать проект без правок.
 function projHash(){ const j = projJson(); let h = 5381; for (let i = 0; i < j.length; i++) h = ((h << 5) + h + j.charCodeAt(i)) | 0; return j.length + ':' + (h >>> 0).toString(36); }
@@ -1821,7 +1832,7 @@ function projPayload(){ const data = {}; PKEYS.forEach(k => data[k] = JSON.parse
 async function api(method, path, body){
   const ctl = new AbortController(), tm = setTimeout(() => ctl.abort(), 75000);
   try {
-    const r = await fetch(srv.url.replace(/\/$/, '') + path, {method, signal:ctl.signal, headers:Object.assign({authorization:'Bearer ' + srv.code, 'x-author':encodeURIComponent(srv.author || '')}, body ? {'content-type':'application/json'} : null), body:body ? JSON.stringify(body) : undefined});
+    const r = await fetch(srv.url.replace(/\/$/, '') + path, {method, signal:ctl.signal, headers:Object.assign({authorization:'Bearer ' + srv.code}, body ? {'content-type':'application/json'} : null), body:body ? JSON.stringify(body) : undefined});
     let j = null; try { j = await r.json(); } catch(e){}
     if (!r.ok){ const er = new Error((j && j.error) || 'http_' + r.status); er.status = r.status; er.body = j; throw er; }
     return j;
@@ -1829,7 +1840,8 @@ async function api(method, path, body){
   finally { clearTimeout(tm); }
 }
 function apiMsg(e){
-  if (e.status === 401) return 'Неверный код доступа.';
+  if (e.status === 401) return 'Код доступа не подошёл. Проверьте код или попросите новый.';
+  if (e.status === 403) return 'У администратора нет проектов: войдите личным кодом.';
   if (e.status === 503) return 'На сервере не настроена база проектов.';
   if (e.status === 413) return 'Проект слишком большой для сервера.';
   if (e.status === 429) return 'Слишком много запросов, повторите через секунду.';
@@ -1837,6 +1849,7 @@ function apiMsg(e){
   return 'Ошибка сервера: ' + e.message;
 }
 function projStatus(){
+  if (srv.role === 'admin') return ['Вход администратора: проекты недоступны', true];
   if (!srvOn()) return ['Общая база не подключена: проект только в этом браузере', true];
   if (!S.projectId) return ['Кухня не сохранена в общую базу', true];
   if (proj.conflict) return ['Конфликт: проект изменён другим человеком', true];
@@ -1888,10 +1901,24 @@ async function projGuard(what, fn){
 }
 async function projRefresh(){ proj.list = (await api('GET', '/projects')).projects; }
 function projConnect(){
-  srv.url = ($('prUrl').value || '').trim() || API_DEFAULT; srv.code = ($('prCode').value || '').trim(); srv.author = ($('prAuthor').value || '').trim();
-  store(KSRV, srv); proj.list = null;
-  projGuard('Подключаемся (сервис может просыпаться до минуты)…', projRefresh);
+  srv.url = ($('prUrl').value || '').trim() || API_DEFAULT; srv.code = ($('prCode').value || '').trim(); srv.name = ''; srv.role = '';
+  proj.list = null; proj.users = null; proj.issued = null;
+  projGuard('Входим (сервис может просыпаться до минуты)…', async () => {
+    const me = await api('GET', '/me'); srv.name = me.name; srv.role = me.role; store(KSRV, srv);
+    if (me.role === 'admin') await projUsers(); else await projRefresh();
+  }).then(() => { if (!srv.role){ srv.code = ''; store(KSRV, srv); renderProj(); } });
 }
+function projLogout(){ srv.code = ''; srv.name = ''; srv.role = ''; store(KSRV, srv); proj.list = null; proj.users = null; proj.issued = null; proj.err = ''; renderProj(); renderProjStatus(); }
+async function projUsers(){ proj.users = (await api('GET', '/users')).users; }
+function userAdd(){
+  const name = ($('prUserName').value || '').trim(); if (!name){ toast('Введите имя человека'); $('prUserName').focus(); return; }
+  projGuard('Заводим человека…', async () => { const u = await api('POST', '/users', {name}); proj.issued = {name:u.name, code:u.code}; await projUsers(); });
+}
+function userCode(id){ if (!confirm('Выдать новый код? Старый перестанет работать.')) return;
+  projGuard('Выдаём новый код…', async () => { const u = await api('POST', '/users/' + id + '/code'); proj.issued = {name:u.name, code:u.code}; await projUsers(); }); }
+function userOff(id){ if (!confirm('Отключить человека? Его код перестанет работать, проекты сохранятся.')) return;
+  projGuard('Отключаем…', async () => { await api('DELETE', '/users/' + id); proj.issued = null; await projUsers(); }); }
+function copyIssued(){ if (!proj.issued) return; const t = proj.issued.code; (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => toast('Код скопирован'), () => { const r = document.createRange(); r.selectNodeContents($('issuedCode')); const sl = getSelection(); sl.removeAllRanges(); sl.addRange(r); toast('Выделено, нажмите Ctrl+C'); }); }
 function projNew(){
   const client = ($('prClient').value || '').trim(), order = ($('prOrder').value || '').trim();
   if (!client && !order){ toast('Укажите клиента или номер заказа'); $('prClient').focus(); return; }
@@ -1929,36 +1956,49 @@ function projKeepMine(){ const c = proj.conflict; if (!c) return; S.projectRev =
 function projSaveNow(){ if (!S.projectId){ projSaveAs(); return; } saveProject(true); }
 function renderProj(){
   const body = $('projBody'); if (!body) return;
-  const on = srvOn(), cur = S.projectId, c = proj.conflict;
+  const logged = !!srv.code && !!srv.role, admin = srv.role === 'admin', on = srvOn(), cur = S.projectId, c = proj.conflict;
   let h = '';
-  if (c) h += `<div class="proj-warn"><b>Проект изменили без вас.</b> ${c.updatedBy ? esc(c.updatedBy) + ', ' : ''}${esc(fmtDT(c.updatedAt))}. Если загрузить их версию, ваши последние правки пропадут. Если перезаписать, пропадут их правки.
+  if (c) h += `<div class="proj-warn"><b>Проект изменили без вас.</b> ${c.updatedBy ? esc(c.updatedBy) + ', ' : ''}${esc(fmtDT(c.updatedAt))}. Так бывает, если проект открыт на двух компьютерах. Если загрузить версию с сервера, ваши последние правки пропадут. Если перезаписать, пропадут те.
     <div class="btns" style="margin-top:8px"><button class="btn" data-act="proj-theirs">Загрузить версию с сервера</button><button class="btn danger" data-act="proj-mine">Перезаписать моей версией</button></div></div>`;
   if (proj.busy) h += `<div class="note">${esc(proj.busy)}</div>`;
   if (proj.err && !proj.busy) h += `<div class="proj-warn">${esc(proj.err)}</div>`;
-  h += `<div class="sec"><h3>Подключение к общей базе</h3>
-    <div class="row3"><div class="field"><label for="prCode">Код доступа</label><input type="password" id="prCode" value="${esc(srv.code)}" autocomplete="off" placeholder="Выдаёт администратор"></div>
-    <div class="field"><label for="prAuthor">Ваше имя</label><input type="text" id="prAuthor" value="${esc(srv.author)}" placeholder="Видно в «изменил»"></div>
-    <div class="field"><label for="prUrl">Адрес сервиса</label><input type="text" id="prUrl" value="${esc(srv.url)}"></div></div>
-    <div class="btns"><button class="btn pri" data-act="proj-connect">${on ? 'Обновить подключение' : 'Подключиться'}</button></div>
-    <p class="proj-note">Код хранится только в этом браузере. Для проверки используйте вымышленных клиентов: сервер общий и стоит не в России.</p></div>`;
-  if (on){
-    h += `<div class="sec"><h3>Текущая кухня</h3><div class="edhead"><span class="ttl">${esc(projName())}</span><span class="pr">${esc(projStatus()[0])}</span></div>
-      <div class="btns"><button class="btn" data-act="proj-save">Сохранить сейчас</button>${cur ? '' : '<button class="btn pri" data-act="proj-saveas">Сохранить как проект</button>'}</div>
-      <p class="proj-note">${cur ? 'Изменения сохраняются сами через пару секунд.' : 'Эта кухня пока только в вашем браузере. Нажмите «Сохранить как проект», чтобы её увидели остальные.'}</p></div>
-    <div class="sec"><h3>Новый проект</h3><div class="row3"><div class="field"><label for="prClient">Клиент</label><input type="text" id="prClient" placeholder="Например: Анна И."></div>
-      <div class="field"><label for="prOrder">Номер заказа</label><input type="text" id="prOrder" placeholder="Например: К-0143"></div>
-      <div class="field"><label>&nbsp;</label><button class="btn pri" data-act="proj-new">Создать пустую кухню</button></div></div></div>
-    <div class="sec"><h3>Проекты общей базы ${proj.list ? '(' + proj.list.length + ')' : ''}</h3>`;
-    if (!proj.list) h += `<div class="empty">${proj.busy ? '' : 'Список не загружен. '}<button class="btn sm" data-act="proj-refresh">Загрузить список</button></div>`;
-    else if (!proj.list.length) h += `<div class="empty">Проектов пока нет. Создайте первый выше.</div>`;
-    else h += `<table class="proj-list" aria-label="Проекты">${proj.list.map(x => `<tr class="${x.id === cur ? 'cur' : ''}"><td><b>${esc(x.name || 'Без названия')}</b><div class="small muted">${esc(fmtDT(x.updatedAt))}${x.updatedBy ? ' · ' + esc(x.updatedBy) : ''}</div></td><td>${x.total ? rub(x.total) : ''}</td>
-      <td class="acts"><button class="btn sm" data-act="proj-load" data-v="${x.id}">${x.id === cur ? 'Перезагрузить' : 'Открыть'}</button><button class="btn sm" data-act="proj-copy" data-v="${x.id}">Копия</button><button class="btn sm danger" data-act="proj-del" data-v="${x.id}">Удалить</button></td></tr>`).join('')}</table>
-      <div class="btns" style="margin-top:8px"><button class="btn sm" data-act="proj-refresh">Обновить список</button></div>`;
-    h += '</div>';
+  if (!logged){
+    h += `<div class="sec"><h3>Вход</h3><div class="row3"><div class="field"><label for="prCode">Ваш личный код</label><input type="password" id="prCode" value="${esc(srv.code)}" autocomplete="off" placeholder="Выдаёт администратор"></div>
+      <div class="field"><label for="prUrl">Адрес сервиса</label><input type="text" id="prUrl" value="${esc(srv.url)}"></div>
+      <div class="field"><label>&nbsp;</label><button class="btn pri" data-act="proj-connect">Войти</button></div></div>
+      <p class="proj-note">Проекты видны только тому, чей это код. Код хранится только в этом браузере. Для проверки используйте вымышленных клиентов: сервер стоит не в России.</p></div>`;
+    body.innerHTML = h; return;
   }
+  h += `<div class="sec"><div class="edhead"><span class="ttl">Вы вошли как ${esc(srv.name)}${admin ? ' (администратор)' : ''}</span><span class="pr"><button class="btn sm" data-act="proj-logout">Выйти</button></span></div></div>`;
+  if (admin){
+    if (proj.issued) h += `<div class="proj-warn"><b>Код для ${esc(proj.issued.name)}</b>: <code id="issuedCode" style="font-size:15px;user-select:all">${esc(proj.issued.code)}</code>
+      <div class="btns" style="margin-top:8px"><button class="btn sm" data-act="proj-copycode">Скопировать код</button></div>
+      <p class="proj-note">Покажем один раз, потом его не восстановить: на сервере хранится только отпечаток. Передайте человеку лично.</p></div>`;
+    h += `<div class="sec"><h3>Люди</h3><div class="row3"><div class="field"><label for="prUserName">Новый человек</label><input type="text" id="prUserName" placeholder="Имя и фамилия"></div>
+      <div class="field"><label>&nbsp;</label><button class="btn pri" data-act="user-add">Создать и выдать код</button></div></div>`;
+    if (!proj.users) h += `<div class="empty"><button class="btn sm" data-act="user-refresh">Загрузить список</button></div>`;
+    else if (!proj.users.length) h += `<div class="empty">Пока никого. Создайте первого.</div>`;
+    else h += `<table class="proj-list" aria-label="Люди">${proj.users.map(u => `<tr><td><b>${esc(u.name)}</b>${u.disabled ? ' <span class="muted">(отключён)</span>' : ''}<div class="small muted">с ${esc(fmtDT(u.createdAt))}</div></td>
+      <td class="acts"><button class="btn sm" data-act="user-code" data-v="${u.id}">Новый код</button>${u.disabled ? '' : `<button class="btn sm danger" data-act="user-off" data-v="${u.id}">Отключить</button>`}</td></tr>`).join('')}</table>`;
+    h += `<p class="proj-note">Администратор заводит людей и выдаёт коды, но чужих проектов не видит и своих не имеет. Чтобы тоже проверять программу, заведите себя как обычного человека и входите его кодом.</p></div>`;
+    body.innerHTML = h; return;
+  }
+  h += `<div class="sec"><h3>Текущая кухня</h3><div class="edhead"><span class="ttl">${esc(projName())}</span><span class="pr">${esc(projStatus()[0])}</span></div>
+    <div class="btns"><button class="btn" data-act="proj-save">Сохранить сейчас</button>${cur ? '' : '<button class="btn pri" data-act="proj-saveas">Сохранить как проект</button>'}</div>
+    <p class="proj-note">${cur ? 'Изменения сохраняются сами через пару секунд.' : 'Эта кухня пока только в вашем браузере. Нажмите «Сохранить как проект», чтобы она сохранилась в вашей базе.'}</p></div>
+  <div class="sec"><h3>Новый проект</h3><div class="row3"><div class="field"><label for="prClient">Клиент</label><input type="text" id="prClient" placeholder="Например: Анна И."></div>
+    <div class="field"><label for="prOrder">Номер заказа</label><input type="text" id="prOrder" placeholder="Например: К-0143"></div>
+    <div class="field"><label>&nbsp;</label><button class="btn pri" data-act="proj-new">Создать пустую кухню</button></div></div></div>
+  <div class="sec"><h3>Мои проекты ${proj.list ? '(' + proj.list.length + ')' : ''}</h3>`;
+  if (!proj.list) h += `<div class="empty">${proj.busy ? '' : 'Список не загружен. '}<button class="btn sm" data-act="proj-refresh">Загрузить список</button></div>`;
+  else if (!proj.list.length) h += `<div class="empty">Проектов пока нет. Создайте первый выше.</div>`;
+  else h += `<table class="proj-list" aria-label="Мои проекты">${proj.list.map(x => `<tr class="${x.id === cur ? 'cur' : ''}"><td><b>${esc(x.name || 'Без названия')}</b><div class="small muted">${esc(fmtDT(x.updatedAt))}</div></td><td>${x.total ? rub(x.total) : ''}</td>
+    <td class="acts"><button class="btn sm" data-act="proj-load" data-v="${x.id}">${x.id === cur ? 'Перезагрузить' : 'Открыть'}</button><button class="btn sm" data-act="proj-copy" data-v="${x.id}">Копия</button><button class="btn sm danger" data-act="proj-del" data-v="${x.id}">Удалить</button></td></tr>`).join('')}</table>
+    <div class="btns" style="margin-top:8px"><button class="btn sm" data-act="proj-refresh">Обновить список</button></div>`;
+  h += '</div>';
   body.innerHTML = h;
 }
-function openProj(){ renderProj(); $('projDlg').showModal(); if (srvOn() && !proj.list && !proj.busy) projGuard('Загружаем список…', projRefresh); }
+function openProj(){ renderProj(); $('projDlg').showModal(); if (proj.busy) return; if (srvOn() && !proj.list) projGuard('Загружаем список…', projRefresh); else if (srv.role === 'admin' && !proj.users) projGuard('Загружаем список…', projUsers); }
 
 /* ---------------- update ---------------- */
 function recalc(){ A = calcAll(S, P, C); }
@@ -2127,6 +2167,12 @@ document.addEventListener('click', e => {
     case 'imp-undo': { const bk = load(KBACKUP); if (!bk) break; C[bk.key] = bk.items; ensureRefs(); store(KC, C); try { localStorage.removeItem(KBACKUP); } catch(e){} renderPrices(); update(); toast('Загрузка отменена'); break; }
     case 'proj-open': openProj(); break;
     case 'proj-connect': projConnect(); break;
+    case 'proj-logout': projLogout(); break;
+    case 'user-add': userAdd(); break;
+    case 'user-code': userCode(v); break;
+    case 'user-off': userOff(v); break;
+    case 'user-refresh': projGuard('Загружаем список…', projUsers); break;
+    case 'proj-copycode': copyIssued(); break;
     case 'proj-refresh': projGuard('Загружаем список…', projRefresh); break;
     case 'proj-new': projNew(); break;
     case 'proj-save': projSaveNow(); break;
