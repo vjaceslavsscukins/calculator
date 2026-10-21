@@ -19,7 +19,7 @@ async function start({ store = new MemoryStore(), ...rest } = {}) {
   const as = code => (method, p, body, headers = {}) => fetch(base + p, { method, headers: { authorization: `Bearer ${code}`, 'content-type': 'application/json', ...headers }, body: body === undefined ? undefined : JSON.stringify(body) });
   const admin = as(ADMIN);
   // заводит человека и возвращает запросы от его имени
-  const person = async name => { const r = await admin('POST', '/users', { name }); const u = await r.json(); return { ...u, call: as(u.code) }; };
+  const person = async (name, role) => { const r = await admin('POST', '/users', { name, role }); const u = await r.json(); return { ...u, call: as(u.code) }; };
   return { base, store, admin, as, person, close: () => relay.close() };
 }
 
@@ -40,8 +40,8 @@ test('администратор заводит людей: код виден о
   assert.equal(a.name, 'Маша Иванова'); assert.ok(a.code && a.code.length >= 20);
   const list = await (await s.admin('GET', '/users')).json();
   assert.equal(list.users.length, 1); assert.ok(!('code' in list.users[0]) && !('codeHash' in list.users[0]));
-  assert.deepEqual(await (await a.call('GET', '/me')).json(), { name: 'Маша Иванова', role: 'user' });
-  assert.deepEqual(await (await s.admin('GET', '/me')).json(), { name: 'Администратор', role: 'admin' });
+  assert.deepEqual(await (await a.call('GET', '/me')).json(), { name: 'Маша Иванова', role: 'manager' });
+  assert.deepEqual(await (await s.admin('GET', '/me')).json(), { name: 'Владелец', role: 'owner' });
   const u = [...s.store.users.values()][0];
   assert.notEqual(u.codeHash, a.code); assert.equal(u.codeHash, hashCode(a.code));
   assert.equal((await s.admin('POST', '/users', { name: '  ' })).status, 400);
@@ -61,7 +61,7 @@ test('чужие проекты не видны: ни в списке, ни по
   const own = await (await masha.call('GET', `/projects/${p.id}`)).json();
   assert.equal(own.name, 'Секрет Маши'); assert.equal(own.data.modules.length, 3);
   assert.equal((await (await masha.call('GET', '/projects')).json()).projects.length, 1);
-  // у администратора проектов нет, чужие он тоже не читает
+  // у владельца (главного кода) проектов нет, чужие он тоже не читает
   assert.equal((await s.admin('GET', '/projects')).status, 403);
   assert.equal((await s.admin('GET', `/projects/${p.id}`)).status, 403);
   s.close();
@@ -135,6 +135,52 @@ test('доступ из браузера только с разрешённог�
   s.close();
 });
 
+test('роли: администратор ведёт людей и прайсы, менеджер только читает прайсы', async () => {
+  const s = await start();
+  const boss = await s.person('Шеф', 'admin'), man = await s.person('Менеджер');
+  assert.deepEqual(await (await boss.call('GET', '/me')).json(), { name: 'Шеф', role: 'admin' });
+  assert.equal((await s.admin('POST', '/users', { name: 'X', role: 'king' })).status, 400, 'неизвестная роль');
+  // прайсы: сначала пусто, правит администратор, менеджер читает, но не пишет
+  assert.deepEqual((await (await man.call('GET', '/settings')).json()).settings, {});
+  const price = { rev: 0, value: { lifts: { hk: 100 } } };
+  assert.equal((await man.call('PUT', '/settings/prices', price)).status, 403, 'менеджер прайсы не правит');
+  assert.equal((await man.call('GET', '/settings')).status, 200);
+  const put = await boss.call('PUT', '/settings/prices', price);
+  assert.equal(put.status, 200); const r1 = await put.json(); assert.equal(r1.rev, 1); assert.equal(r1.updatedBy, 'Шеф');
+  assert.equal((await s.admin('PUT', '/settings/catalogs', { rev: 0, value: { a: 1 } })).status, 200, 'владелец тоже правит');
+  const got = (await (await man.call('GET', '/settings')).json()).settings;
+  assert.deepEqual(got.prices.value, { lifts: { hk: 100 } }); assert.equal(got.prices.rev, 1); assert.equal(got.catalogs.rev, 1);
+  // правка со старой версии не затирает чужую
+  const old = await boss.call('PUT', '/settings/prices', { rev: 0, value: { lifts: { hk: 1 } } });
+  assert.equal(old.status, 409); assert.equal((await old.json()).rev, 1);
+  assert.equal((await boss.call('PUT', '/settings/prices', { rev: 1, value: { lifts: { hk: 200 } } })).status, 200);
+  assert.equal((await boss.call('PUT', '/settings/prices', { value: {} })).status, 400, 'нужна версия');
+  assert.equal((await boss.call('PUT', '/settings/prices', { rev: 2, value: [] })).status, 400, 'нужен объект');
+  assert.equal((await boss.call('PUT', '/settings/other', { rev: 0, value: {} })).status, 404, 'неизвестный раздел');
+  // люди: менеджеру нельзя; администратор может, но не может понизить или отключить сам себя
+  assert.equal((await man.call('GET', '/users')).status, 403);
+  assert.equal((await man.call('PATCH', `/users/${boss.id}`, { role: 'manager' })).status, 403);
+  assert.equal((await boss.call('GET', '/users')).status, 200);
+  const nu = await (await boss.call('POST', '/users', { name: 'Второй админ', role: 'admin' })).json(); assert.equal(nu.role, 'admin');
+  assert.equal((await boss.call('PATCH', `/users/${boss.id}`, { role: 'manager' })).status, 400);
+  assert.equal((await boss.call('DELETE', `/users/${boss.id}`)).status, 400);
+  const ch = await (await boss.call('PATCH', `/users/${man.id}`, { role: 'admin' })).json(); assert.equal(ch.role, 'admin');
+  assert.equal((await man.call('PUT', '/settings/prices', { rev: 2, value: {} })).status, 200, 'после повышения менеджер правит прайсы');
+  assert.equal((await boss.call('PATCH', `/users/${man.id}`, { role: 'bad' })).status, 400);
+  // проекты есть и у администратора, и у менеджера
+  assert.equal((await boss.call('POST', '/projects', { name: 'П', data: data() })).status, 201);
+  s.close();
+});
+
+test('прайсы без кода недоступны, большой прайс проходит, слишком большой нет', async () => {
+  const s = await start({ maxSettings: 3000 });
+  assert.equal((await fetch(`${s.base}/settings`)).status, 401);
+  const boss = await s.person('Шеф', 'admin');
+  assert.equal((await boss.call('PUT', '/settings/prices', { rev: 0, value: { pad: 'я'.repeat(100) } })).status, 200);
+  assert.equal((await boss.call('PUT', '/settings/prices', { rev: 1, value: { pad: 'я'.repeat(3000) } })).status, 413);
+  s.close();
+});
+
 test('короткий или пустой главный код не работает', async () => {
   const s = await start({ adminToken: 'short' });
   assert.equal((await s.as('short')('GET', '/users')).status, 401);
@@ -144,11 +190,14 @@ test('короткий или пустой главный код не работ
 test('файловое хранилище переживает перезапуск вместе с людьми и их проектами', async () => {
   const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'proj-')), 'projects.json');
   const a = await start({ store: new MemoryStore({ file }) });
-  const masha = await a.person('Маша');
+  const masha = await a.person('Маша', 'admin');
   const p = await (await masha.call('POST', '/projects', { name: 'остаётся', data: data(4) })).json();
+  assert.equal((await masha.call('PUT', '/settings/prices', { rev: 0, value: { x: 1 } })).status, 200);
   a.close();
   const b = await start({ store: new MemoryStore({ file }) });
   const g = await (await b.as(masha.code)('GET', `/projects/${p.id}`)).json();
   assert.equal(g.name, 'остаётся'); assert.equal(g.data.modules.length, 4);
+  const st = (await (await b.as(masha.code)('GET', '/settings')).json()).settings;
+  assert.deepEqual(st.prices.value, { x: 1 }); assert.equal((await (await b.as(masha.code)('GET', '/me')).json()).role, 'admin');
   b.close();
 });

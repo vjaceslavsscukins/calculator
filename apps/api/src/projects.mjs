@@ -21,30 +21,43 @@ export function checkData(data) {
 const cleanUserName = v => { const n = typeof v === 'string' ? v.trim().replace(/\s+/g, ' ').slice(0, 60) : ''; if (!n) throw new ProjectError(400, 'name_required'); return n; };
 
 const brief = r => ({ id: r.id, name: r.name, client: r.client, order: r.order, total: r.total, rev: r.rev, createdAt: r.createdAt, updatedAt: r.updatedAt, updatedBy: r.updatedBy });
-const userBrief = u => ({ id: u.id, name: u.name, createdAt: u.createdAt, disabled: !!u.disabledAt });
+const ROLES = ['manager', 'admin'];
+const cleanRole = v => { const r = v === undefined ? 'manager' : v; if (!ROLES.includes(r)) throw new ProjectError(400, 'bad_role'); return r; };
+const SETTING_KEYS = ['prices', 'catalogs'];
+const userBrief = u => ({ id: u.id, name: u.name, role: u.role || 'manager', createdAt: u.createdAt, disabled: !!u.disabledAt });
 
 // Хранилище в памяти; с путём к файлу сохраняется на диск (на бесплатном Render диск стирается при перезапуске, для общей базы нужен PostgreSQL).
 export class MemoryStore {
   constructor({ file } = {}) {
-    this.file = file; this.rows = new Map(); this.users = new Map();
+    this.file = file; this.rows = new Map(); this.users = new Map(); this.settings = new Map();
     if (file && fs.existsSync(file)) {
       try {
         const j = JSON.parse(fs.readFileSync(file, 'utf8'));
         for (const r of Array.isArray(j) ? j : j.projects || []) this.rows.set(r.id, r);
         for (const u of Array.isArray(j) ? [] : j.users || []) this.users.set(u.id, u);
+        for (const st of Array.isArray(j) ? [] : j.settings || []) this.settings.set(st.key, st);
       } catch { /* пустая база */ }
     }
   }
-  save() { if (this.file) { const tmp = this.file + '.tmp'; fs.writeFileSync(tmp, JSON.stringify({ projects: [...this.rows.values()], users: [...this.users.values()] })); fs.renameSync(tmp, this.file); } }
+  save() { if (this.file) { const tmp = this.file + '.tmp'; fs.writeFileSync(tmp, JSON.stringify({ projects: [...this.rows.values()], users: [...this.users.values()], settings: [...this.settings.values()] })); fs.renameSync(tmp, this.file); } }
   // пользователи
-  async createUser(name, codeHash) {
-    const u = { id: randomUUID(), name, codeHash, createdAt: new Date().toISOString(), disabledAt: null };
+  async createUser(name, codeHash, role = 'manager') {
+    const u = { id: randomUUID(), name, codeHash, role, createdAt: new Date().toISOString(), disabledAt: null };
     this.users.set(u.id, u); this.save(); return userBrief(u);
   }
-  async findUser(codeHash) { for (const u of this.users.values()) if (!u.disabledAt && u.codeHash === codeHash) return { id: u.id, name: u.name }; return null; }
+  async findUser(codeHash) { for (const u of this.users.values()) if (!u.disabledAt && u.codeHash === codeHash) return { id: u.id, name: u.name, role: u.role || 'manager' }; return null; }
   async listUsers() { return [...this.users.values()].sort((a, b) => a.createdAt.localeCompare(b.createdAt)).map(userBrief); }
   async setCode(id, codeHash) { const u = this.users.get(id); if (!u) throw new ProjectError(404, 'not_found'); u.codeHash = codeHash; u.disabledAt = null; this.save(); return userBrief(u); }
   async disableUser(id) { const u = this.users.get(id); if (!u) throw new ProjectError(404, 'not_found'); u.disabledAt = new Date().toISOString(); this.save(); }
+  async setRole(id, role) { const u = this.users.get(id); if (!u) throw new ProjectError(404, 'not_found'); u.role = role; this.save(); return userBrief(u); }
+  // общие настройки (прайсы и каталоги): одна запись на ключ, правка с проверкой версии
+  async getSettings() { const o = {}; for (const st of this.settings.values()) o[st.key] = { value: st.value, rev: st.rev, updatedAt: st.updatedAt, updatedBy: st.updatedBy }; return o; }
+  async putSetting(key, rev, value, by) {
+    const cur = this.settings.get(key), now = new Date().toISOString();
+    if ((cur ? cur.rev : 0) !== rev) throw new ProjectError(409, 'conflict', { rev: cur ? cur.rev : 0, updatedAt: cur && cur.updatedAt, updatedBy: cur && cur.updatedBy });
+    const st = { key, value, rev: rev + 1, updatedAt: now, updatedBy: by }; this.settings.set(key, st); this.save();
+    return { rev: st.rev, updatedAt: now, updatedBy: by };
+  }
   // проекты: всё только в пределах владельца, чужой проект выглядит как несуществующий
   mine(id, owner) { const r = this.rows.get(id); return r && !r.deletedAt && r.ownerId === owner ? r : null; }
   async list(owner) { return [...this.rows.values()].filter(r => !r.deletedAt && r.ownerId === owner).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)).map(brief); }
@@ -72,15 +85,30 @@ export async function createPgStore(url, { ssl = true } = {}) {
     data jsonb NOT NULL, rev integer NOT NULL DEFAULT 1, created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
     updated_by text NOT NULL DEFAULT '', deleted_at timestamptz, owner_id uuid)`);
   await pool.query('ALTER TABLE projects ADD COLUMN IF NOT EXISTS owner_id uuid');
+  await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS role text NOT NULL DEFAULT 'manager'");
+  await pool.query(`CREATE TABLE IF NOT EXISTS settings (key text PRIMARY KEY, value jsonb NOT NULL, rev integer NOT NULL DEFAULT 1, updated_at timestamptz NOT NULL DEFAULT now(), updated_by text NOT NULL DEFAULT '')`);
   await pool.query('CREATE INDEX IF NOT EXISTS projects_owner_idx ON projects (owner_id, updated_at DESC)');
   const row = r => ({ id: r.id, name: r.name, client: r.client, order: r.order, total: Number(r.total), rev: r.rev, createdAt: r.created_at.toISOString(), updatedAt: r.updated_at.toISOString(), updatedBy: r.updated_by });
-  const urow = r => ({ id: r.id, name: r.name, createdAt: r.created_at.toISOString(), disabled: !!r.disabled_at });
+  const urow = r => ({ id: r.id, name: r.name, role: r.role || 'manager', createdAt: r.created_at.toISOString(), disabled: !!r.disabled_at });
   const cols = 'id, name, client, "order", total, rev, created_at, updated_at, updated_by';
   return {
-    async createUser(name, codeHash) { const { rows } = await pool.query('INSERT INTO users (id, name, code_hash) VALUES ($1,$2,$3) RETURNING id, name, created_at, disabled_at', [randomUUID(), name, codeHash]); return urow(rows[0]); },
-    async findUser(codeHash) { const { rows } = await pool.query('SELECT id, name FROM users WHERE code_hash = $1 AND disabled_at IS NULL', [codeHash]); return rows[0] || null; },
-    async listUsers() { return (await pool.query('SELECT id, name, created_at, disabled_at FROM users ORDER BY created_at')).rows.map(urow); },
-    async setCode(id, codeHash) { const { rows } = await pool.query('UPDATE users SET code_hash = $2, disabled_at = NULL WHERE id = $1 RETURNING id, name, created_at, disabled_at', [id, codeHash]); if (!rows[0]) throw new ProjectError(404, 'not_found'); return urow(rows[0]); },
+    async createUser(name, codeHash, role = 'manager') { const { rows } = await pool.query('INSERT INTO users (id, name, code_hash, role) VALUES ($1,$2,$3,$4) RETURNING id, name, role, created_at, disabled_at', [randomUUID(), name, codeHash, role]); return urow(rows[0]); },
+    async findUser(codeHash) { const { rows } = await pool.query('SELECT id, name, role FROM users WHERE code_hash = $1 AND disabled_at IS NULL', [codeHash]); return rows[0] || null; },
+    async listUsers() { return (await pool.query('SELECT id, name, role, created_at, disabled_at FROM users ORDER BY created_at')).rows.map(urow); },
+    async setCode(id, codeHash) { const { rows } = await pool.query('UPDATE users SET code_hash = $2, disabled_at = NULL WHERE id = $1 RETURNING id, name, role, created_at, disabled_at', [id, codeHash]); if (!rows[0]) throw new ProjectError(404, 'not_found'); return urow(rows[0]); },
+    async setRole(id, role) { const { rows } = await pool.query('UPDATE users SET role = $2 WHERE id = $1 RETURNING id, name, role, created_at, disabled_at', [id, role]); if (!rows[0]) throw new ProjectError(404, 'not_found'); return urow(rows[0]); },
+    async getSettings() { const o = {}; for (const r of (await pool.query('SELECT key, value, rev, updated_at, updated_by FROM settings')).rows) o[r.key] = { value: r.value, rev: r.rev, updatedAt: r.updated_at.toISOString(), updatedBy: r.updated_by }; return o; },
+    async putSetting(key, rev, value, by) {
+      if (rev === 0) {
+        const r = await pool.query('INSERT INTO settings (key, value, rev, updated_by) VALUES ($1,$2,1,$3) ON CONFLICT (key) DO NOTHING RETURNING rev, updated_at', [key, JSON.stringify(value), by]);
+        if (r.rows[0]) return { rev: 1, updatedAt: r.rows[0].updated_at.toISOString(), updatedBy: by };
+      } else {
+        const r = await pool.query('UPDATE settings SET value=$3, rev=rev+1, updated_at=now(), updated_by=$4 WHERE key=$1 AND rev=$2 RETURNING rev, updated_at', [key, rev, JSON.stringify(value), by]);
+        if (r.rows[0]) return { rev: r.rows[0].rev, updatedAt: r.rows[0].updated_at.toISOString(), updatedBy: by };
+      }
+      const c = (await pool.query('SELECT rev, updated_at, updated_by FROM settings WHERE key=$1', [key])).rows[0];
+      throw new ProjectError(409, 'conflict', { rev: c ? c.rev : 0, updatedAt: c && c.updated_at.toISOString(), updatedBy: c && c.updated_by });
+    },
     async disableUser(id) { const r = await pool.query('UPDATE users SET disabled_at = now() WHERE id = $1', [id]); if (!r.rowCount) throw new ProjectError(404, 'not_found'); },
     async list(owner) { return (await pool.query(`SELECT ${cols} FROM projects WHERE deleted_at IS NULL AND owner_id = $1 ORDER BY updated_at DESC LIMIT 500`, [owner])).rows.map(row); },
     async get(id, owner) { const { rows } = await pool.query(`SELECT ${cols}, data FROM projects WHERE id = $1 AND owner_id = $2 AND deleted_at IS NULL`, [id, owner]); return rows[0] ? { ...row(rows[0]), data: rows[0].data } : null; },
@@ -103,31 +131,33 @@ export async function createPgStore(url, { ssl = true } = {}) {
 
 const ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
-// Обработчик маршрутов /projects, /users, /me. Возвращает true, если запрос его.
-// adminToken — главный код (переменная PROJECTS_TOKEN): им заводят людей, проектов у него нет.
-export function createProjects({ store, adminToken = '', origins = [], maxBody = 2 * 1024 * 1024 }) {
+// Обработчик маршрутов /projects, /users, /me, /settings. Возвращает true, если запрос его.
+// Роли: owner — главный код (PROJECTS_TOKEN), admin — доступ как у владельца к прайсам и людям, manager — проекты и просмотр прайсов.
+// У главного кода проектов нет; у администраторов и менеджеров свои, чужих не видит никто.
+export function createProjects({ store, adminToken = '', origins = [], maxBody = 2 * 1024 * 1024, maxSettings = 8 * 1024 * 1024 }) {
   const adminHash = adminToken && adminToken.length >= 16 ? createHash('sha256').update(adminToken).digest() : null;
-  const isAdmin = code => { if (!adminHash) return false; const h = createHash('sha256').update(code).digest(); return timingSafeEqual(h, adminHash); };
+  const isOwner = code => { if (!adminHash) return false; const h = createHash('sha256').update(code).digest(); return timingSafeEqual(h, adminHash); };
   const allowed = origin => !!origin && origins.includes(origin);
   const cors = req => allowed(req.headers.origin)
-    ? { 'access-control-allow-origin': req.headers.origin, 'access-control-allow-headers': 'authorization, content-type', 'access-control-allow-methods': 'GET, POST, PUT, DELETE, OPTIONS', 'access-control-max-age': '600', vary: 'Origin' }
+    ? { 'access-control-allow-origin': req.headers.origin, 'access-control-allow-headers': 'authorization, content-type', 'access-control-allow-methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS', 'access-control-max-age': '600', vary: 'Origin' }
     : { vary: 'Origin' };
-  async function readJson(req) {
+  async function readJson(req, max = maxBody) {
     const chunks = []; let n = 0;
-    for await (const c of req) { n += c.length; if (n > maxBody) throw new ProjectError(413, 'too_large'); chunks.push(c); }
+    for await (const c of req) { n += c.length; if (n > max) throw new ProjectError(413, 'too_large'); chunks.push(c); }
     if (!n) return {};
     try { return JSON.parse(Buffer.concat(chunks).toString('utf8')); } catch { throw new ProjectError(400, 'bad_json'); }
   }
-  // Кто пришёл: { role: 'admin' } или { role: 'user', id, name }
+  // Кто пришёл: { role: 'owner' } или { role: 'admin' | 'manager', id, name }
   async function who(req) {
     const m = /^Bearer (.+)$/.exec(req.headers.authorization || ''); if (!m) throw new ProjectError(401, 'unauthorized');
-    if (isAdmin(m[1])) return { role: 'admin', name: 'Администратор' };
+    if (isOwner(m[1])) return { role: 'owner', name: 'Владелец' };
     const u = await store.findUser(hashCode(m[1])); if (!u) throw new ProjectError(401, 'unauthorized');
-    return { role: 'user', id: u.id, name: u.name };
+    return { role: u.role === 'admin' ? 'admin' : 'manager', id: u.id, name: u.name };
   }
+  const canManage = me => me.role === 'owner' || me.role === 'admin';
 
   return async function handle(req, res, url, reply, take) {
-    const m = url.pathname.match(/^\/(projects|users|me)(?:\/([^/]+))?(?:\/(code))?$/);
+    const m = url.pathname.match(/^\/(projects|users|me|settings)(?:\/([^/]+))?(?:\/(code))?$/);
     if (!m) return false;
     const head = cors(req), [, area, id, sub] = m;
     try {
@@ -135,20 +165,37 @@ export function createProjects({ store, adminToken = '', origins = [], maxBody =
       if (!store) throw new ProjectError(503, 'projects_not_configured');
       const me = await who(req);
       if (!take()) throw new ProjectError(429, 'rate_limited');
-      if (id !== undefined && !ID.test(id)) throw new ProjectError(404, 'not_found');
+      if (area !== 'settings' && id !== undefined && !ID.test(id)) throw new ProjectError(404, 'not_found');
       let out, code = 200;
       if (area === 'me') { if (id || req.method !== 'GET') throw new ProjectError(405, 'method_not_allowed'); out = { name: me.name, role: me.role }; }
+      else if (area === 'settings') {
+        // прайсы и каталоги общие: читает любой вошедший, правит только администратор
+        if (sub) throw new ProjectError(404, 'not_found');
+        if (!id && req.method === 'GET') out = { settings: await store.getSettings() };
+        else if (id && req.method === 'PUT') {
+          if (!SETTING_KEYS.includes(id)) throw new ProjectError(404, 'not_found');
+          if (!canManage(me)) throw new ProjectError(403, 'admin_only');
+          const b = await readJson(req, maxSettings);
+          if (!Number.isInteger(b.rev) || b.rev < 0) throw new ProjectError(400, 'rev_required');
+          if (!b.value || typeof b.value !== 'object' || Array.isArray(b.value)) throw new ProjectError(400, 'bad_value');
+          out = await store.putSetting(id, b.rev, b.value, me.name);
+        } else throw new ProjectError(405, 'method_not_allowed');
+      }
       else if (area === 'users') {
-        if (me.role !== 'admin') throw new ProjectError(403, 'admin_only');
+        if (!canManage(me)) throw new ProjectError(403, 'admin_only');
         if (!id && req.method === 'GET') out = { users: await store.listUsers() };
         else if (!id && req.method === 'POST') {
-          const name = cleanUserName((await readJson(req)).name), plain = newCode(), u = await store.createUser(name, hashCode(plain));
-          out = { ...u, code: plain }; code = 201;          // код показывается один раз, в базе только его отпечаток
+          const b = await readJson(req), name = cleanUserName(b.name), role = cleanRole(b.role), plain = newCode();
+          out = { ...(await store.createUser(name, hashCode(plain), role)), code: plain }; code = 201;          // код показывается один раз, в базе только его отпечаток
         } else if (id && sub === 'code' && req.method === 'POST') { const plain = newCode(); out = { ...(await store.setCode(id, hashCode(plain))), code: plain }; }
-        else if (id && !sub && req.method === 'DELETE') { await store.disableUser(id); out = { ok: true }; }
+        else if (id && !sub && req.method === 'PATCH') {
+          if (id === me.id) throw new ProjectError(400, 'cannot_change_self');   // чтобы не остаться без администратора
+          out = await store.setRole(id, cleanRole((await readJson(req)).role));
+        }
+        else if (id && !sub && req.method === 'DELETE') { if (id === me.id) throw new ProjectError(400, 'cannot_change_self'); await store.disableUser(id); out = { ok: true }; }
         else throw new ProjectError(405, 'method_not_allowed');
       } else {
-        if (me.role !== 'user') throw new ProjectError(403, 'admin_has_no_projects');
+        if (me.role === 'owner') throw new ProjectError(403, 'owner_has_no_projects');
         if (sub) throw new ProjectError(404, 'not_found');
         if (!id && req.method === 'GET') out = { projects: await store.list(me.id) };
         else if (!id && req.method === 'POST') { const b = await readJson(req); checkData(b.data); out = await store.create(cleanMeta(b), b.data, me.id, me.name); code = 201; }
