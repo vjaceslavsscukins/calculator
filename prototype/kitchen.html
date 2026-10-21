@@ -519,6 +519,9 @@ const BUILTIN_TEMPLATES = [
     facades:[{kind:'doors', y:'2', h:'H-round(H*0.22)-4'}, {kind:'drawer', y:'H-round(H*0.22)+2', h:'round(H*0.22)-4'}]},
   {code:'base_drawers2', name:'2 ящика', cat:'low', row:'low', w:600, h:720, d:560, widths:[400,450,500,600,800,900,1000],
     facades:[{kind:'drawer', y:'2', h:'round(H/2)-4'}, {kind:'drawer', y:'round(H/2)+2', h:'H-round(H/2)-4'}]},
+  {code:'base_drawers2_inner', name:'2 ящика с внутренним', cat:'low', row:'low', w:600, h:720, d:560, widths:[500,600,800,900],
+    todo:'Внутренний ящик стоит в нижнем высоком ящике (по ведомостям технолога): уточнить, всегда ли так и какой нужен класс высоты.',
+    facades:[{kind:'drawer', y:'2', h:'round(H/2)-4', box:'C'}, {kind:'drawer', y:'round(H/2)+2', h:'H-round(H/2)-4', box:'D', inner:'M'}]},
   {code:'base_drawers3', name:'3 ящика', cat:'low', row:'low', w:600, h:720, d:560, widths:[400,450,500,600,800,900,1000],
     facades:[{kind:'drawer', y:'2', h:'round(H*0.39)-4'}, {kind:'drawer', y:'round(H*0.39)+2', h:'round(H*0.39)-4'}, {kind:'drawer', y:'round(H*0.39)*2+2', h:'H-round(H*0.39)*2-4'}]},
   {code:'base_sink', name:'Под мойку', cat:'low', row:'low', w:800, h:720, d:560, widths:[600,800,900], back:false, appliance:'sink', cutDefaults:{sink:true, pipe:true}, facades:[{kind:'doors', y:'2', h:'H-4'}]},
@@ -563,6 +566,7 @@ const BUILTIN_TEMPLATES = [
 
 const TPL_CATS = ['low', 'up', 'mezz', 'tall', 'gap'], TPL_ROWS = ['low', 'up', 'mezz'], TPL_APPLIANCES = ['sink', 'oven', 'tall_oven', 'fridge', 'dw', 'cargo', 'lift'], TPL_SINGLE = ['dw', 'cargo', 'lift', 'fridge', 'panel'];
 // Проверка шаблона перед добавлением в библиотеку. Возвращает список ошибок на русском (пустой — шаблон годится).
+const TPL_BOXES = ['M', 'C', 'D'];
 function validateTemplate(t, takenCodes = []){
   const e = [], int = (v, lo, hi) => Number.isInteger(v) && v >= lo && v <= hi;
   if (!t || typeof t !== 'object' || Array.isArray(t)) return ['Шаблон должен быть объектом JSON'];
@@ -591,6 +595,10 @@ function validateTemplate(t, takenCodes = []){
     if (!['doors', 'drawer', 'single', 'corner'].includes(fd.kind)){ e.push(`${at}.kind: doors, drawer, single или corner`); return; }
     if (fd.when) num(fd.when, `${at}.when`);
     if (fd.kind === 'corner'){ if (!t.corner) e.push(`${at}: для угловых фасадов нужно "corner": true`); if (!int(fd.blind, 100, 1500)) e.push(`${at}.blind: глухая часть, целое число мм`); return; }
+    if (fd.kind === 'drawer'){
+      if (fd.box !== undefined && !TPL_BOXES.includes(fd.box)) e.push(`${at}.box: класс ящика ${TPL_BOXES.join(', ')}`);
+      if (fd.inner !== undefined && !TPL_BOXES.includes(fd.inner)) e.push(`${at}.inner: класс внутреннего ящика ${TPL_BOXES.join(', ')}`);
+    }
     if (fd.kind === 'single' && !TPL_SINGLE.includes(fd.k)) e.push(`${at}.k: одно из ${TPL_SINGLE.join(', ')}`);
     (fd.kind === 'doors' && fd.rows ? fd.rows.map((r, j) => [r, `${at}.rows[${j}]`]) : [[fd, at]]).forEach(([r, w]) => {
       if (r.part !== undefined && !['top', 'bottom'].includes(r.part)) e.push(`${w}.part: top или bottom`);
@@ -678,7 +686,7 @@ function facadesOf(m, S){
   (t.tpl.facades || []).forEach(fd => {
     if (fd.when && !ev(fd.when)) return;
     if (fd.kind === 'doors'){ const rows = fd.rows || [fd]; const n = W > 500 ? 2 : 1, cw = W / n; for (let i = 0; i < n; i++) rows.forEach(r => door(i*cw + 2, ev(r.y), cw - 4, ev(r.h), n === 1 ? 'left' : (i ? 'right' : 'left'), Object.assign({}, r.glass ? {glass:true} : null, r.part ? {part:r.part} : null))); }
-    else if (fd.kind === 'drawer') out.push({x:2, y:ev(fd.y), w:W - 4, h:ev(fd.h), k:'drawer'});
+    else if (fd.kind === 'drawer') out.push(Object.assign({x:2, y:ev(fd.y), w:W - 4, h:ev(fd.h), k:'drawer'}, fd.box ? {box:fd.box} : null, fd.inner ? {inner:fd.inner} : null));
     else if (fd.kind === 'single') out.push(Object.assign({x:2, y:ev(fd.y), w:W - 4, h:ev(fd.h), k:fd.k}, fd.hinge ? {hinge:fd.hinge} : null, fd.part ? {part:fd.part} : null));
     else if (fd.kind === 'corner'){ const dw = Math.max(W - fd.blind, 250); if (m.blind === 'right') door(2, 2, dw - 4, H - 4, 'left'); else door(W - dw + 2, 2, dw - 4, H - 4, 'right'); }
   });
@@ -693,6 +701,16 @@ function facadesOf(m, S){
   return out;
 }
 
+// Ящик Blum TANDEMBOX antaro, длина направляющих 500 мм: размеры по комплектовочным ведомостям технолога (22 изделия, модули 500, 600 и 800 мм).
+// Дно из ЛДСП (Ш − 108) × 492, задняя стенка из ЛДСП (Ш − 120) × высота по классу ящика (M, C, D).
+// Класс: из шаблона (box), иначе по высоте фасада (до 200 мм — M, выше — D). Внутренний ящик (inner) стоит внутри ящика и считается отдельным комплектом.
+// TODO(технолог): модули не глубиной 510 (длина направляющих), другие классы высоты и габариты внутреннего ящика (в ведомостях он тех же размеров).
+const TANDEMBOX_BACK = {M:68, C:151, D:183};
+function tandemboxParts(drawers, W){
+  const n = {};
+  drawers.forEach(f => { const c = f.box || (f.h < 200 ? 'M' : 'D'); n[c] = (n[c] || 0) + 1; if (f.inner) n[f.inner] = (n[f.inner] || 0) + 1; });
+  return ['M', 'C', 'D'].filter(c => n[c]).map(c => ({cls:c, q:n[c], bottomA:W - 108, bottomB:492, backA:W - 120, backB:TANDEMBOX_BACK[c]}));
+}
 function panelsOf(m, S){
   const t = TYPES[m.type], p = [];
   if (t.gap || t.carcass === 'none') return p;
@@ -706,9 +724,9 @@ function panelsOf(m, S){
   if (t.row === 'low' && !t.tall){ add('Дно', wi, D, 1, 'ldsp', wi); add('Царга', wi, 100, 2, 'ldsp', wi); }
   else add('Дно и крыша', wi, D, 2, 'ldsp', wi);
   add('Полка', wi - 2, D - 20, shelvesOf(m).length, 'ldsp', wi - 2);
-  const nd = facadesOf(m, S).filter(f => f.k === 'drawer').length;
-  add('Дно ящика', wi - 26, D - 70, nd, 'ldsp', 0);
-  if (S.mat.drawers === 'tandembox') add('Задняя стенка ящика', wi - 38, 120, nd, 'ldsp', 0);
+  const dfac = facadesOf(m, S).filter(f => f.k === 'drawer');
+  if (S.mat.drawers === 'tandembox') tandemboxParts(dfac, W).forEach(b => { add('Дно ящика', b.bottomA, b.bottomB, b.q, 'ldsp', 0); add('Задняя стенка ящика', b.backA, b.backB, b.q, 'ldsp', 0); });
+  else add('Дно ящика', wi - 26, D - 70, dfac.length, 'ldsp', 0);
   if (t.back) add('Задняя стенка', W - 2, H - 2, 1, 'hdf');
   return p;
 }
@@ -719,7 +737,7 @@ function hwOf(m, facs, S){
   facs.forEach(f => {
     if (f.k === 'panel') return;
     if (f.k === 'door') h.hinge += f.h <= 900 ? 2 : f.h <= 1600 ? 3 : 4;
-    if (f.k === 'drawer') h.slide++;
+    if (f.k === 'drawer') h.slide += f.inner ? 2 : 1;
     if (f.k === 'lift') h.lift++;
     if (f.k === 'cargo') h.cargo++;
     if (f.k === 'fridge') h.fridge++;
