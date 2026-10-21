@@ -6,7 +6,7 @@
 
 - `/healthz` — проверка, что сервис жив (без токена).
 - `/bitrix/<метод>?<параметры>` — вызов метода REST, например `/bitrix/crm.deal.list?filter[STAGE_ID]=C1:WON&select[]=ID&select[]=TITLE`.
-  Разрешены только методы чтения (`list`, `get`, `getlist`, `getchildren`, `getfields`, `fields`, `getdata`, `getbyid`) из разделов `crm`, `disk`, `tasks`, `task`, `sonet_group`, `socialnetwork`, `lists`. Параметры `auth` и `token` отбрасываются.
+  Разрешены только методы чтения (`list`, `get`, `getlist`, `getchildren`, `getfields`, `fields`, `getdata`, `getbyid`) из разделов `crm`, `disk`, `tasks`, `task`, `sonet_group`, `socialnetwork`, `lists`. Из чата открыты ровно два метода: `im.dialog.messages.get` (сообщения и файлы чата задачи, `DIALOG_ID=chat<chatId>`) и `im.dialog.get`. Параметры `auth` и `token` отбрасываются.
 - `/bitrix-file/<id файла на Диске>` — скачать файл с Диска (до 25 МБ).
 
 ## Переменные окружения
