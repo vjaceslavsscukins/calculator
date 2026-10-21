@@ -770,7 +770,13 @@ const DEFAULT_PRICES = {
   work:{cut:150, edging:35, assembly:700},
   waste:{ldsp:1.2, hdf:1.15, edge:1.1},
   markup:100, install:10, delivery:3000,
+  // Закупочные цены из прежнего калькулятора салона (листы «Прайс Фурнитура» и «Прайс1»). Подъёмник выбирается на каждый модуль.
+  lifts:{hk_xs:4366, hk_top:8800, hk_top_tipon:10422, hf:16085, hs:16569, hl:17245, gas:250},
+  // Фасад в алюминиевой раме со стеклом, ₽/м² (цена с рамкой). TODO: цена 40×40 в калькуляторе не найдена, пока как у 40×20.
+  frames:{w4020:6500, w4040:6500, n2020:9500},
 };
+const LIFTS = {hk_xs:'Aventos HK-XS', hk_top:'Aventos HK top', hk_top_tipon:'Aventos HK top с TIP-ON', hf:'Aventos HF top (двойной фасад)', hs:'Aventos HS top', hl:'Aventos HL top', gas:'Газлифт'};
+const FRAMES = {w4020:'Рамка 40×20 («широкая»)', w4040:'Рамка 40×40', n2020:'Рамка 20×20 («узкая»)'};
 
 function catFind(list, id){ return list.find(r => r.id === id) || list[0]; }
 function wallsOf(S){ return S.layout === 'U' ? ['A','B','C'] : S.layout === 'L' ? ['A','B'] : ['A']; }
@@ -787,9 +793,9 @@ function facadesOf(m, S){
   const door = (x, y, w, h, hinge, ex = {}) => out.push(Object.assign({x, y, w, h, k:'door', hinge}, ex));
   (t.tpl.facades || []).forEach(fd => {
     if (fd.when && !ev(fd.when)) return;
-    if (fd.kind === 'doors'){ const rows = fd.rows || [fd]; const n = fd.n || (W > 500 ? 2 : 1), cw = W / n; for (let i = 0; i < n; i++) rows.forEach(r => door(i*cw + 2, ev(r.y), cw - 4, ev(r.h), n === 1 ? 'left' : (i ? 'right' : 'left'), Object.assign({}, r.glass ? {glass:true} : null, r.part ? {part:r.part} : null))); }
+    if (fd.kind === 'doors'){ const rows = fd.rows || [fd]; const n = fd.n || (W > 500 ? 2 : 1), cw = W / n; for (let i = 0; i < n; i++) rows.forEach(r => door(i*cw + 2, ev(r.y), cw - 4, ev(r.h), n === 1 ? 'left' : (i ? 'right' : 'left'), Object.assign({}, r.glass ? {glass:true} : null, fd.frame ? {frame:true} : null, r.part ? {part:r.part} : null))); }
     else if (fd.kind === 'drawer') out.push(Object.assign({x:2, y:ev(fd.y), w:W - 4, h:ev(fd.h), k:'drawer'}, fd.box ? {box:fd.box} : null, fd.inner ? {inner:fd.inner} : null));
-    else if (fd.kind === 'single') out.push(Object.assign({x:2, y:ev(fd.y), w:W - 4, h:ev(fd.h), k:fd.k}, fd.hinge ? {hinge:fd.hinge} : null, fd.part ? {part:fd.part} : null));
+    else if (fd.kind === 'single') out.push(Object.assign({x:2, y:ev(fd.y), w:W - 4, h:ev(fd.h), k:fd.k}, fd.hinge ? {hinge:fd.hinge} : null, fd.part ? {part:fd.part} : null, fd.second ? {second:true} : null));
     else if (fd.kind === 'corner'){ const dw = Math.max(W - fd.blind, 250); if (m.blind === 'right') door(2, 2, dw - 4, H - 4, 'left'); else door(W - dw + 2, 2, dw - 4, H - 4, 'right'); }
   });
   if (S.mat.handle === 'gola' && !t.noGola){
@@ -856,7 +862,7 @@ function hwOf(m, facs, S){
     if (f.k === 'panel') return;
     if (f.k === 'door') h.hinge += f.h <= 900 ? 2 : f.h <= 1600 ? 3 : 4;
     if (f.k === 'drawer') h.slide += f.inner ? 2 : 1;
-    if (f.k === 'lift') h.lift++;
+    if (f.k === 'lift' && !f.second) h.lift++;
     if (f.k === 'cargo') h.cargo++;
     if (f.k === 'fridge') h.fridge++;
     if (f.k === 'dw') h.dw++;
@@ -887,9 +893,11 @@ function calcModule(m, S, P, C){
   const Wt = P.waste, B = P.blum;
   const corpus = ldsp*Wt.ldsp*decor.price + hdf*Wt.hdf*P.hdf + (e2*P.edge2 + e04*P.edge04)*Wt.edge;
   // Фасадный бок считаем по цене фасадного материала без фрезеровки. TODO(технолог): нужна ли фрезеровка и кромка.
-  const facade = facArea * (fm.price + ml.add) + sideArea * fm.price + hw.glass * P.glass;
+  const frameArea = facs.reduce((a, f) => a + (f.frame ? f.w * f.h / 1e6 : 0), 0), frameUnit = frameArea ? ((P.frames || {})[m.frame || t.tpl.frame] || 0) : 0;
+  const facade = (facArea - frameArea) * (fm.price + ml.add) + frameArea * frameUnit + sideArea * fm.price + hw.glass * P.glass;
+  const liftUnit = m.lift && P.lifts && P.lifts[m.lift] != null ? P.lifts[m.lift] : B.aventos;
   const light = m.light && t.row === 'up' && !t.gap ? m.w / 1000 * P.led : 0;
-  const hwc = hw.hinge*B.hinge + hw.slide*B[S.mat.drawers] + hw.lift*B.aventos + hw.cargo*B.cargo + hw.fridge*B.fridgeMount
+  const hwc = hw.hinge*B.hinge + hw.slide*B[S.mat.drawers] + hw.lift*liftUnit + hw.cargo*B.cargo + hw.fridge*B.fridgeMount
     + hw.dw*P.dwMount + hw.bar*P.bar + hw.push*B.tipon + hw.gola*P.gola + hw.leg*P.leg + hw.hanger*P.hanger
     + hw.pin*P.shelfPin + hw.fix*P.fixings + light;
   const work = ldsp*P.work.cut + (e2 + e04)*P.work.edging + (hw.fix ? P.work.assembly : 0) + (m.cut && m.cut.pipe ? P.cutPipe : 0);
