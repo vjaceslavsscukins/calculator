@@ -507,7 +507,7 @@ dialog.dlg::backdrop{background:rgba(20,18,15,.5)}
 <script>
 // CALC-START
 // TODO(технолог): ширина угловой фальшпланки в ведомостях от 24 до 100 мм (чаще 57–60), высота как у фасада; взято 60
-const CORNER_PLANK = 60;
+const CORNER_PLANK = 50;
 const T = 16, SHEET_M2 = 2.8 * 2.07, BASE_Y = 100, UP_TOP = 2170, GOLA = 30, GOLA_RISE = 60;
 
 /* ---------- формулы шаблонов: безопасный разбор, без eval и new Function ---------- */
@@ -657,6 +657,14 @@ const BUILTIN_TEMPLATES = [
     note:SHOP_NOTE + ' Одна дверца на открытой части, глухая часть 320 мм заходит под соседний ряд; угловая фальшпланка (60 мм) входит по умолчанию.',
     todo:'Конструкция углового верхнего взята как у верхнего модуля цеха; ведомости углового уточнить у технолога.',
     facades:[{kind:'corner', blind:320}]},
+  {code:'s_up_hf', name:'Под подъёмник HF (сдвоенный фасад)', family:'shop', cat:'up', row:'up', w:800, h:720, d:340, widths:[600, 700, 800, 900, 1000], golaKeep:true, lift:'hf', panels:SHOP_UP, shelves:SHELVES_UP,
+    note:SHOP_NOTE + ' Два фасада один над другим складываются подъёмником AVENTOS HF top: один подъёмник на модуль.',
+    todo:'Подъёмник HF подбирается по высоте и весу фасадов; размеры фасадов (поровну) и состав комплекта уточнить у технолога.',
+    facades:[{kind:'single', k:'lift', y:'2', h:'round(H/2)-3'}, {kind:'single', k:'lift', second:true, y:'round(H/2)+1', h:'H-round(H/2)-4'}]},
+  {code:'s_mezz_hf', name:'Антресоль под подъёмник HF (сдвоенная)', family:'shop', cat:'mezz', row:'mezz', w:800, h:560, d:340, widths:[600, 700, 800, 900, 1000, 1200], golaKeep:true, lift:'hf', panels:SHOP_UP, shelves:[],
+    note:SHOP_NOTE + ' Антресоль с двумя фасадами по высоте под AVENTOS HF top (в моделях Базиса двухъярусные антресоли высотой 520 и 1040 мм все с подъёмником).',
+    todo:'Подъёмник HF подбирается по высоте и весу фасадов; уточнить у технолога.',
+    facades:[{kind:'single', k:'lift', y:'2', h:'round(H/2)-3'}, {kind:'single', k:'lift', second:true, y:'round(H/2)+1', h:'H-round(H/2)-4'}]},
   {code:'base_door', legacy:true, name:'С дверцами', cat:'low', row:'low', w:600, h:720, d:560, widths:[300,400,450,500,600,800,900], shelves:[{y:'round(H/2)'}], facades:[{kind:'doors', y:'2', h:'H-4'}]},
   {code:'base_drawer_door', legacy:true, name:'Ящик и дверцы', cat:'low', row:'low', w:600, h:720, d:560, widths:[400,450,500,600,800,900], shelves:[{y:'round(H*0.39)'}],
     facades:[{kind:'doors', y:'2', h:'H-round(H*0.22)-4'}, {kind:'drawer', y:'H-round(H*0.22)+2', h:'round(H*0.22)-4'}]},
@@ -864,10 +872,11 @@ function modS(m, S){
 function facadesOf(m, S){
   S = modS(m, S);
   const t = TYPES[m.type], W = m.w, H = m.h, out = [], G = S.mat.handle === 'gola' && !t.noGola ? 1 : 0, V = {W, H, D:m.d, T, G, X1:m.x1 ?? t.tpl.x1 ?? 0}, ev = e => evalExpr(e, V);
+  const optFrame = !!m.frame && !t.tpl.frame && t.row !== 'low' && !t.tall;   // алюминиевая рамка со стеклом как опция любого верхнего и антресоли
   const door = (x, y, w, h, hinge, ex = {}) => out.push(Object.assign({x, y, w, h, k:'door', hinge}, ex));
   (t.tpl.facades || []).forEach(fd => {
     if (fd.when && !ev(fd.when)) return;
-    if (fd.kind === 'doors'){ const rows = fd.rows || [fd]; const n = fd.n || (W > 500 ? 2 : 1), cw = W / n; for (let i = 0; i < n; i++) rows.forEach(r => door(i*cw + 2, ev(r.y), cw - 4, ev(r.h), n === 1 ? (m.hinge === 'right' ? 'right' : 'left') : (i ? 'right' : 'left'), Object.assign({}, r.glass ? {glass:true} : null, fd.frame ? {frame:true} : null, r.part ? {part:r.part} : null))); }
+    if (fd.kind === 'doors'){ const rows = fd.rows || [fd]; const n = fd.n || (W > 500 ? 2 : 1), cw = W / n; for (let i = 0; i < n; i++) rows.forEach(r => door(i*cw + 2, ev(r.y), cw - 4, ev(r.h), n === 1 ? (m.hinge === 'right' ? 'right' : 'left') : (i ? 'right' : 'left'), Object.assign({}, r.glass || optFrame ? {glass:true} : null, fd.frame || optFrame ? {frame:true} : null, r.part ? {part:r.part} : null))); }
     else if (fd.kind === 'drawer'){
       // Внутренний ящик (опция модуля) стоит в верхнем ящике: верхний класса D с внутренним M, нижний класса C
       const ex = Object.assign({}, fd.box ? {box:fd.box} : null, fd.inner ? {inner:fd.inner} : null);
@@ -982,7 +991,7 @@ function calcModule(m, S, P, C){
   // Фасадный бок считаем по цене фасадного материала без фрезеровки. TODO(технолог): нужна ли фрезеровка и кромка.
   const frameArea = facs.reduce((a, f) => a + (f.frame ? f.w * f.h / 1e6 : 0), 0), frameUnit = frameArea || endFrameArea ? ((P.frames || {})[m.frame || t.tpl.frame || 'w4020'] || 0) : 0;
   const facade = (facArea - frameArea) * (fm.price + ml.add) + (frameArea + endFrameArea) * frameUnit + sideArea * fm.price + (hw.glass + endGlass) * P.glass;
-  const liftUnit = m.lift && P.lifts && P.lifts[m.lift] != null ? P.lifts[m.lift] : B.aventos;
+  const lk = m.lift || t.tpl.lift, liftUnit = lk && P.lifts && P.lifts[lk] != null ? P.lifts[lk] : B.aventos;
   const light = m.light && t.row === 'up' && !t.gap ? m.w / 1000 * P.led : 0;
   const hwc = hw.hinge*(m.hingeBrand === 'hettich' ? B.hettichHinge : B.hinge) + hw.slide*B[S.mat.drawers] + hw.lift*liftUnit + hw.cargo*B.cargo + hw.fridge*B.fridgeMount
     + hw.dw*P.dwMount + hw.bar*P.bar + hw.push*B.tipon + hw.gola*P.gola + hw.leg*P.leg + hw.hanger*P.hanger
@@ -1111,8 +1120,10 @@ function bomOf(A, S, P, C){
   const glass = s(r => r.hw.glass) + A.mods.reduce((a, r) => a + r.panels.filter(p => p.mat === 'frame').reduce((b, p) => b + Math.max(0, p.a - 120) * Math.max(0, p.b - 120) / 1e6 * p.q, 0), 0); if (glass) rows.push({n:'Стекло для витрин', q:glass, u:'м²', p:P.glass});
   rows.push({g:'Фурнитура Blum и комплектующие'});
   const H = k => s(r => r.hw[k]), dr = DRAWERS[S.mat.drawers], dc = dr.colors.find(c => c.id === S.mat.drawerColor) || dr.colors[0];
+  const liftN = {}; A.mods.forEach(r => { if (r.hw.lift){ const k = r.m.lift || TYPES[r.m.type].tpl.lift || ''; liftN[k] = (liftN[k] || 0) + r.hw.lift; } });
+  const liftRows = Object.entries(liftN).map(([k, n]) => [`Подъёмник ${k ? LIFTS[k] : 'AVENTOS HK top'}`, n, k && P.lifts && P.lifts[k] != null ? P.lifts[k] : B.aventos, 'шт']);
   [['Петля CLIP top BLUMOTION', H('hinge'), B.hinge, 'шт'], [`Ящик ${dr.n}, ${dc.name.toLowerCase()}`, H('slide'), B[S.mat.drawers], 'шт'],
-   ['Подъёмник AVENTOS HK top', H('lift'), B.aventos, 'шт'], ['Карго для бутылочницы', H('cargo'), B.cargo, 'шт'],
+   ...liftRows, ['Карго для бутылочницы', H('cargo'), B.cargo, 'шт'],
    ['Крепление фасада холодильника', H('fridge'), B.fridgeMount, 'шт'], ['Крепление фасада посудомойки', H('dw'), P.dwMount, 'шт'],
    ['Ручка-скоба', H('bar'), P.bar, 'шт'], ['Толкатель TIP-ON', H('push'), B.tipon, 'шт'], ['Профиль Gola', H('gola'), P.gola, 'м'],
    ['Светодиодная лента с профилем', A.ledLen, P.led, 'м'],
@@ -1159,7 +1170,7 @@ function deepMerge(base, over){
 function load(key){ try { const s = localStorage.getItem(key); return s ? JSON.parse(s) : null; } catch(e){ return null; } }
 function store(key, v){ try { localStorage.setItem(key, JSON.stringify(v)); } catch(e){} if (key === KS) projectChanged(); else if (key === KP) settingsChanged('prices'); else if (key === KC) settingsChanged('catalogs'); }
 // Проекты: общая база для тестирования. Настройки подключения лежат в браузере, данные проектов на сервере (kitchen-api, PostgreSQL).
-const BUILD = '21.10.2026, сборка 18'; // меняется при каждом выпуске: по ней видно, какая версия открыта
+const BUILD = '22.10.2026, сборка 20'; // меняется при каждом выпуске: по ней видно, какая версия открыта
 const KSRV = 'kitchen.server.v1', API_DEFAULT = 'https://kitchen-api-c112.onrender.com';
 const PKEYS = ['client', 'order', 'layout', 'walls', 'room', 'mat', 'disc', 'modules', 'nextId', 'extra', 'parts', 'kp'];
 let srv = Object.assign({url:API_DEFAULT, code:'', name:'', role:''}, load(KSRV) || {});
@@ -1454,6 +1465,10 @@ function leftModule(){
   if (t.carcass !== 'none' && t.row !== 'low') h += `<div class="field"><span class="flabel">Торец в алюминиевой рамке со стеклом (вместо боковины)</span>
     <label class="chk"><input type="checkbox" id="edFrL" ${m.frL ? 'checked' : ''}> Слева</label>
     <label class="chk"><input type="checkbox" id="edFrR" ${m.frR ? 'checked' : ''}> Справа</label></div>`;
+  if (t.row !== 'low' && !t.tall && t.carcass !== 'none' && (t.tpl.facades || []).some(f => f.kind === 'single' && f.k === 'lift'))
+    h += `<div class="field"><span class="flabel">Подъёмник</span><div class="seg">${Object.entries(LIFTS).map(([k, v]) => `<button data-act="mod-lift" data-v="${k}" aria-pressed="${(m.lift || t.tpl.lift || 'hk_top') === k}">${esc(v)}</button>`).join('')}</div></div>`;
+  if (t.row !== 'low' && !t.tall && !t.tpl.frame && (t.tpl.facades || []).some(f => f.kind === 'doors'))
+    h += `<div class="field"><span class="flabel">Фасады</span><div class="seg"><button data-act="mod-frame" data-v="" aria-pressed="${!m.frame}">Обычные</button>${Object.entries(FRAMES).map(([k, v]) => `<button data-act="mod-frame" data-v="${k}" aria-pressed="${m.frame === k}">В алюминиевой рамке ${esc(v.replace(/ \(.*\)/, '').replace('Рамка ', ''))}</button>`).join('')}</div></div>`;
   if (t.tpl.frame || m.frL || m.frR) h += `<div class="field"><span class="flabel">Алюминиевая рамка</span><div class="seg">${Object.entries(FRAMES).map(([k, v]) => `<button data-act="mod-frame" data-v="${k}" aria-pressed="${(m.frame || t.tpl.frame || 'w4020') === k}">${esc(v)}</button>`).join('')}</div></div>`;
   if (t.x1) h += `<div class="field"><label for="edX1">Высота малой дверцы сверху, мм</label><input type="number" id="edX1" min="150" max="600" step="1" value="${m.x1 ?? t.x1}"></div>`;
   if (t.carcass !== 'none' && !t.gap) h += `<div class="field"><span class="flabel">Открывание этого модуля</span><div class="seg"><button data-act="mod-handle" data-v="" aria-pressed="${!m.handle}">Как в кухне</button>${Object.entries(HANDLES).map(([k, v]) => `<button data-act="mod-handle" data-v="${k}" aria-pressed="${m.handle === k}">${k === 'bar' ? 'Ручка' : k === 'gola' ? 'Gola' : 'Push'}</button>`).join('')}</div></div>`;
@@ -1474,7 +1489,7 @@ function leftModule(){
     <label class="chk"><input type="checkbox" id="edEndL" ${m.endL ? 'checked' : ''}> Слева</label>
     <label class="chk"><input type="checkbox" id="edEndR" ${m.endR ? 'checked' : ''}> Справа</label></div>`;
   if (t.row === 'mezz') h += `<div class="small muted">Над пеналом ставьте глубину 560, над верхними 300.</div>`;
-  if (t.corner) h += `<div class="field"><label for="edPlank">Угловая фальшпланка, ширина мм (0 — без планки)</label><input type="number" id="edPlank" min="0" max="300" step="1" value="${m.plank || 0}"><div class="small muted" style="margin-top:4px">Высота как у модуля, материал фасадный. В ведомостях ширина от 24 до 100 мм (чаще 57–60): уточните по замеру.</div></div>`;
+  if (t.corner) h += `<div class="field"><label for="edPlank">Угловая фальшпланка, ширина мм (0 — без планки)</label><input type="number" id="edPlank" min="0" max="300" step="1" value="${m.plank || 0}"><div class="small muted" style="margin-top:4px">Высота как у модуля, материал фасадный. Угловая планка 50×50 мм (бывает 40×40): это её ширина. В ведомостях встречается от 24 до 100 мм.</div><div class="seg" style="margin-top:6px"><button data-act="plank" data-v="40" aria-pressed="${m.plank === 40}">40 мм</button><button data-act="plank" data-v="50" aria-pressed="${m.plank === 50}">50 мм</button></div></div>`;
   if (t.corner) h += `<div class="field"><span class="flabel">Глухая часть (заходит под соседний ряд)</span><div class="seg"><button data-act="blind" data-v="left" aria-pressed="${m.blind !== 'right'}">Слева</button><button data-act="blind" data-v="right" aria-pressed="${m.blind === 'right'}">Справа</button></div></div>`;
   const hw = r.hw, dr = DRAWERS[S.mat.drawers];
   const hwl = hwText(hw);
@@ -2496,6 +2511,8 @@ document.addEventListener('click', e => { document.querySelectorAll('details.men
     case 'mod-drawers': if (m){ if (v) m.drawers = v; else delete m.drawers; update(); } break;
     case 'mod-hbrand': if (m){ if (v) m.hingeBrand = v; else delete m.hingeBrand; update(); } break;
     case 'mod-frame': if (m){ m.frame = v; update(); } break;
+    case 'mod-lift': if (m){ m.lift = v; update(); } break;
+    case 'plank': if (m){ m.plank = +v; update(); } break;
     case 'mod-hinge': if (m){ if (v === 'right') m.hinge = 'right'; else delete m.hinge; update(); } break;
     case 'mod-handle': if (m){ if (v) m.handle = v; else delete m.handle; update(); } break;
     case 'mod-legs': if (m){ if (v) m.legs = +v; else delete m.legs; update(); } break;
@@ -2957,8 +2974,8 @@ function buildModule(m, pos){
   const rz = TYPES[m.type].tpl.golaKeep ? 0 : riseOf(m), fs0 = facadesOf(m, S), top0 = Math.max(0, ...fs0.map(f => f.y + f.h)), up = TYPES[m.type].tpl.golaKeep && riseOf(m) ? Math.max(0, m.h + riseOf(m) - 32 - top0) : 0;
   const fsList = fs0.map(f => rz && f.y + f.h >= m.h - 40 ? Object.assign({}, f, {h:f.h + rz}) : up && f.k !== 'panel' && f.y + f.h >= top0 - 1 ? Object.assign({}, f, {h:f.h + up}) : f);
   const golaTop = Math.max(0, ...fsList.map(f => f.y + f.h));
-  // Угловая фальшпланка: полоса из материала фасада в глухой части, вплотную к дверце.
-  // TODO(технолог): положение планки (у дверцы или у торца глухой части) уточнить, пока у дверцы.
+  // Угловая фальшпланка 50×50 (бывает 40×40) закрывает щель между глухой частью и дверцей: стоит в глухой части вплотную к дверце, из материала фасада.
+  // TODO(технолог): положение и ширина планки (24–100 мм по ведомостям), нужна ли вторая полоса вдоль соседней стены.
   const cdoor = t.corner ? fsList.find(f => f.k === 'door') : null;
   if (cdoor && +m.plank > 4){
     const pw = Math.min(+m.plank, W - cdoor.w - 4), px = cdoor.x < W / 2 ? cdoor.x + cdoor.w + 2 : cdoor.x - 2 - pw, pg = new THREE.Group();
@@ -3176,10 +3193,19 @@ function hoverAt(cx, cy, type, m){
   if (!hit){ dropAt = null; hideGhost(); return; }
   dropAt = {wall:hit.wall, u:hit.u}; showGhost(type, hit.wall, slotFor(type, hit.wall, hit.u, m && m.id).x, m);
 }
+// Глухая часть углового модуля смотрит в угол: на стене А слева, если там стена Б, справа, если там стена В; если стена одна, в ближайший конец
+function cornerSide(wall, xc){
+  if (wall === 'B') return 'right'; if (wall === 'C') return 'left';
+  const ws = wallsOf(S), L = S.walls.A;
+  if (ws.includes('B') && !ws.includes('C')) return 'left';
+  if (ws.includes('C') && !ws.includes('B')) return 'right';
+  return xc < L / 2 ? 'left' : 'right';
+}
 function finishPlace(type, moveId){
   const {wall, u} = dropAt, slot = slotFor(type, wall, u, moveId); let nm;
   if (moveId){ nm = S.modules.find(o => o.id === moveId); S.modules = S.modules.filter(o => o !== nm); if (nm.wall !== wall){ nm.wall = wall; nm.blind = wall === 'B' ? 'right' : 'left'; } }
   else nm = newModule(type, wall);
+  if (TYPES[type].corner) nm.blind = cornerSide(wall, slot.x + nm.w / 2);
   if (slot.ref) S.modules.splice(S.modules.indexOf(slot.ref), 0, nm);
   else if (slot.list.length) S.modules.splice(S.modules.indexOf(slot.list[slot.list.length - 1]) + 1, 0, nm);
   else S.modules.push(nm);
