@@ -272,3 +272,31 @@ test('шаблон с деталями: плохая формула и неве�
   const bad3 = JSON.parse(JSON.stringify(t)); bad3.code = 'my_shop_3'; bad3.panels[2].q = '1.5';
   assert.match(cur.validateTemplate(bad3).join(';'), /количество/);
 });
+
+// Открывание, заданное у модуля, перекрывает открывание кухни; планки и доборы идут в смету по площади
+function shopState(extra = {}) {
+  return {
+    layout: 'I', walls: { A: 4000, B: 2000, C: 2000 }, room: { height: 2700, wall: '#fff', floor: 'oakL' }, disc: 0, extra: [], nextId: 5,
+    modules: [{ id: 'm1', type: 's_base_door', wall: 'A', w: 600, h: 720, d: 510, blind: 'left', corpus: null, facade: null, light: false, cut: { sink: false, hob: false, pipe: false } }],
+    mat: { corpus: cur.DEFAULT_CAT.corpus[0].id, facade: cur.DEFAULT_CAT.facade[0].id, milling: cur.DEFAULT_CAT.milling[0].id, fLow: 'k1', fUp: 'k4', handle: 'bar', drawers: 'legrabox', drawerColor: 'silk', top: cur.DEFAULT_CAT.top[0].id, splash: false },
+    ...extra,
+  };
+}
+test('открывание у модуля: Gola у одного модуля при ручке в кухне даёт деталь 764, без выбора остаётся 704', () => {
+  const S = shopState(), m = S.modules[0];
+  const side = (mm) => cur.panelsOf(mm, S).find((p) => p.n === 'Боковина').a;
+  assert.equal(side(m), 704);
+  m.handle = 'gola'; assert.equal(side(m), 764);
+  assert.ok(cur.hwOf(m, cur.facadesOf(m, S), S).gola > 0, 'профиль Gola в фурнитуре');
+  delete m.handle; assert.equal(side(m), 704);
+});
+test('планки и доборы: площадь по материалу, пустые строки не считаются', () => {
+  const S = shopState({ parts: [{ id: 'p1', name: 'Угловая планка', w: 100, h: 720, q: 2, mat: 'ldsp' }, { id: 'p2', name: '', w: 0, h: 720, q: 1, mat: 'ldsp' }] });
+  const A = cur.calcAll(S, cur.DEFAULT_PRICES, cur.DEFAULT_CAT);
+  const line = A.common.filter((c) => c.part);
+  assert.equal(line.length, 1);
+  assert.equal(+line[0].q.toFixed(3), 0.144);
+  assert.match(line[0].n, /Угловая планка, 100×720 мм, 2 шт/);
+  const base = cur.calcAll(shopState(), cur.DEFAULT_PRICES, cur.DEFAULT_CAT);
+  assert.ok(A.total > base.total, 'планки увеличивают смету');
+});
