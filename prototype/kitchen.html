@@ -508,7 +508,7 @@ dialog.dlg::backdrop{background:rgba(20,18,15,.5)}
 // CALC-START
 // TODO(технолог): ширина угловой фальшпланки в ведомостях от 24 до 100 мм (чаще 57–60), высота как у фасада; взято 60
 const CORNER_PLANK = 60;
-const T = 16, SHEET_M2 = 2.8 * 2.07, BASE_Y = 100, UP_TOP = 2170, GOLA = 30;
+const T = 16, SHEET_M2 = 2.8 * 2.07, BASE_Y = 100, UP_TOP = 2170, GOLA = 30, GOLA_RISE = 60;
 
 /* ---------- формулы шаблонов: безопасный разбор, без eval и new Function ---------- */
 const FORMULA_FNS = {round:Math.round, floor:Math.floor, ceil:Math.ceil, min:Math.min, max:Math.max, abs:Math.abs};
@@ -803,6 +803,9 @@ function wallsOf(S){ return S.layout === 'U' ? ['A','B','C'] : S.layout === 'L' 
 function activeModules(S){ const w = wallsOf(S); return S.modules.filter(m => w.includes(m.wall)); }
 function facadeColorId(m, S){ return m.facade || (TYPES[m.type].row === 'low' ? S.mat.fLow : S.mat.fUp); }
 
+// Нижние модули с Gola выше на 60 мм (боковина 764 вместо 704 по ведомостям): уровень столешницы один у всех модулей ряда.
+// У модулей цеха (golaKeep) прибавка заложена в формулах шаблона через G. Остальные считаются по эталону без неё, в 3D их верх дотягивается до общего уровня.
+function riseOfType(t, S){ return S.mat.handle === 'gola' && t.row === 'low' && !t.tall && !t.gap ? GOLA_RISE : 0; }
 function shelvesOf(m){
   const t = TYPES[m.type], V = {W:m.w, H:m.h, D:m.d, T};
   return (t.tpl.shelves || []).filter(sh => !sh.when || evalExpr(sh.when, V)).map(sh => evalExpr(sh.y, V));
@@ -1107,7 +1110,7 @@ function deepMerge(base, over){
 function load(key){ try { const s = localStorage.getItem(key); return s ? JSON.parse(s) : null; } catch(e){ return null; } }
 function store(key, v){ try { localStorage.setItem(key, JSON.stringify(v)); } catch(e){} if (key === KS) projectChanged(); else if (key === KP) settingsChanged('prices'); else if (key === KC) settingsChanged('catalogs'); }
 // Проекты: общая база для тестирования. Настройки подключения лежат в браузере, данные проектов на сервере (kitchen-api, PostgreSQL).
-const BUILD = '21.10.2026, сборка 11'; // меняется при каждом выпуске: по ней видно, какая версия открыта
+const BUILD = '21.10.2026, сборка 12'; // меняется при каждом выпуске: по ней видно, какая версия открыта
 const KSRV = 'kitchen.server.v1', API_DEFAULT = 'https://kitchen-api-c112.onrender.com';
 const PKEYS = ['client', 'order', 'layout', 'walls', 'room', 'mat', 'disc', 'modules', 'nextId', 'extra', 'parts', 'kp'];
 let srv = Object.assign({url:API_DEFAULT, code:'', name:'', role:''}, load(KSRV) || {});
@@ -1189,8 +1192,7 @@ const LEGS = [100, 150];
 const upBase = () => S.mat.upBottom || 1450;   // низ верхних модулей от пола (в моделях 1450–1530)
 const handleOf = m => (m && m.handle && HANDLES[m.handle]) ? m.handle : S.mat.handle;
 const legsOf = m => { const t = TYPES[m.type]; if (t.row !== 'low' || t.tall) return BASE_Y; return LEGS.includes(m.legs) ? m.legs : LEGS.includes(S.mat.legs) ? S.mat.legs : BASE_Y; };
-// модули цеха с Gola выше на 60 мм (боковина 764 вместо 704 по ведомостям)
-const riseOf = m => { const t = TYPES[m.type]; return t.golaRise && handleOf(m) === 'gola' && !t.noGola ? t.golaRise : 0; };
+const riseOf = m => riseOfType(TYPES[m.type], {mat:{handle:handleOf(m)}});
 // картинки каталога рисуются в выбранной «папке» (ручка / Gola / push), а не в стиле открытого проекта
 const THUMB_FACADE = 'k1';
 const catStyle = () => HANDLES[S.catStyle] ? S.catStyle : 'bar';
@@ -1400,6 +1402,12 @@ function leftModule(){
   if (t.x1) h += `<div class="field"><label for="edX1">Высота малой дверцы сверху, мм</label><input type="number" id="edX1" min="150" max="600" step="1" value="${m.x1 ?? t.x1}"></div>`;
   if (t.carcass !== 'none' && !t.gap) h += `<div class="field"><span class="flabel">Открывание этого модуля</span><div class="seg"><button data-act="mod-handle" data-v="" aria-pressed="${!m.handle}">Как в кухне</button>${Object.entries(HANDLES).map(([k, v]) => `<button data-act="mod-handle" data-v="${k}" aria-pressed="${m.handle === k}">${k === 'bar' ? 'Ручка' : k === 'gola' ? 'Gola' : 'Push'}</button>`).join('')}</div></div>`;
   if (t.row === 'low' && !t.tall && t.carcass !== 'none') h += `<div class="field"><span class="flabel">Ножки этого модуля, мм</span><div class="seg"><button data-act="mod-legs" data-v="" aria-pressed="${!m.legs}">Как в кухне</button>${LEGS.map(v => `<button data-act="mod-legs" data-v="${v}" aria-pressed="${m.legs === v}">${v}</button>`).join('')}</div></div>`;
+  if (t.row === 'low' && !t.tall && t.carcass !== 'none'){
+    const topOf = x => legsOf(x) + x.h + riseOf(x), mine = topOf(m);
+    const odd = S.modules.filter(x => x.wall === m.wall && x.id !== m.id && TYPES[x.type].row === 'low' && !TYPES[x.type].tall && !TYPES[x.type].gap && TYPES[x.type].carcass !== 'none' && topOf(x) !== mine);
+    h += `<div class="muted">Верх модуля ${mine} мм от пола.</div>`;
+    if (odd.length) h += `<div class="warn">Высота не совпадает с соседними модулями на стене (${[...new Set(odd.map(topOf))].join(', ')} мм): проверьте ножки.</div>`;
+  }
   if (t.row === 'up') h += `<label class="chk"><input type="checkbox" id="edLight" ${m.light ? 'checked' : ''}> Подсветка снизу, ${nf0.format(P.led)} ₽/м</label>`;
   if (t.row === 'low' && !t.tall && t.carcass !== 'none'){
     h += `<label class="chk"><input type="checkbox" id="edSink" ${m.cut.sink ? 'checked' : ''}> Мойка: вырез в столешнице</label>
@@ -2880,8 +2888,10 @@ function buildModule(m, pos){
     cg.userData.fid = m.id + ':' + facadesOf(m, S).findIndex(x => x.k === 'cargo'); addAnim(cg.userData.fid, cg, 'z', (D - 60) / 1000);
   }
 
-  const golaTop = Math.max(0, ...facadesOf(m, S).map(f => f.y + f.h));
-  facadesOf(m, S).forEach((f, fi) => {
+  // Шаблоны без golaKeep считаются без прибавки Gola, в 3D верхний фасад дотягиваем до общего уровня столешницы
+  const rz = TYPES[m.type].tpl.golaKeep ? 0 : riseOf(m), fsList = facadesOf(m, S).map(f => rz && f.y + f.h >= m.h - 40 ? Object.assign({}, f, {h:f.h + rz}) : f);
+  const golaTop = Math.max(0, ...fsList.map(f => f.y + f.h));
+  fsList.forEach((f, fi) => {
     if (f.k === 'cargo') return;
     const fid = m.id + ':' + fi; let piv = new THREE.Group(), hx0 = 0, hy0 = 0; piv.userData.fid = fid;
     if (f.k === 'door' || f.k === 'fridge'){
