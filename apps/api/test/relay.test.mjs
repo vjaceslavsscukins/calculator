@@ -54,7 +54,7 @@ test('разрешённый метод проходит, параметры с�
 
 test('методы записи и лишние разделы запрещены', async () => {
   const s = await start();
-  for (const m of ['crm.deal.add', 'crm.deal.update', 'crm.deal.delete', 'disk.file.getExternalLink', 'user.get', 'disk.folder.uploadfile', '..%2F..%2Fcrm.deal.list', 'crm', 'crm.deal.list.json']) {
+  for (const m of ['crm.deal.add', 'crm.deal.update', 'crm.deal.delete', 'disk.file.getExternalLink', 'user.get', 'disk.folder.uploadfile', '..%2F..%2Fcrm.deal.list', 'crm', 'crm.deal.list.json', 'im.message.add']) {
     const r = await fetch(`${s.base}/bitrix/${m}`, { headers: auth });
     assert.equal(r.status, 403, m);
   }
@@ -102,4 +102,6 @@ test('настройки проверяются при старте', () => {
   assert.throws(() => normalizeWebhook('http://a.bitrix24.ru/rest/1/abc/'), /https/);
   assert.equal(normalizeWebhook('https://sofiya.bitrix24.ru/rest/1/abc123/').host, 'sofiya.bitrix24.ru');
   assert.ok(isAllowedMethod('disk.folder.getchildren') && isAllowedMethod('crm.item.list') && !isAllowedMethod('crm.item.add'));
+  assert.ok(isAllowedMethod('im.dialog.messages.get') && isAllowedMethod('im.dialog.get'));
+  assert.ok(!isAllowedMethod('im.message.add') && !isAllowedMethod('im.dialog.messages.add') && !isAllowedMethod('im.chat.list') && !isAllowedMethod('im.chat.add') && !isAllowedMethod('im.disk.file.commit') && !isAllowedMethod('im.dialog.messages.get.json'));
 });

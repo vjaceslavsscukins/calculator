@@ -2,9 +2,13 @@
 const FAMILIES = new Set(['crm', 'disk', 'tasks', 'task', 'sonet_group', 'socialnetwork', 'lists']);
 const VERBS = new Set(['list', 'get', 'getlist', 'getchildren', 'getfields', 'fields', 'getdata', 'getbyid']);
 
+// Чат задачи: комментарии новых задач живут в чате, а не в task.commentitem. Разрешены только два метода чтения, остальной im.* закрыт.
+const EXACT = new Set(['im.dialog.messages.get', 'im.dialog.get']);
+
 export function isAllowedMethod(method) {
   if (!/^[a-z0-9_]+(\.[a-z0-9_]+)+$/.test(method)) return false;
   if (method.includes('externallink')) return false; // создаёт публичную ссылку, это уже запись
+  if (EXACT.has(method)) return true;
   const parts = method.split('.');
   return FAMILIES.has(parts[0]) && VERBS.has(parts[parts.length - 1]);
 }
