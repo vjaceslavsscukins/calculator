@@ -1154,7 +1154,7 @@ function deepMerge(base, over){
 function load(key){ try { const s = localStorage.getItem(key); return s ? JSON.parse(s) : null; } catch(e){ return null; } }
 function store(key, v){ try { localStorage.setItem(key, JSON.stringify(v)); } catch(e){} if (key === KS) projectChanged(); else if (key === KP) settingsChanged('prices'); else if (key === KC) settingsChanged('catalogs'); }
 // Проекты: общая база для тестирования. Настройки подключения лежат в браузере, данные проектов на сервере (kitchen-api, PostgreSQL).
-const BUILD = '21.10.2026, сборка 15'; // меняется при каждом выпуске: по ней видно, какая версия открыта
+const BUILD = '21.10.2026, сборка 16'; // меняется при каждом выпуске: по ней видно, какая версия открыта
 const KSRV = 'kitchen.server.v1', API_DEFAULT = 'https://kitchen-api-c112.onrender.com';
 const PKEYS = ['client', 'order', 'layout', 'walls', 'room', 'mat', 'disc', 'modules', 'nextId', 'extra', 'parts', 'kp'];
 let srv = Object.assign({url:API_DEFAULT, code:'', name:'', role:''}, load(KSRV) || {});
@@ -2934,7 +2934,9 @@ function buildModule(m, pos){
   }
 
   // Шаблоны без golaKeep считаются без прибавки Gola, в 3D верхний фасад дотягиваем до общего уровня столешницы
-  const rz = TYPES[m.type].tpl.golaKeep ? 0 : riseOf(m), fsList = facadesOf(m, S).map(f => rz && f.y + f.h >= m.h - 40 ? Object.assign({}, f, {h:f.h + rz}) : f);
+  // Верхний фасад (и профиль Gola над ним) у всех нижних модулей на одном уровне: у модулей цеха он по ведомости выше на 30 мм у дверей, чем у ящиков, в 3D ящик дотягиваем.
+  const rz = TYPES[m.type].tpl.golaKeep ? 0 : riseOf(m), fs0 = facadesOf(m, S), top0 = Math.max(0, ...fs0.map(f => f.y + f.h)), up = TYPES[m.type].tpl.golaKeep && riseOf(m) ? Math.max(0, m.h + riseOf(m) - 32 - top0) : 0;
+  const fsList = fs0.map(f => rz && f.y + f.h >= m.h - 40 ? Object.assign({}, f, {h:f.h + rz}) : up && f.k !== 'panel' && f.y + f.h >= top0 - 1 ? Object.assign({}, f, {h:f.h + up}) : f);
   const golaTop = Math.max(0, ...fsList.map(f => f.y + f.h));
   // Угловая фальшпланка: полоса из материала фасада в глухой части, вплотную к дверце.
   // TODO(технолог): положение планки (у дверцы или у торца глухой части) уточнить, пока у дверцы.
