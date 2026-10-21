@@ -60,6 +60,21 @@ button{cursor:pointer}
 .stage-tools{position:absolute;top:12px;right:12px;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
 .gbtn{border:1px solid var(--line);background:var(--glass);backdrop-filter:blur(8px);border-radius:10px;padding:7px 12px;font-size:12.5px;font-weight:500;box-shadow:0 1px 2px rgba(0,0,0,.04)}
 .gbtn:hover{border-color:var(--muted)}
+.gbtn:disabled{opacity:.4;cursor:default}
+.gbtn:disabled:hover{border-color:var(--line)}
+.top-kp{margin-left:auto;margin-right:4px}
+.modbar{position:absolute;z-index:3;display:flex;align-items:center;gap:2px;background:var(--glass);backdrop-filter:blur(10px);border:1px solid var(--line);border-radius:12px;padding:3px;box-shadow:var(--shadow);transform:translateX(-50%);white-space:nowrap}
+.modbar[hidden]{display:none}
+.modbar .nm{font-size:12px;color:var(--muted);padding:0 8px 0 6px;max-width:160px;overflow:hidden;text-overflow:ellipsis}
+.modbar .mb{border:0;background:transparent;border-radius:8px;min-width:30px;height:30px;padding:0 8px;font-size:13px;font-weight:500;display:inline-flex;align-items:center;justify-content:center}
+.modbar .mb:hover{background:var(--sunk)}
+.modbar .mb.danger{color:var(--warn)}
+.modbar .sep{width:1px;height:18px;background:var(--line);margin:0 3px}
+.modbar input{width:62px;text-align:center;padding:5px 4px;border-radius:8px;font-size:13px}
+.presets{display:flex;flex-direction:column;gap:6px}
+.preset{display:flex;gap:6px}
+.preset .btn:first-child{flex:1;text-align:left;overflow:hidden;text-overflow:ellipsis}
+.presave{display:flex;gap:6px}
 .gbtn[aria-pressed="true"]{background:var(--pri);color:var(--pri-ink);border-color:var(--pri)}
 .stage-hint{position:absolute;left:16px;bottom:78px;right:16px;font-size:12px;color:var(--muted);pointer-events:none}
 .stage-err{position:absolute;inset:0;display:grid;place-items:center;padding:24px;text-align:center;color:var(--muted)}
@@ -239,6 +254,7 @@ details.paste textarea{min-height:90px;font-family:var(--f-mono);font-size:12px;
 @media (max-width: 560px){
   .hdr-total{text-align:left}
   .top-flag{display:none}
+  .top-kp{display:none}
   .cards{grid-template-columns:repeat(2,minmax(0,1fr))}
   .row3{grid-template-columns:1fr 1fr}
 }
@@ -290,6 +306,7 @@ details.paste textarea{min-height:90px;font-family:var(--f-mono);font-size:12px;
       </div>
     </div>
     <span class="top-flag">Цены примерные. Свои загружаются во вкладке «Прайс и каталоги»</span>
+    <button class="btn pri top-kp" data-act="print-kp">Печать КП</button>
     <div class="hdr-total">
       <div class="lbl">Итого для клиента</div>
       <div class="num" id="hdrTotal">0 ₽</div>
@@ -312,12 +329,15 @@ details.paste textarea{min-height:90px;font-family:var(--f-mono);font-size:12px;
       <div class="stage-wrap" id="stageWrap">
         <div id="stage" aria-label="3D-вид кухни"></div>
         <div class="place-banner" id="placeBanner" hidden><span id="placeText"></span><button data-act="place-cancel">Отмена</button></div>
+        <div class="modbar" id="modbar" hidden></div>
         <div class="stage-tools">
+          <button class="gbtn" id="btnUndo" data-act="undo" disabled title="Отменить (Ctrl+Z)">Отменить</button>
+          <button class="gbtn" id="btnRedo" data-act="redo" disabled title="Повторить (Ctrl+Shift+Z)">Повторить</button>
           <button class="gbtn" id="btnOpen" data-act="open-all" aria-pressed="false">Открыть всё</button>
           <button class="gbtn" id="btnDims" data-act="toggle-dims" aria-pressed="false">Размеры</button>
           <button class="gbtn" data-act="reset-view">Сбросить вид</button>
         </div>
-        <div class="stage-hint" id="stageHint">Вращение: перетаскивание. Выбранный шкаф можно переставить, потянув за него. Двойной клик открывает дверцы.</div>
+        <div class="stage-hint" id="stageHint">Вращение: перетаскивание. Выбранный шкаф можно переставить, потянув за него. Двойной клик по дверце или ящику открывает только его.</div>
       </div>
 
       <section class="docs" id="docs" data-open="false" aria-label="Документы">
@@ -661,6 +681,12 @@ function bomOf(A, S, P, C){
 // CALC-END
 
 /* ---------------- state ---------------- */
+const KPR = 'kitchen.presets.v1';
+const BUILTIN_PRESETS = [
+  {id:'b1', name:'Белая эмаль, скоба', builtin:true, mat:{corpus:'c1', facade:'f2', milling:'n0', fLow:'k1', fUp:'k1', handle:'bar'}},
+  {id:'b2', name:'Шалфей и белый, Gola', builtin:true, mat:{corpus:'c1', facade:'f2', milling:'n1', fLow:'k4', fUp:'k1', handle:'gola'}},
+  {id:'b3', name:'Дуб и графит, push', builtin:true, mat:{corpus:'c3', facade:'f1', milling:'n0', fLow:'k8', fUp:'k7', handle:'push'}}];
+const userPresets = () => load(KPR) || [];
 const KS = 'kitchen.state.v2', KP = 'kitchen.prices.v2', KC = 'kitchen.catalog.v2';
 const WALL_COLORS = [{name:'Белый', hex:'#F2F1EC'}, {name:'Тёплый серый', hex:'#D9D5CC'}, {name:'Оливковый', hex:'#B9B89B'}, {name:'Глиняный', hex:'#CDAA90'}, {name:'Сизый', hex:'#A9B4BA'}, {name:'Графит', hex:'#55595B'}];
 const FLOORS = [{id:'oakL', name:'Дуб светлый', hex:'#CDB497', pattern:'planks'}, {id:'oakD', name:'Дуб тёмный', hex:'#7C5C40', pattern:'planks'}, {id:'tile', name:'Плитка серая', hex:'#B9BAB6', pattern:'tiles'}, {id:'conc', name:'Микроцемент', hex:'#C8C6C0', pattern:'plain'}];
@@ -860,7 +886,7 @@ function leftModule(){
     <div class="chips">${t.widths.map(w => `<button class="chip" data-act="w-chip" data-v="${w}" aria-pressed="${w === m.w}">${w}</button>`).join('')}</div>
     <div class="btns">
       <button class="btn" data-act="mv" data-v="-1">← Левее</button><button class="btn" data-act="mv" data-v="1">Правее →</button>
-      ${t.gap || m.type === 'upper_open' ? '' : `<button class="btn" data-act="toggle-open">${isOpen(m.id) ? 'Закрыть' : 'Открыть'}</button>`}
+      ${t.gap || m.type === 'upper_open' ? '' : `<button class="btn" data-act="toggle-open">${modOpen(m) ? 'Закрыть все' : 'Открыть все'}</button>`}
       <button class="btn" data-act="dup">Копия</button><button class="btn danger" data-act="del">Удалить</button>
     </div></div>`;
   if (t.gap) return h + `<div class="sec"><div class="small muted">Свободное место: окно, отдельностоящий холодильник, плита. В смету не входит.</div></div>`;
@@ -901,6 +927,11 @@ function leftMat(){
   const dr = DRAWERS[S.mat.drawers];
   const ups = activeModules(S).filter(m => TYPES[m.type].row === 'up' && !TYPES[m.type].gap), lit = ups.filter(m => m.light).length;
   return `
+  <div class="sec"><h3>Комплекты отделки</h3>
+    <div class="presets">${[...BUILTIN_PRESETS, ...userPresets()].map(p => `<div class="preset"><button class="btn" data-act="preset-apply" data-v="${p.id}">${esc(p.name)}</button>${p.builtin ? '' : `<button class="btn sm danger" data-act="preset-del" data-v="${p.id}" aria-label="Удалить комплект ${esc(p.name)}">×</button>`}</div>`).join('')}</div>
+    <div class="presave"><input type="text" id="inPresetName" placeholder="Название комплекта" aria-label="Название комплекта"><button class="btn" data-act="preset-save">Сохранить текущий</button></div>
+    <div class="small muted">Комплект запоминает корпус, фасады, цвета, открывание, ящики и столешницу.</div>
+  </div>
   <div class="sec"><h3>Корпус</h3>
     <div class="field"><span class="flabel">ЛДСП: <span class="swname">${esc(catFind(C.corpus, S.mat.corpus).name)}</span></span>${swatchRow(C.corpus, S.mat.corpus, 'mat', 'corpus')}</div></div>
   <div class="sec"><h3>Фасады</h3>
@@ -1174,16 +1205,88 @@ async function printKP(){
 
 /* ---------------- update ---------------- */
 function recalc(){ A = calcAll(S, P, C); }
+/* ---------------- отмена и повтор ---------------- */
+const HKEYS = ['modules', 'walls', 'layout', 'room', 'mat', 'disc', 'extra'];
+let hist = [], fut = [], histCur = null;
+function snapState(){ const o = {}; HKEYS.forEach(k => o[k] = S[k]); return JSON.stringify(o); }
+function updateUndoBtns(){ $('btnUndo').disabled = !hist.length; $('btnRedo').disabled = !fut.length; }
+function histTrack(){
+  const cur = snapState();
+  if (histCur === null){ histCur = cur; return; }
+  if (cur === histCur) return;
+  hist.push(histCur); if (hist.length > 100) hist.shift(); fut = []; histCur = cur; updateUndoBtns();
+}
+function applySnap(str){
+  const o = JSON.parse(str); HKEYS.forEach(k => S[k] = o[k]);
+  if (!S.modules.some(m => m.id === S.selected)) S.selected = null;
+  ensureRefs(); renderExtras(); update({resetCam:false}); updateUndoBtns();
+}
+function undo(){ if (!hist.length){ toast('Нечего отменять'); return; } fut.push(histCur); histCur = hist.pop(); applySnap(histCur); toast('Отменено'); }
+function redo(){ if (!fut.length){ toast('Нечего повторять'); return; } hist.push(histCur); histCur = fut.pop(); applySnap(histCur); toast('Повторено'); }
+
+/* ---------------- правки выбранного модуля (кнопки, панель в 3D, клавиши) ---------------- */
+function modAct(act, v){
+  const m = selMod(); if (!m) return;
+  if (act === 'mv'){
+    const dir = +v, row = TYPES[m.type].row, i = S.modules.indexOf(m);
+    for (let j = i + dir; j >= 0 && j < S.modules.length; j += dir){ const o = S.modules[j]; if (o.wall === m.wall && TYPES[o.type].row === row){ S.modules[i] = o; S.modules[j] = m; break; } }
+    update();
+  } else if (act === 'dup'){
+    const c = JSON.parse(JSON.stringify(m)); c.id = 'm' + (S.nextId++); S.modules.splice(S.modules.indexOf(m) + 1, 0, c); S.selected = c.id; update(); toast('Копия добавлена');
+  } else if (act === 'del'){
+    const grp = S.modules.filter(o => o.wall === m.wall && TYPES[o.type].row === TYPES[m.type].row), gi = grp.indexOf(m), next = grp[gi + 1] || grp[gi - 1];
+    S.modules = S.modules.filter(o => o !== m); S.selected = next ? next.id : null; update(); toast('Модуль удалён (Ctrl+Z вернёт)');
+  } else if (act === 'w-step'){
+    const ws = [...new Set([...TYPES[m.type].widths, m.w])].sort((a, b) => a - b), nw = ws[ws.indexOf(m.w) + +v];
+    if (nw){ m.w = nw; update(); } else toast('Это крайний стандартный размер');
+  }
+}
+function renderModbar(){
+  const bar = $('modbar'), m = selMod();
+  if (!m || !has3D){ bar.hidden = true; return; }
+  const t = TYPES[m.type];
+  bar.innerHTML = `<span class="nm">${esc(modLabel(m))}</span>
+    <button class="mb" data-act="w-step" data-v="-1" title="Уже: предыдущая стандартная ширина" aria-label="Уже">−</button>
+    <input type="number" id="mbW" value="${m.w}" min="150" max="2400" step="1" aria-label="Ширина, мм">
+    <button class="mb" data-act="w-step" data-v="1" title="Шире: следующая стандартная ширина" aria-label="Шире">+</button><span class="sep"></span>
+    <button class="mb" data-act="mv" data-v="-1" title="Левее (стрелка ←)" aria-label="Левее">←</button>
+    <button class="mb" data-act="mv" data-v="1" title="Правее (стрелка →)" aria-label="Правее">→</button><span class="sep"></span>
+    ${t.gap || m.type === 'upper_open' ? '' : `<button class="mb" data-act="toggle-open" title="Открыть или закрыть все дверцы и ящики модуля. Одну дверцу или один ящик открывает двойной клик по ней">${modOpen(m) ? 'Закрыть' : 'Открыть'}</button>`}
+    <button class="mb" data-act="dup" title="Копия (Ctrl+D)">Копия</button>
+    <button class="mb danger" data-act="del" title="Удалить (Delete)">Удалить</button>`;
+  bar.hidden = false;
+}
+let selBox = null;
+function positionModbar(){
+  const bar = $('modbar'); if (bar.hidden) return;
+  const hide = !selBox || (mv && mv.active) || dragging || placing;
+  bar.style.visibility = hide ? 'hidden' : 'visible'; if (hide) return;
+  const rect = $('stage').getBoundingClientRect(), c = new THREE.Vector3((selBox.min.x + selBox.max.x) / 2, selBox.max.y, (selBox.min.z + selBox.max.z) / 2).project(camera);
+  if (c.z > 1){ bar.style.visibility = 'hidden'; return; }
+  const half = bar.offsetWidth / 2;
+  const x = Math.max(half + 8, Math.min(rect.width - half - 8, (c.x + 1) / 2 * rect.width));
+  const y = Math.max(54, Math.min(rect.height - bar.offsetHeight - 70, (1 - c.y) / 2 * rect.height - 14 - bar.offsetHeight));
+  bar.style.left = x + 'px'; bar.style.top = y + 'px';
+}
+
 function update({left = true, resetCam = false, rebuild = true} = {}){
-  recalc(); renderHeader();
+  histTrack(); recalc(); renderHeader();
   if (left) renderLeft();
   renderSmeta(); renderBom();
   if (rebuild) build3D(resetCam);
+  renderModbar();
   store(KS, S);
 }
 function clampNum(v, lo, hi, def){ const n = Math.round(parseNum(v)); if (!isFinite(n)) return def; return Math.min(hi, Math.max(lo, n)); }
 function selectMod(id, fromScene){ S.selected = id; S.ltab = 'module'; const m = S.modules.find(x => x.id === id); if (m) S.place = m.wall; update(); if (fromScene) $('lbody').scrollTop = 0; }
 function isOpen(id){ return openAll || openSet.has(id); }
+// каждая дверца и каждый ящик открываются сами по себе: идентификатор «модуль:номер фасада»
+const modFids = m => facadesOf(m, S).map((f, i) => m.id + ':' + i);
+const modOpen = m => modFids(m).some(isOpen);
+function syncOpenAllBtn(){ const b = $('btnOpen'); b.setAttribute('aria-pressed', String(openAll)); b.textContent = openAll ? 'Закрыть всё' : 'Открыть всё'; }
+function leaveOpenAll(){ if (!openAll) return; openAll = false; activeModules(S).forEach(m => modFids(m).forEach(f => openSet.add(f))); syncOpenAllBtn(); }
+function toggleFid(fid){ leaveOpenAll(); openSet.has(fid) ? openSet.delete(fid) : openSet.add(fid); }
+function toggleModOpen(m){ leaveOpenAll(); const ids = modFids(m), open = ids.some(isOpen); ids.forEach(f => open ? openSet.delete(f) : openSet.add(f)); }
 const confirmTimers = {};
 function confirmClick(btn, label, fn){
   if (btn.dataset.armed === '1'){ btn.dataset.armed = ''; btn.textContent = btn.dataset.orig; clearTimeout(confirmTimers[btn.id]); fn(); return; }
@@ -1225,15 +1328,20 @@ document.addEventListener('click', e => {
     case 'w-chip': if (m){ m.w = +v; update(); } break;
     case 'blind': if (m){ m.blind = v; update(); } break;
     case 'ov': if (m){ m[k] = v || null; update(); } break;
-    case 'mv': if (m){
-      const dir = +v, row = TYPES[m.type].row, i = S.modules.indexOf(m);
-      for (let j = i + dir; j >= 0 && j < S.modules.length; j += dir){ const o = S.modules[j]; if (o.wall === m.wall && TYPES[o.type].row === row){ S.modules[i] = o; S.modules[j] = m; break; } }
-      update(); } break;
-    case 'dup': if (m){ const c = JSON.parse(JSON.stringify(m)); c.id = 'm' + (S.nextId++); S.modules.splice(S.modules.indexOf(m) + 1, 0, c); S.selected = c.id; update(); toast('Копия добавлена'); } break;
-    case 'del': if (m){
-      const grp = S.modules.filter(o => o.wall === m.wall && TYPES[o.type].row === TYPES[m.type].row), gi = grp.indexOf(m), next = grp[gi + 1] || grp[gi - 1];
-      S.modules = S.modules.filter(o => o !== m); S.selected = next ? next.id : null; update(); toast('Модуль удалён'); } break;
-    case 'toggle-open': if (m){ openSet.has(m.id) ? openSet.delete(m.id) : openSet.add(m.id); renderLeft(); } break;
+    case 'mv': case 'dup': case 'del': case 'w-step': modAct(act, v); break;
+    case 'preset-apply': {
+      const pr = [...BUILTIN_PRESETS, ...userPresets()].find(x => x.id === v); if (!pr) break;
+      const ok = {corpus:C.corpus, facade:C.facade, milling:C.milling, fLow:C.fcolor, fUp:C.fcolor, top:C.top};
+      Object.entries(pr.mat).forEach(([key, val]) => { if (ok[key] ? ok[key].some(r => r.id === val) : key === 'handle' ? !!HANDLES[val] : key === 'drawers' ? !!DRAWERS[val] : true) S.mat[key] = val; });
+      if (!DRAWERS[S.mat.drawers].colors.some(c => c.id === S.mat.drawerColor)) S.mat.drawerColor = DRAWERS[S.mat.drawers].colors[0].id;
+      update(); toast('Применён комплект: ' + pr.name); break; }
+    case 'preset-save': {
+      const nm = ($('inPresetName').value || '').trim(); if (!nm){ toast('Введите название комплекта'); $('inPresetName').focus(); break; }
+      const list = userPresets(); list.push({id:'u' + Date.now().toString(36), name:nm, mat:JSON.parse(JSON.stringify(S.mat))}); store(KPR, list); renderLeft(); toast('Комплект сохранён'); break; }
+    case 'preset-del': store(KPR, userPresets().filter(x => x.id !== v)); renderLeft(); break;
+    case 'undo': undo(); break;
+    case 'redo': redo(); break;
+    case 'toggle-open': if (m){ toggleModOpen(m); renderLeft(); renderModbar(); } break;
     case 'open-all': openAll = !openAll; if (!openAll) openSet.clear(); b.setAttribute('aria-pressed', String(openAll)); b.textContent = openAll ? 'Закрыть всё' : 'Открыть всё'; if (S.ltab === 'module') renderLeft(); break;
     case 'mat':
       S.mat[k] = v;
@@ -1300,6 +1408,7 @@ document.addEventListener('change', e => {
       const nt = t.value, d = TYPES[nt], o = TYPES[m.type];
       if (o.row !== d.row || o.cat !== d.cat || (!d.widths.includes(m.w) && (nt.includes('corner') || nt === 'base_oven' || nt.startsWith('tall_') || nt === 'base_cargo'))) m.w = d.w;
       m.type = nt; m.h = d.h; m.d = d.d; m.cut = {sink:nt === 'base_sink', hob:nt === 'base_oven', pipe:nt === 'base_sink'}; update(); } break;
+    case 'mbW': if (m){ const nv = clampNum(t.value, 150, 2400, m.w); if (nv !== Math.round(parseNum(t.value))) toast('Допустимо от 150 до 2400 мм'); m.w = nv; update(); } break;
     case 'edW': case 'edH': case 'edD': if (m){
       const k = {edW:'w', edH:'h', edD:'d'}[id], lim = {w:[150, 2400], h:[200, 2400], d:[250, 700]}[k];
       const nv = clampNum(t.value, lim[0], lim[1], m[k]);
@@ -1409,16 +1518,16 @@ function init3D(){
       const v = new THREE.Vector2((e.clientX - rect.left) / rect.width * 2 - 1, -(e.clientY - rect.top) / rect.height * 2 + 1);
       const rc = new THREE.Raycaster(); rc.setFromCamera(v, camera);
       const hits = root ? rc.intersectObjects(root.children, true) : [];
-      for (const h of hits){ let o = h.object; while (o && !o.userData.modId) o = o.parent;
+      for (const h of hits){ let o = h.object, fid = null; while (o && !o.userData.modId){ if (!fid && o.userData.fid) fid = o.userData.fid; o = o.parent; }
         if (o){ const id = o.userData.modId, now = performance.now();
-          if (lastClick.id === id && now - lastClick.t < 380){ openSet.has(id) ? openSet.delete(id) : openSet.add(id); lastClick = {id:null, t:0}; if (S.ltab === 'module') renderLeft(); return; }
+          if (lastClick.id === id && now - lastClick.t < 380){ const mm = S.modules.find(x => x.id === id); if (fid) toggleFid(fid); else if (mm) toggleModOpen(mm); lastClick = {id:null, t:0}; if (S.ltab === 'module') renderLeft(); renderModbar(); return; }
           lastClick = {id, t:now}; if (S.selected !== id) selectMod(id, true); else if (S.ltab !== 'module'){ S.ltab = 'module'; renderLeft(); } return; } }
     });
     (function loop(){
       requestAnimationFrame(loop); if (document.hidden) return;
       anims.forEach(a => { const tgt = isOpen(a.id) ? a.open : a.closed, cur = a.get(); if (Math.abs(tgt - cur) > 1e-4) a.set(cur + (tgt - cur) * .16); });
       if (helper) helper.update();
-      controls.update(); renderer.render(scene, camera);
+      controls.update(); renderer.render(scene, camera); positionModbar();
     })();
     has3D = true;
   } catch (err){ $('stage').innerHTML = '<div class="stage-err">3D-вид не запустился в этом браузере. Смета и материалы работают.</div>'; }
@@ -1531,32 +1640,32 @@ function buildModule(m, pos){
     facadePanel(fp, W - 4, H - 4 - (S.mat.handle === 'gola' ? GOLA : 0), 2, 2, fac, mill, false);
     if (S.mat.handle === 'bar') box(fp, 10, 128, 14, W / 2 - 5, H - 200, FT, handleM);
     if (S.mat.handle === 'gola') box(g, W, GOLA, 20, 0, baseY + H - GOLA, D - 22, alu, false);
-    addAnim(m.id, cg, 'z', (D - 60) / 1000);
+    cg.userData.fid = m.id + ':' + facadesOf(m, S).findIndex(x => x.k === 'cargo'); addAnim(cg.userData.fid, cg, 'z', (D - 60) / 1000);
   }
 
-  facadesOf(m, S).forEach(f => {
+  facadesOf(m, S).forEach((f, fi) => {
     if (f.k === 'cargo') return;
-    let piv = new THREE.Group(), hx0 = 0, hy0 = 0;
+    const fid = m.id + ':' + fi; let piv = new THREE.Group(), hx0 = 0, hy0 = 0; piv.userData.fid = fid;
     if (f.k === 'door' || f.k === 'fridge'){
       if (f.hinge === 'left') piv.position.set(f.x / 1000, (baseY + f.y) / 1000, D / 1000);
       else { piv.position.set((f.x + f.w) / 1000, (baseY + f.y) / 1000, D / 1000); hx0 = -f.w; }
       g.add(piv); facadePanel(piv, f.w, f.h, hx0, 0, fac, mill, f.glass);
-      addAnim(m.id, piv, 'ry', f.hinge === 'left' ? -1.7 : 1.7);
+      addAnim(fid, piv, 'ry', f.hinge === 'left' ? -1.7 : 1.7);
     } else if (f.k === 'lift'){
       piv.position.set(f.x / 1000, (baseY + f.y + f.h) / 1000, D / 1000); hy0 = -f.h; g.add(piv);
-      facadePanel(piv, f.w, f.h, 0, hy0, fac, mill, false); addAnim(m.id, piv, 'rx', -1.35);
+      facadePanel(piv, f.w, f.h, 0, hy0, fac, mill, false); addAnim(fid, piv, 'rx', -1.35);
     } else if (f.k === 'dw'){
       piv.position.set(f.x / 1000, (baseY + f.y) / 1000, D / 1000); g.add(piv);
-      facadePanel(piv, f.w, f.h, 0, 0, fac, mill, false); addAnim(m.id, piv, 'rx', 1.35);
+      facadePanel(piv, f.w, f.h, 0, 0, fac, mill, false); addAnim(fid, piv, 'rx', 1.35);
     } else if (f.k === 'drawer'){
-      const slide = new THREE.Group(); g.add(slide);
+      const slide = new THREE.Group(); slide.userData.fid = fid; g.add(slide);
       const side = Math.min(f.h - 50, f.h < 220 ? 90 : f.h < 330 ? 177 : 241), len = D - 70, iw = W - 2*T - 26, by = baseY + f.y + 22, z0 = D - len - 8;
       box(slide, 13, side, len, T + 1, by, z0, dmat); box(slide, 13, side, len, W - T - 14, by, z0, dmat);
       box(slide, iw, 16, len, T + 13, by, z0, white);
       box(slide, iw, side * .85, 13, T + 13, by, z0, S.mat.drawers === 'legrabox' ? dmat : white);
       piv.position.set(f.x / 1000, (baseY + f.y) / 1000, D / 1000); slide.add(piv);
       facadePanel(piv, f.w, f.h, 0, 0, fac, mill, false);
-      addAnim(m.id, slide, 'z', (len * .8) / 1000);
+      addAnim(fid, slide, 'z', (len * .8) / 1000);
     }
     if (S.mat.handle === 'bar'){
       if (f.k === 'door' || f.k === 'fridge'){
@@ -1631,6 +1740,7 @@ function build3D(resetCam){
   });
   const sel = root.children.find(o => o.userData && o.userData.modId === S.selected);
   if (sel){ helper = new THREE.BoxHelper(sel, col(cssVar('--accent') || '#A9532A')); scene.add(helper); }
+  selBox = sel ? new THREE.Box3().setFromObject(sel) : null;
   // отражения окружения слабые, чтобы не пересвечивать цвета образцов
   root.traverse(o => { if (o.material) [].concat(o.material).forEach(m => { if (m.isMeshStandardMaterial) m.envMapIntensity = m === matCache.glassPane ? 1 : .15; }); });
   if (resetCam) fitCamera();
@@ -1677,8 +1787,8 @@ function ghostDims(type, m){
 }
 function hideGhost(){ if (ghost){ scene.remove(ghost); ghost.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); }); ghost = null; } }
 function showGhost(type, wall, x, m){
-  const key = `${type}|${wall}|${x}`; if (ghost && ghost.userData.key === key) return;
-  hideGhost(); const d = ghostDims(type, m), g = new THREE.Group(), c = col(cssVar('--accent') || '#A9532A');
+  const d = ghostDims(type, m), over = x + d.W > S.walls[wall], key = `${type}|${wall}|${x}|${over}`; if (ghost && ghost.userData.key === key) return;
+  hideGhost(); const g = new THREE.Group(), c = col(over ? (cssVar('--warn') || '#B23E0C') : (cssVar('--accent') || '#A9532A'));
   const geo = new THREE.BoxGeometry(d.W / 1000, d.H / 1000, d.D / 1000), pos = new THREE.Vector3(d.W / 2000, (d.y0 + d.H / 2) / 1000, d.D / 2000);
   const me = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({color:c, transparent:true, opacity:.3, depthWrite:false})); me.position.copy(pos); me.renderOrder = 5;
   const ed = new THREE.LineSegments(new THREE.EdgesGeometry(geo), new THREE.LineBasicMaterial({color:c})); ed.position.copy(pos); ed.renderOrder = 6;
@@ -1746,7 +1856,18 @@ document.addEventListener('pointerup', e => {
   if (pend){ clearTimeout(pend.timer); pend = null; }
 });
 document.addEventListener('pointercancel', cancelDrags);
-document.addEventListener('keydown', e => { if (e.key === 'Escape' && (placing || dragging || mv)){ cancelDrags(); stopPlacing(); } });
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && (placing || dragging || mv)){ cancelDrags(); stopPlacing(); return; }
+  const tg = e.target, typing = tg && (tg.tagName === 'INPUT' || tg.tagName === 'TEXTAREA' || tg.tagName === 'SELECT' || tg.isContentEditable), mod = e.ctrlKey || e.metaKey;
+  if (typing || e.altKey) return;
+  if (mod && e.code === 'KeyZ'){ e.preventDefault(); e.shiftKey ? redo() : undo(); return; }
+  if (mod && e.code === 'KeyY'){ e.preventDefault(); redo(); return; }
+  if (mod && e.code === 'KeyD'){ e.preventDefault(); modAct('dup'); return; }
+  if (mod || !selMod()) return;
+  if (e.key === 'Delete' || e.key === 'Backspace'){ e.preventDefault(); modAct('del'); }
+  else if (e.key === 'ArrowLeft'){ e.preventDefault(); modAct('mv', -1); }
+  else if (e.key === 'ArrowRight'){ e.preventDefault(); modAct('mv', 1); }
+});
 document.addEventListener('touchmove', e => { if (dragging && e.cancelable) e.preventDefault(); }, {passive:false});
 document.getElementById('stage').addEventListener('pointerdown', e => {
   if (placing || dragging || (e.pointerType === 'mouse' && e.button !== 0) || !controls) return;
