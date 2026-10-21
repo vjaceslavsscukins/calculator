@@ -77,6 +77,14 @@ button{cursor:pointer}
 .fold[open]>summary::after{content:'−'}
 .fold[open]>summary{margin-bottom:10px}
 .fold>summary::-webkit-details-marker{display:none}
+.cwarn{position:absolute;top:4px;right:4px;width:16px;height:16px;border-radius:50%;background:var(--warn-soft);color:var(--warn);font-size:11px;font-weight:700;display:grid;place-items:center;pointer-events:none}
+.card{position:relative}
+.lib-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;padding:7px 0;border-bottom:1px solid var(--line);font-size:13px}
+.lib-row small{color:var(--muted);font-family:var(--f-mono);font-size:11.5px}
+.lib-row .tag{font-size:11px;border-radius:6px;padding:1px 6px;background:var(--sunk);color:var(--muted);margin-left:6px}
+.lib-row .tag.w{background:var(--warn-soft);color:var(--warn)}
+#libJson{min-height:200px;font-family:var(--f-mono);font-size:12px}
+.lib-err{background:var(--warn-soft);color:var(--warn);border-radius:10px;padding:8px 10px;font-size:12.5px}
 .presets{display:flex;flex-direction:column;gap:6px}
 .preset{display:flex;gap:6px}
 .preset .btn:first-child{flex:1;text-align:left;overflow:hidden;text-overflow:ellipsis}
@@ -426,6 +434,10 @@ dialog.dlg::backdrop{background:rgba(20,18,15,.5)}
   <div class="dlg-b" id="impBody"></div>
   <div class="dlg-f" id="impFoot"></div>
 </dialog>
+<dialog id="libDlg" class="dlg" aria-label="Библиотека модулей">
+  <div class="dlg-h"><b>Библиотека модулей</b><button class="btn sm" data-act="dlg-close" data-v="libDlg" aria-label="Закрыть">×</button></div>
+  <div class="dlg-b" id="libBody"></div>
+</dialog>
 <div class="toast" id="toast" hidden></div>
 <div id="printArea" aria-hidden="true"></div>
 
@@ -436,30 +448,146 @@ dialog.dlg::backdrop{background:rgba(20,18,15,.5)}
 // CALC-START
 const T = 16, SHEET_M2 = 2.8 * 2.07, BASE_Y = 100, UP_TOP = 2170, GOLA = 30;
 
-const TYPES = {
-  base_door:        {name:'С дверцами',            cat:'low',  row:'low',  w:600,  h:720,  d:560, widths:[300,400,450,500,600,800,900]},
-  base_drawer_door: {name:'Ящик и дверцы',         cat:'low',  row:'low',  w:600,  h:720,  d:560, widths:[400,450,500,600,800,900]},
-  base_drawers2:    {name:'2 ящика',               cat:'low',  row:'low',  w:600,  h:720,  d:560, widths:[400,450,500,600,800,900,1000]},
-  base_drawers3:    {name:'3 ящика',               cat:'low',  row:'low',  w:600,  h:720,  d:560, widths:[400,450,500,600,800,900,1000]},
-  base_sink:        {name:'Под мойку',             cat:'low',  row:'low',  w:800,  h:720,  d:560, widths:[600,800,900]},
-  base_oven:        {name:'Под духовой шкаф',      cat:'low',  row:'low',  w:600,  h:720,  d:560, widths:[600]},
-  base_dw:          {name:'Посудомойка',           cat:'low',  row:'low',  w:600,  h:720,  d:560, widths:[450,600]},
-  base_cargo:       {name:'Бутылочница',           cat:'low',  row:'low',  w:200,  h:720,  d:560, widths:[150,200,300]},
-  base_corner:      {name:'Угловой нижний',        cat:'low',  row:'low',  w:1050, h:720,  d:560, widths:[900,1000,1050,1100]},
-  upper_door:       {name:'С дверцами',            cat:'up',   row:'up',   w:600,  h:720,  d:300, widths:[300,400,450,500,600,800,900]},
-  upper_glass:      {name:'Витрина со стеклом',    cat:'up',   row:'up',   w:600,  h:720,  d:300, widths:[400,450,500,600,800]},
-  upper_lift:       {name:'С подъёмником',         cat:'up',   row:'up',   w:600,  h:360,  d:300, widths:[500,600,800,900]},
-  upper_open:       {name:'Открытая полка',        cat:'up',   row:'up',   w:600,  h:720,  d:300, widths:[300,400,600,800]},
-  upper_corner:     {name:'Угловой верхний',       cat:'up',   row:'up',   w:620,  h:720,  d:300, widths:[620,650,700]},
-  mezz_door:        {name:'Антресоль с дверцами',  cat:'mezz', row:'mezz', w:600,  h:360,  d:300, widths:[400,600,800,900]},
-  mezz_lift:        {name:'Антресоль с подъёмником', cat:'mezz', row:'mezz', w:600, h:360,  d:300, widths:[600,800,900]},
-  tall_door:        {name:'Пенал с дверцами',      cat:'tall', row:'low',  w:600,  h:2070, d:560, widths:[400,450,500,600], tall:true},
-  tall_oven:        {name:'Под духовку и СВЧ',     cat:'tall', row:'low',  w:600,  h:2070, d:560, widths:[600], tall:true},
-  tall_fridge:      {name:'Под встроенный холодильник', cat:'tall', row:'low', w:600, h:2070, d:560, widths:[600], tall:true},
-  gap_low:          {name:'Проём внизу',           cat:'gap',  row:'low',  w:600,  h:0, d:0, widths:[600,700,900], gap:true},
-  gap_up:           {name:'Проём вверху',          cat:'gap',  row:'up',   w:600,  h:0, d:0, widths:[400,600,800], gap:true},
-  gap_mezz:         {name:'Проём на антресолях',   cat:'gap',  row:'mezz', w:600,  h:0, d:0, widths:[600,800,1200], gap:true},
-};
+/* ---------- формулы шаблонов: безопасный разбор, без eval и new Function ---------- */
+const FORMULA_FNS = {round:Math.round, floor:Math.floor, ceil:Math.ceil, min:Math.min, max:Math.max, abs:Math.abs};
+const exprCache = new Map();
+function compileExpr(src){
+  const key = String(src); if (exprCache.has(key)) return exprCache.get(key);
+  const bad = msg => new Error(`Формула «${key}»: ${msg}`), toks = [], re = /\s*(?:(\d+(?:\.\d+)?)|([A-Za-z_][A-Za-z0-9_]*)|(<=|>=|==|!=|&&|\|\||[-+*\/%()?:,<>!]))/y;
+  for (let pos = 0; pos < key.length;){
+    re.lastIndex = pos; const m = re.exec(key);
+    if (!m){ if (/^\s*$/.test(key.slice(pos))) break; throw bad(`лишний символ на позиции ${pos + 1}`); }
+    toks.push(m[1] !== undefined ? {t:'n', v:+m[1]} : m[2] !== undefined ? {t:'i', v:m[2]} : {t:'o', v:m[3]}); pos = re.lastIndex;
+  }
+  let i = 0; const peek = () => toks[i], isOp = v => peek() && peek().t === 'o' && peek().v === v, eat = v => { if (!isOp(v)) throw bad(`ожидалось «${v}»`); i++; };
+  const level = (sub, ops) => () => { let l = sub(); while (peek() && peek().t === 'o' && ops[peek().v]){ const f = ops[toks[i++].v], L = l, R = sub(); l = V => f(L(V), R(V)); } return l; };
+  const ternary = () => { const c = or(); if (!isOp('?')) return c; i++; const a = ternary(); eat(':'); const b = ternary(); return V => c(V) ? a(V) : b(V); };
+  const unary = () => {
+    if (isOp('-')){ i++; const u = unary(); return V => -u(V); } if (isOp('+')){ i++; return unary(); } if (isOp('!')){ i++; const u = unary(); return V => !u(V); }
+    const t = toks[i++]; if (!t) throw bad('формула оборвалась');
+    if (t.t === 'n') return () => t.v;
+    if (t.t === 'o' && t.v === '('){ const e = ternary(); eat(')'); return e; }
+    if (t.t === 'i'){
+      if (isOp('(')){
+        i++; const fn = FORMULA_FNS[t.v]; if (!Object.prototype.hasOwnProperty.call(FORMULA_FNS, t.v)) throw bad(`неизвестная функция «${t.v}»`);
+        const args = []; if (!isOp(')')){ args.push(ternary()); while (isOp(',')){ i++; args.push(ternary()); } } eat(')'); return V => fn(...args.map(a => a(V)));
+      }
+      return V => { if (!Object.prototype.hasOwnProperty.call(V, t.v)) throw bad(`неизвестная переменная «${t.v}»`); return V[t.v]; };
+    }
+    throw bad(`неожиданный знак «${t.v}»`);
+  };
+  const mul = level(unary, {'*':(a, b) => a * b, '/':(a, b) => a / b, '%':(a, b) => a % b}), add = level(mul, {'+':(a, b) => a + b, '-':(a, b) => a - b});
+  const rel = level(add, {'<':(a, b) => a < b, '<=':(a, b) => a <= b, '>':(a, b) => a > b, '>=':(a, b) => a >= b}), eq = level(rel, {'==':(a, b) => a === b, '!=':(a, b) => a !== b});
+  const and = level(eq, {'&&':(a, b) => a && b}), or = level(and, {'||':(a, b) => a || b});
+  const fn = ternary(); if (i < toks.length) throw bad(`лишнее «${toks[i].v}»`);
+  exprCache.set(key, fn); return fn;
+}
+const evalExpr = (src, V) => typeof src === 'number' ? src : compileExpr(src)(V);
+
+/* ---------- шаблоны модулей: данные, а не код ---------- */
+// cat/row — раздел каталога и ряд; carcass: 'base' | 'none' (нет корпуса); back: задняя стенка ХДФ;
+// shelves — высоты полок от низа модуля (формулы от W, H, D, T; when — условие); facades — фасады по порядку;
+// appliance — особенности 3D (техника); cutDefaults — вырезы по умолчанию; strictW — ширина только из списка;
+// todo — вопрос к технологу, показывается в программе
+const SHELVES_UP = [{y:'round(H/3)', when:'H>760'}, {y:'round(H*2/3)', when:'H>760'}, {y:'round(H/2)', when:'H<=760'}];
+const BUILTIN_TEMPLATES = [
+  {code:'base_door', name:'С дверцами', cat:'low', row:'low', w:600, h:720, d:560, widths:[300,400,450,500,600,800,900], shelves:[{y:'round(H/2)'}], facades:[{kind:'doors', y:'2', h:'H-4'}]},
+  {code:'base_drawer_door', name:'Ящик и дверцы', cat:'low', row:'low', w:600, h:720, d:560, widths:[400,450,500,600,800,900], shelves:[{y:'round(H*0.39)'}],
+    facades:[{kind:'doors', y:'2', h:'H-round(H*0.22)-4'}, {kind:'drawer', y:'H-round(H*0.22)+2', h:'round(H*0.22)-4'}]},
+  {code:'base_drawers2', name:'2 ящика', cat:'low', row:'low', w:600, h:720, d:560, widths:[400,450,500,600,800,900,1000],
+    facades:[{kind:'drawer', y:'2', h:'round(H/2)-4'}, {kind:'drawer', y:'round(H/2)+2', h:'H-round(H/2)-4'}]},
+  {code:'base_drawers3', name:'3 ящика', cat:'low', row:'low', w:600, h:720, d:560, widths:[400,450,500,600,800,900,1000],
+    facades:[{kind:'drawer', y:'2', h:'round(H*0.39)-4'}, {kind:'drawer', y:'round(H*0.39)+2', h:'round(H*0.39)-4'}, {kind:'drawer', y:'round(H*0.39)*2+2', h:'H-round(H*0.39)*2-4'}]},
+  {code:'base_sink', name:'Под мойку', cat:'low', row:'low', w:800, h:720, d:560, widths:[600,800,900], back:false, appliance:'sink', cutDefaults:{sink:true, pipe:true}, facades:[{kind:'doors', y:'2', h:'H-4'}]},
+  {code:'base_oven', name:'Под духовой шкаф', cat:'low', row:'low', w:600, h:720, d:560, widths:[600], strictW:true, appliance:'oven', cutDefaults:{hob:true}, shelves:[{y:'H-600'}],
+    facades:[{kind:'drawer', y:'2', h:'max(H-600,60)-4'}]},
+  {code:'base_dw', name:'Посудомойка', cat:'low', row:'low', w:600, h:720, d:560, widths:[450,600], carcass:'none', appliance:'dw', facades:[{kind:'single', k:'dw', y:'2', h:'H-4'}]},
+  {code:'base_cargo', name:'Бутылочница', cat:'low', row:'low', w:200, h:720, d:560, widths:[150,200,300], strictW:true, appliance:'cargo', facades:[{kind:'single', k:'cargo', y:'2', h:'H-4'}]},
+  {code:'base_corner', name:'Угловой нижний', cat:'low', row:'low', w:1050, h:720, d:560, widths:[900,1000,1050,1100], corner:true, strictW:true, shelves:[{y:'round(H/2)'}], facades:[{kind:'corner', blind:600}]},
+  {code:'upper_door', name:'С дверцами', cat:'up', row:'up', w:600, h:720, d:300, widths:[300,400,450,500,600,800,900], shelves:SHELVES_UP, facades:[{kind:'doors', y:'2', h:'H-4'}]},
+  {code:'upper_glass', name:'Витрина со стеклом', cat:'up', row:'up', w:600, h:720, d:300, widths:[400,450,500,600,800], shelves:SHELVES_UP, facades:[{kind:'doors', y:'2', h:'H-4', glass:true}]},
+  {code:'upper_lift', name:'С подъёмником', cat:'up', row:'up', w:600, h:360, d:300, widths:[500,600,800,900], appliance:'lift', facades:[{kind:'single', k:'lift', y:'2', h:'H-4'}]},
+  {code:'upper_open', name:'Открытая полка', cat:'up', row:'up', w:600, h:720, d:300, widths:[300,400,600,800], noOpen:true, shelves:SHELVES_UP, facades:[]},
+  {code:'upper_corner', name:'Угловой верхний', cat:'up', row:'up', w:620, h:720, d:300, widths:[620,650,700], corner:true, strictW:true, shelves:SHELVES_UP, facades:[{kind:'corner', blind:320}]},
+  {code:'mezz_door', name:'Антресоль с дверцами', cat:'mezz', row:'mezz', w:600, h:360, d:300, widths:[400,600,800,900], shelves:[{y:'round(H/2)', when:'H>450'}], facades:[{kind:'doors', y:'2', h:'H-4'}]},
+  {code:'mezz_lift', name:'Антресоль с подъёмником', cat:'mezz', row:'mezz', w:600, h:360, d:300, widths:[600,800,900], facades:[{kind:'single', k:'lift', y:'2', h:'H-4'}]},
+  {code:'tall_door', name:'Пенал с дверцами', cat:'tall', row:'low', tall:true, w:600, h:2070, d:560, widths:[400,450,500,600], strictW:true,
+    shelves:[{y:'round(H*1/5)'}, {y:'round(H*2/5)'}, {y:'round(H*3/5)'}, {y:'round(H*4/5)'}],
+    facades:[{kind:'doors', rows:[{y:'2', h:'round(H*0.62)-4', part:'bottom'}, {y:'round(H*0.62)+2', h:'H-round(H*0.62)-4', part:'top'}]}]},
+  {code:'tall_oven', name:'Под духовку и СВЧ', cat:'tall', row:'low', tall:true, w:600, h:2070, d:560, widths:[600], strictW:true, appliance:'tall_oven', shelves:[{y:'520'}, {y:'1115'}, {y:'1495'}],
+    facades:[{kind:'drawer', y:'2', h:'256'}, {kind:'drawer', y:'262', h:'254'}, {kind:'doors', y:'1497', h:'H-1499', part:'top'}]},
+  {code:'tall_fridge', name:'Под встроенный холодильник', cat:'tall', row:'low', tall:true, w:600, h:2070, d:560, widths:[600], strictW:true, appliance:'fridge', shelves:[{y:'1770'}],
+    facades:[{kind:'single', k:'fridge', hinge:'right', part:'bottom', y:'2', h:'716'}, {kind:'single', k:'fridge', hinge:'right', part:'bottom', y:'722', h:'1046'}, {kind:'doors', y:'1772', h:'H-1774', part:'top'}]},
+  {code:'gap_low', name:'Проём внизу', cat:'gap', row:'low', gap:true, w:600, h:0, d:0, widths:[600,700,900], facades:[]},
+  {code:'gap_up', name:'Проём вверху', cat:'gap', row:'up', gap:true, w:600, h:0, d:0, widths:[400,600,800], facades:[]},
+  {code:'gap_mezz', name:'Проём на антресолях', cat:'gap', row:'mezz', gap:true, w:600, h:0, d:0, widths:[600,800,1200], facades:[]},
+  // --- новые модули: раскладка предположительная, нужна проверка технолога ---
+  {code:'base_hob', name:'Под варочную', cat:'low', row:'low', w:600, h:720, d:560, widths:[600,800,900], cutDefaults:{hob:true}, todo:'Высота ящиков под варочной панелью и вырез: уточнить у технолога.',
+    facades:[{kind:'drawer', y:'2', h:'round(H/2)-4'}, {kind:'drawer', y:'round(H/2)+2', h:'H-round(H/2)-4'}]},
+  {code:'base_drawers4', name:'4 ящика', cat:'low', row:'low', w:600, h:720, d:560, widths:[400,450,500,600,800,900], todo:'Высоты четырёх ящиков взяты поровну: уточнить у технолога.',
+    facades:[{kind:'drawer', y:'2', h:'round(H/4)-4'}, {kind:'drawer', y:'round(H/4)+2', h:'round(H/4)-4'}, {kind:'drawer', y:'round(H/4)*2+2', h:'round(H/4)-4'}, {kind:'drawer', y:'round(H/4)*3+2', h:'H-round(H/4)*3-4'}]},
+  {code:'base_open', name:'Открытая полка', cat:'low', row:'low', w:400, h:720, d:560, widths:[200,300,400,600], noOpen:true, shelves:[{y:'round(H/2)'}], facades:[]},
+  {code:'filler_low', name:'Добор (планка)', cat:'low', row:'low', w:100, h:720, d:560, widths:[50,100,150,200,250,300], carcass:'none', noGola:true, todo:'Материал и расчёт добора (фасад или ЛДСП): уточнить у технолога.',
+    facades:[{kind:'single', k:'panel', y:'2', h:'H-4'}]},
+  {code:'upper_short', name:'Низкий над вытяжкой', cat:'up', row:'up', w:600, h:360, d:300, widths:[500,600,800,900], facades:[{kind:'doors', y:'2', h:'H-4'}]},
+  {code:'filler_up', name:'Добор (планка) верхний', cat:'up', row:'up', w:100, h:720, d:300, widths:[50,100,150,200,250,300], carcass:'none', noGola:true, todo:'Материал и расчёт добора (фасад или ЛДСП): уточнить у технолога.',
+    facades:[{kind:'single', k:'panel', y:'2', h:'H-4'}]},
+  {code:'mezz_open', name:'Антресоль открытая', cat:'mezz', row:'mezz', w:600, h:360, d:300, widths:[400,600,800,900], noOpen:true, facades:[]},
+  {code:'tall_drawers', name:'Пенал с ящиками', cat:'tall', row:'low', tall:true, w:600, h:2070, d:560, widths:[400,450,500,600], strictW:true, todo:'Раскладка ящиков и полок примерная: уточнить у технолога.',
+    shelves:[{y:'round(H*0.45)'}, {y:'round(H*0.62)'}, {y:'round(H*0.79)'}],
+    facades:[{kind:'drawer', y:'2', h:'round(H*0.12)-4'}, {kind:'drawer', y:'round(H*0.12)+2', h:'round(H*0.12)-4'}, {kind:'drawer', y:'round(H*0.12)*2+2', h:'round(H*0.12)-4'}, {kind:'doors', y:'round(H*0.12)*3+2', h:'H-round(H*0.12)*3-4', part:'top'}]},
+];
+
+const TPL_CATS = ['low', 'up', 'mezz', 'tall', 'gap'], TPL_ROWS = ['low', 'up', 'mezz'], TPL_APPLIANCES = ['sink', 'oven', 'tall_oven', 'fridge', 'dw', 'cargo', 'lift'], TPL_SINGLE = ['dw', 'cargo', 'lift', 'fridge', 'panel'];
+// Проверка шаблона перед добавлением в библиотеку. Возвращает список ошибок на русском (пустой — шаблон годится).
+function validateTemplate(t, takenCodes = []){
+  const e = [], int = (v, lo, hi) => Number.isInteger(v) && v >= lo && v <= hi;
+  if (!t || typeof t !== 'object' || Array.isArray(t)) return ['Шаблон должен быть объектом JSON'];
+  if (!/^[a-z][a-z0-9_]{2,40}$/.test(t.code || '')) e.push('code: латиница, цифры и «_», от 3 знаков, начинается с буквы');
+  if (takenCodes.includes(t.code)) e.push(`code «${t.code}» уже занят`);
+  if (typeof t.name !== 'string' || !t.name.trim()) e.push('name: нужно название');
+  if (!TPL_CATS.includes(t.cat)) e.push('cat: одно из ' + TPL_CATS.join(', '));
+  if (!TPL_ROWS.includes(t.row)) e.push('row: одно из ' + TPL_ROWS.join(', '));
+  if (!int(t.w, 50, 2400)) e.push('w: целое число от 50 до 2400');
+  if (!(t.gap ? t.h === 0 || int(t.h, 0, 3000) : int(t.h, 100, 3000))) e.push('h: целое число от 100 до 3000');
+  if (!(t.gap ? t.d === 0 || int(t.d, 0, 1000) : int(t.d, 100, 1000))) e.push('d: целое число от 100 до 1000');
+  if (!Array.isArray(t.widths) || !t.widths.length || !t.widths.every(w => int(w, 50, 2400)) || t.widths.some((w, i) => i && w <= t.widths[i - 1])) e.push('widths: список целых чисел по возрастанию');
+  else if (!t.widths.includes(t.w)) e.push('widths: в списке должна быть ширина по умолчанию w');
+  if (t.carcass !== undefined && !['base', 'none'].includes(t.carcass)) e.push('carcass: base или none');
+  if (t.appliance !== undefined && !TPL_APPLIANCES.includes(t.appliance)) e.push('appliance: одно из ' + TPL_APPLIANCES.join(', '));
+  if (e.length) return e;
+  const Ws = [...new Set([t.widths[0], t.w, t.widths[t.widths.length - 1]])], num = (src, what, check) => {
+    for (const W of Ws){
+      try { const v = evalExpr(src, {W, H:t.h, D:t.d, T}); if (typeof v === 'number' ? !Number.isFinite(v) : false) throw new Error('не число'); if (check && !check(v)) e.push(`${what}: «${src}» даёт недопустимое значение ${v} при ширине ${W}`); }
+      catch(err){ e.push(`${what}: ${err.message}`); return; }
+    }
+  };
+  (t.shelves || []).forEach((sh, i) => { num(sh.y, `shelves[${i}].y`, v => v > 0 && v < t.h); if (sh.when) num(sh.when, `shelves[${i}].when`); });
+  (t.facades || []).forEach((fd, i) => {
+    const at = `facades[${i}]`;
+    if (!['doors', 'drawer', 'single', 'corner'].includes(fd.kind)){ e.push(`${at}.kind: doors, drawer, single или corner`); return; }
+    if (fd.when) num(fd.when, `${at}.when`);
+    if (fd.kind === 'corner'){ if (!t.corner) e.push(`${at}: для угловых фасадов нужно "corner": true`); if (!int(fd.blind, 100, 1500)) e.push(`${at}.blind: глухая часть, целое число мм`); return; }
+    if (fd.kind === 'single' && !TPL_SINGLE.includes(fd.k)) e.push(`${at}.k: одно из ${TPL_SINGLE.join(', ')}`);
+    (fd.kind === 'doors' && fd.rows ? fd.rows.map((r, j) => [r, `${at}.rows[${j}]`]) : [[fd, at]]).forEach(([r, w]) => {
+      if (r.part !== undefined && !['top', 'bottom'].includes(r.part)) e.push(`${w}.part: top или bottom`);
+      num(r.y, `${w}.y`, v => v >= 0); num(r.h, `${w}.h`, v => v > 0);
+    });
+  });
+  return e;
+}
+const TYPES = {};
+function typeOf(t){
+  return {name:t.name, cat:t.cat, row:t.row, w:t.w, h:t.h, d:t.d, widths:t.widths, tall:!!t.tall, gap:!!t.gap, corner:!!t.corner, strictW:!!t.strictW, noOpen:!!t.noOpen, noGola:!!t.noGola,
+    back:t.back !== false, carcass:t.carcass || 'base', appliance:t.appliance || null, cutDefaults:t.cutDefaults || null, todo:t.todo || '', custom:!!t.custom, tpl:t};
+}
+// Заполняет TYPES встроенными шаблонами и шаблонами из библиотеки (custom). Неподходящие шаблоны пропускаются.
+function setTemplates(custom){
+  Object.keys(TYPES).forEach(k => delete TYPES[k]);
+  BUILTIN_TEMPLATES.forEach(t => { TYPES[t.code] = typeOf(t); });
+  (custom || []).forEach(t => { if (!validateTemplate(t, Object.keys(TYPES)).length) TYPES[t.code] = typeOf(Object.assign({}, t, {custom:true})); });
+}
+setTemplates([]);
 const CATS = [['low','Нижние'],['up','Верхние'],['mezz','Антресоли'],['tall','Пеналы'],['gap','Проёмы']];
 const ROWS = [['low','нижний ряд и пеналы'],['up','верхний ряд'],['mezz','антресоли']];
 
@@ -517,51 +645,21 @@ function activeModules(S){ const w = wallsOf(S); return S.modules.filter(m => w.
 function facadeColorId(m, S){ return m.facade || (TYPES[m.type].row === 'low' ? S.mat.fLow : S.mat.fUp); }
 
 function shelvesOf(m){
-  const H = m.h;
-  switch (m.type){
-    case 'base_door': case 'base_corner': return [Math.round(H / 2)];
-    case 'base_drawer_door': return [Math.round(H * .39)];
-    case 'base_oven': return [H - 600];
-    case 'upper_door': case 'upper_glass': case 'upper_corner': case 'upper_open':
-      return H > 760 ? [Math.round(H / 3), Math.round(H * 2 / 3)] : [Math.round(H / 2)];
-    case 'mezz_door': return H > 450 ? [Math.round(H / 2)] : [];
-    case 'tall_door': return [1, 2, 3, 4].map(i => Math.round(H * i / 5));
-    case 'tall_oven': return [520, 1115, 1495];
-    case 'tall_fridge': return [1770];
-    default: return [];
-  }
+  const t = TYPES[m.type], V = {W:m.w, H:m.h, D:m.d, T};
+  return (t.tpl.shelves || []).filter(sh => !sh.when || evalExpr(sh.when, V)).map(sh => evalExpr(sh.y, V));
 }
 
 function facadesOf(m, S){
-  const t = TYPES[m.type], W = m.w, H = m.h, out = [];
+  const t = TYPES[m.type], W = m.w, H = m.h, out = [], V = {W, H, D:m.d, T}, ev = e => evalExpr(e, V);
   const door = (x, y, w, h, hinge, ex = {}) => out.push(Object.assign({x, y, w, h, k:'door', hinge}, ex));
-  const cols = (y, h, ex = {}) => { const n = W > 500 ? 2 : 1, cw = W / n; for (let i = 0; i < n; i++) door(i*cw + 2, y, cw - 4, h, n === 1 ? 'left' : (i ? 'right' : 'left'), ex); };
-  const drw = (y, h) => out.push({x:2, y, w:W - 4, h, k:'drawer'});
-  switch (m.type){
-    case 'base_door': case 'base_sink': case 'upper_door': case 'mezz_door': cols(2, H - 4); break;
-    case 'upper_glass': cols(2, H - 4, {glass:true}); break;
-    case 'base_drawer_door': { const dh = Math.round(H * .22); cols(2, H - dh - 4); drw(H - dh + 2, dh - 4); break; }
-    case 'base_drawers2': { const a = Math.round(H / 2); drw(2, a - 4); drw(a + 2, H - a - 4); break; }
-    case 'base_drawers3': { const a = Math.round(H * .39), b = Math.round(H * .39); drw(2, a - 4); drw(a + 2, b - 4); drw(a + b + 2, H - a - b - 4); break; }
-    case 'base_oven': drw(2, Math.max(H - 600, 60) - 4); break;
-    case 'base_dw': out.push({x:2, y:2, w:W - 4, h:H - 4, k:'dw'}); break;
-    case 'base_cargo': out.push({x:2, y:2, w:W - 4, h:H - 4, k:'cargo'}); break;
-    case 'base_corner': case 'upper_corner': {
-      const blind = m.type === 'base_corner' ? 600 : 320, dw = Math.max(W - blind, 250);
-      if (m.blind === 'right') door(2, 2, dw - 4, H - 4, 'left'); else door(W - dw + 2, 2, dw - 4, H - 4, 'right');
-      break; }
-    case 'upper_lift': case 'mezz_lift': out.push({x:2, y:2, w:W - 4, h:H - 4, k:'lift'}); break;
-    case 'tall_door': {
-      const n = W > 500 ? 2 : 1, cw = W / n, hb = Math.round(H * .62);
-      for (let i = 0; i < n; i++){ const hg = n === 1 ? 'left' : (i ? 'right' : 'left');
-        door(i*cw + 2, 2, cw - 4, hb - 4, hg, {part:'bottom'}); door(i*cw + 2, hb + 2, cw - 4, H - hb - 4, hg, {part:'top'}); }
-      break; }
-    case 'tall_oven': { drw(2, 256); drw(262, 254); const y0 = 520 + 595 + 380; cols(y0 + 2, H - y0 - 4, {part:'top'}); break; }
-    case 'tall_fridge': {
-      out.push({x:2, y:2, w:W - 4, h:716, k:'fridge', hinge:'right', part:'bottom'}, {x:2, y:722, w:W - 4, h:1046, k:'fridge', hinge:'right', part:'bottom'});
-      cols(1772, H - 1774, {part:'top'}); break; }
-  }
-  if (S.mat.handle === 'gola'){
+  (t.tpl.facades || []).forEach(fd => {
+    if (fd.when && !ev(fd.when)) return;
+    if (fd.kind === 'doors'){ const rows = fd.rows || [fd]; const n = W > 500 ? 2 : 1, cw = W / n; for (let i = 0; i < n; i++) rows.forEach(r => door(i*cw + 2, ev(r.y), cw - 4, ev(r.h), n === 1 ? 'left' : (i ? 'right' : 'left'), Object.assign({}, r.glass ? {glass:true} : null, r.part ? {part:r.part} : null))); }
+    else if (fd.kind === 'drawer') out.push({x:2, y:ev(fd.y), w:W - 4, h:ev(fd.h), k:'drawer'});
+    else if (fd.kind === 'single') out.push(Object.assign({x:2, y:ev(fd.y), w:W - 4, h:ev(fd.h), k:fd.k}, fd.hinge ? {hinge:fd.hinge} : null, fd.part ? {part:fd.part} : null));
+    else if (fd.kind === 'corner'){ const dw = Math.max(W - fd.blind, 250); if (m.blind === 'right') door(2, 2, dw - 4, H - 4, 'left'); else door(W - dw + 2, 2, dw - 4, H - 4, 'right'); }
+  });
+  if (S.mat.handle === 'gola' && !t.noGola){
     if (t.row === 'low' && !t.tall) out.forEach(f => { f.h -= GOLA; f.channel = true; });
     else if (t.tall) out.forEach(f => {
       if (f.k === 'drawer'){ f.h -= GOLA; f.channel = true; return; }
@@ -574,7 +672,7 @@ function facadesOf(m, S){
 
 function panelsOf(m, S){
   const t = TYPES[m.type], p = [];
-  if (t.gap || m.type === 'base_dw') return p;
+  if (t.gap || t.carcass === 'none') return p;
   const W = m.w, H = m.h, D = m.d, wi = W - 2*T;
   const add = (n, a, b, q, mat, e2) => { if (q > 0) p.push({n, a:Math.round(a), b:Math.round(b), q, mat, e2:e2 || 0}); };
   add('Боковина', H, D, 2, 'ldsp', H);
@@ -584,7 +682,7 @@ function panelsOf(m, S){
   const nd = facadesOf(m, S).filter(f => f.k === 'drawer').length;
   add('Дно ящика', wi - 26, D - 70, nd, 'ldsp', 0);
   if (S.mat.drawers === 'tandembox') add('Задняя стенка ящика', wi - 38, 120, nd, 'ldsp', 0);
-  if (m.type !== 'base_sink') add('Задняя стенка', W - 2, H - 2, 1, 'hdf');
+  if (t.back) add('Задняя стенка', W - 2, H - 2, 1, 'hdf');
   return p;
 }
 
@@ -592,6 +690,7 @@ function hwOf(m, facs, S){
   const t = TYPES[m.type];
   const h = {hinge:0, slide:0, lift:0, cargo:0, fridge:0, dw:0, bar:0, push:0, gola:0, leg:0, hanger:0, pin:0, fix:0, glass:0};
   facs.forEach(f => {
+    if (f.k === 'panel') return;
     if (f.k === 'door') h.hinge += f.h <= 900 ? 2 : f.h <= 1600 ? 3 : 4;
     if (f.k === 'drawer') h.slide++;
     if (f.k === 'lift') h.lift++;
@@ -604,7 +703,7 @@ function hwOf(m, facs, S){
     if (f.channel) h.gola += (f.w + 4) / 1000;
     if (f.vch !== undefined) h.gola += (f.h + 4) / 1000;
   });
-  if (!t.gap && m.type !== 'base_dw'){
+  if (!t.gap && t.carcass !== 'none'){
     h.fix = 1;
     if (t.row === 'low') h.leg = m.w >= 800 ? 6 : 4; else h.hanger = 2;
   }
@@ -665,13 +764,13 @@ function layoutOf(S){
   });
   const A = res.walls.A;
   if (ws.includes('B')){
-    if (res.walls.B.nLow && A.lows[0] && !(A.lows[0].type === 'base_corner' && A.lows[0].blind !== 'right')) res.warnings.push('Угол со стеной Б: первым внизу на стене А поставьте «Угловой нижний» с глухой частью слева');
-    if (res.walls.B.nUp && A.ups[0] && !(A.ups[0].type === 'upper_corner' && A.ups[0].blind !== 'right')) res.warnings.push('Угол со стеной Б: первым вверху на стене А поставьте «Угловой верхний» с глухой частью слева');
+    if (res.walls.B.nLow && A.lows[0] && !(TYPES[A.lows[0].type].corner && A.lows[0].blind !== 'right')) res.warnings.push('Угол со стеной Б: первым внизу на стене А поставьте «Угловой нижний» с глухой частью слева');
+    if (res.walls.B.nUp && A.ups[0] && !(TYPES[A.ups[0].type].corner && A.ups[0].blind !== 'right')) res.warnings.push('Угол со стеной Б: первым вверху на стене А поставьте «Угловой верхний» с глухой частью слева');
   }
   if (ws.includes('C')){
     const ll = A.lows[A.lows.length - 1], lu = A.ups[A.ups.length - 1];
-    if (res.walls.C.nLow && ll && !(ll.type === 'base_corner' && ll.blind === 'right')) res.warnings.push('Угол со стеной В: последним внизу на стене А поставьте «Угловой нижний» с глухой частью справа');
-    if (res.walls.C.nUp && lu && !(lu.type === 'upper_corner' && lu.blind === 'right')) res.warnings.push('Угол со стеной В: последним вверху на стене А поставьте «Угловой верхний» с глухой частью справа');
+    if (res.walls.C.nLow && ll && !(TYPES[ll.type].corner && ll.blind === 'right')) res.warnings.push('Угол со стеной В: последним внизу на стене А поставьте «Угловой нижний» с глухой частью справа');
+    if (res.walls.C.nUp && lu && !(TYPES[lu.type].corner && lu.blind === 'right')) res.warnings.push('Угол со стеной В: последним вверху на стене А поставьте «Угловой верхний» с глухой частью справа');
   }
   const hiMezz = S.modules.filter(m => ws.includes(m.wall) && TYPES[m.type].row === 'mezz' && !TYPES[m.type].gap && UP_TOP + m.h > S.room.height);
   if (hiMezz.length) res.warnings.push(`Антресоли выше потолка ${S.room.height} мм: уменьшите высоту антресолей`);
@@ -780,6 +879,8 @@ function deepMerge(base, over){
 function load(key){ try { const s = localStorage.getItem(key); return s ? JSON.parse(s) : null; } catch(e){ return null; } }
 function store(key, v){ try { localStorage.setItem(key, JSON.stringify(v)); } catch(e){} }
 
+const KTPL = 'kitchen.templates.v1';
+setTemplates(load(KTPL) || []);
 let S = (() => { const s = load(KS); if (s && Array.isArray(s.modules) && s.mat && s.walls) return Object.assign(sampleState(), s); return sampleState(); })();
 let P = deepMerge(DEFAULT_PRICES, load(KP));
 let C = (() => { const c = load(KC); const d = JSON.parse(JSON.stringify(DEFAULT_CAT)); if (c) for (const k in d) if (Array.isArray(c[k]) && c[k].length) d[k] = c[k]; return d; })();
@@ -804,14 +905,16 @@ function selMod(){ const m = S.modules.find(x => x.id === S.selected); return m 
 function sizeStr(m){ return TYPES[m.type].gap ? `${m.w}` : `${m.w}×${m.h}×${m.d}`; }
 function shade(hex, pct){ const n = parseInt(hex.slice(1), 16); const f = c => Math.max(0, Math.min(255, Math.round(c + c * pct / 100))); return '#' + [f(n >> 16), f((n >> 8) & 255), f(n & 255)].map(v => v.toString(16).padStart(2, '0')).join(''); }
 function swBg(c){ return c.pattern === 'wood' || c.pattern === 'planks' ? `repeating-linear-gradient(95deg, ${c.hex} 0 3px, ${shade(c.hex, -12)} 3px 4px)` : c.pattern === 'metal' ? `linear-gradient(135deg, ${shade(c.hex, -18)} 0%, ${shade(c.hex, 40)} 42%, ${c.hex} 58%, ${shade(c.hex, -28)} 100%)` : c.pattern === 'marble' ? `linear-gradient(135deg, ${c.hex} 40%, #C9C8C3 48%, ${c.hex} 56%)` : c.pattern === 'tiles' ? `linear-gradient(90deg, ${shade(c.hex, -15)} 1px, transparent 1px) 0 0/9px 9px, linear-gradient(${shade(c.hex, -15)} 1px, ${c.hex} 1px) 0 0/9px 9px` : c.hex; }
+const defCut = type => Object.assign({sink:false, hob:false, pipe:false}, TYPES[type].cutDefaults);
+const canOpen = m => facadesOf(m, S).some(f => f.k !== 'panel');
 function newModule(type, wall, o = {}){
   const t = TYPES[type];
   return Object.assign({id:'m' + (S.nextId++), type, wall, w:t.w, h:t.h, d:t.d, blind:wall === 'B' ? 'right' : 'left', corpus:null, facade:null,
-    light:false, cut:{sink:type === 'base_sink', hob:type === 'base_oven', pipe:type === 'base_sink'}}, o);
+    light:false, cut:defCut(type)}, o);
 }
 function modLabel(m){
   const t = TYPES[m.type];
-  if (m.type.includes('corner')) return t.name;
+  if (t.corner) return t.name;
   if (t.cat === 'low') return 'Нижний: ' + t.name.toLowerCase();
   if (t.cat === 'up') return 'Верхний: ' + t.name.toLowerCase();
   return t.name;
@@ -835,14 +938,15 @@ function moduleSvg(type){
   if (t.gap) return `<svg viewBox="0 0 80 68" aria-hidden="true"><rect x="${ox}" y="${oy}" width="${W}" height="${H}" fill="none" stroke="var(--muted)" stroke-dasharray="3 3"/></svg>`;
   let s = `<rect x="${ox}" y="${oy}" width="${W}" height="${H}" fill="var(--sunk)" stroke="var(--muted)" stroke-width=".8"/>`;
   const Y = (y, h) => oy + H - (y + h) * sc;
-  if (type === 'upper_open') shelvesOf(m).forEach(y => s += `<line x1="${ox}" x2="${ox + W}" y1="${Y(y, 0)}" y2="${Y(y, 0)}" stroke="var(--muted)"/>`);
-  if (type === 'base_oven') s += `<rect x="${ox + 2}" y="${Y(m.h - 597, 595)}" width="${W - 4}" height="${595 * sc}" fill="var(--ink)" opacity=".85"/>`;
-  if (type === 'tall_oven') s += `<rect x="${ox + 2}" y="${Y(520, 595)}" width="${W - 4}" height="${595 * sc}" fill="var(--ink)" opacity=".85"/><rect x="${ox + 2}" y="${Y(1115, 380)}" width="${W - 4}" height="${380 * sc}" fill="var(--ink)" opacity=".6"/>`;
+  if (!t.tpl.facades.length) shelvesOf(m).forEach(y => s += `<line x1="${ox}" x2="${ox + W}" y1="${Y(y, 0)}" y2="${Y(y, 0)}" stroke="var(--muted)"/>`);
+  if (t.appliance === 'oven') s += `<rect x="${ox + 2}" y="${Y(m.h - 597, 595)}" width="${W - 4}" height="${595 * sc}" fill="var(--ink)" opacity=".85"/>`;
+  if (t.appliance === 'tall_oven') s += `<rect x="${ox + 2}" y="${Y(520, 595)}" width="${W - 4}" height="${595 * sc}" fill="var(--ink)" opacity=".85"/><rect x="${ox + 2}" y="${Y(1115, 380)}" width="${W - 4}" height="${380 * sc}" fill="var(--ink)" opacity=".6"/>`;
   facadesOf(m, {mat:{handle:'bar'}}).forEach(f => {
     s += `<rect x="${ox + f.x * sc}" y="${Y(f.y, f.h)}" width="${f.w * sc}" height="${f.h * sc}" fill="${f.glass ? 'var(--accent-soft)' : 'var(--surface)'}" stroke="var(--ink)" stroke-width=".8"/>`;
     if (f.glass) s += `<rect x="${ox + f.x * sc + 3}" y="${Y(f.y, f.h) + 3}" width="${f.w * sc - 6}" height="${f.h * sc - 6}" fill="none" stroke="var(--ink)" stroke-width=".5"/>`;
     const cx = ox + (f.x + f.w / 2) * sc, top = Y(f.y, f.h);
-    if (f.k === 'door' || f.k === 'fridge'){
+    if (f.k === 'panel'){ /* добор: ручки нет */ }
+    else if (f.k === 'door' || f.k === 'fridge'){
       const hx = f.hinge === 'left' ? ox + (f.x + f.w) * sc - 3 : ox + f.x * sc + 3;
       const hy = t.row === 'low' && !t.tall ? top + 3 : (f.part === 'bottom' ? top + 3 : top + f.h * sc - 9);
       s += `<line x1="${hx}" x2="${hx}" y1="${hy}" y2="${hy + 6}" stroke="var(--ink)" stroke-width="1.4"/>`;
@@ -918,7 +1022,8 @@ function leftCatalog(){
   const ws = wallsOf(S), num = numberMap();
   let h = `<div class="sec"><h3>Добавить модуль</h3>
     <div class="cats">${CATS.map(([k, n]) => `<button class="cat" data-act="cat" data-v="${k}" aria-pressed="${S.cat === k}">${n}</button>`).join('')}</div>
-    <div class="cards">${Object.entries(TYPES).filter(([, t]) => t.cat === S.cat).map(([k, t]) => `<button class="card" data-act="pick" data-v="${k}" data-type="${k}" aria-pressed="${!!placing && placing.type === k}" aria-label="Поставить на стену: ${esc(t.name)}">${moduleSvg(k)}<span class="cn">${esc(t.name)}</span><span class="cs">${t.gap ? t.w : t.w + '×' + t.h}</span></button>`).join('')}</div>
+    <div class="cards">${Object.entries(TYPES).filter(([, t]) => t.cat === S.cat).map(([k, t]) => `<button class="card" data-act="pick" data-v="${k}" data-type="${k}" aria-pressed="${!!placing && placing.type === k}" aria-label="Поставить на стену: ${esc(t.name)}">${moduleSvg(k)}${t.todo ? '<span class="cwarn" title="Правило требует проверки технолога">!</span>' : ''}<span class="cn">${esc(t.name)}</span><span class="cs">${t.gap ? t.w : t.w + '×' + t.h}</span></button>`).join('')}</div>
+    <button class="btn sm" data-act="lib-open">Библиотека модулей…</button>
     <div class="dnd-note"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex:none;margin-top:2px"><path d="M8 1.5v13M1.5 8h13M8 1.5L6 3.5M8 1.5l2 2M8 14.5l-2-2M8 14.5l2-2M1.5 8l2-2M1.5 8l2 2M14.5 8l-2-2M14.5 8l-2 2"/></svg><span>Перетащите модуль на стену в 3D-виде. На планшете: нажмите на модуль, затем на нужное место на стене.</span></div>
   </div><div class="sec"><h3><span>Состав кухни</span><span>${A.mods.filter(r => !TYPES[r.m.type].gap).length} модулей</span></h3>`;
   ws.forEach(wl => ROWS.forEach(([row, rn]) => {
@@ -952,9 +1057,10 @@ function leftModule(){
     <div class="chips">${t.widths.map(w => `<button class="chip" data-act="w-chip" data-v="${w}" aria-pressed="${w === m.w}">${w}</button>`).join('')}</div>
     <div class="btns">
       <button class="btn" data-act="mv" data-v="-1">← Левее</button><button class="btn" data-act="mv" data-v="1">Правее →</button>
-      ${t.gap || m.type === 'upper_open' ? '' : `<button class="btn" data-act="toggle-open">${modOpen(m) ? 'Закрыть все' : 'Открыть все'}</button>`}
+      ${!canOpen(m) ? '' : `<button class="btn" data-act="toggle-open">${modOpen(m) ? 'Закрыть все' : 'Открыть все'}</button>`}
       <button class="btn" data-act="dup">Копия</button><button class="btn danger" data-act="del">Удалить</button>
     </div></div>`;
+  if (t.todo) h += `<div class="sec"><div class="warn">Проверить у технолога: ${esc(t.todo)}</div></div>`;
   if (t.gap) return h + `<div class="sec"><div class="small muted">Свободное место: окно, отдельностоящий холодильник, плита. В смету не входит.</div></div>`;
   h += `<div class="sec"><h3>Цвета этого модуля</h3>
     <div class="field"><span class="flabel">Корпус: <span class="swname">${esc(m.corpus ? catFind(C.corpus, m.corpus).name : 'как у кухни')}</span></span>
@@ -963,13 +1069,13 @@ function leftModule(){
       ${catField('fcolor', m.facade, 'ov', 'facade', {none:'как у кухни'})}</div>` : ''}
   </div><div class="sec"><h3>Опции</h3>`;
   if (t.row === 'up') h += `<label class="chk"><input type="checkbox" id="edLight" ${m.light ? 'checked' : ''}> Подсветка снизу, ${nf0.format(P.led)} ₽/м</label>`;
-  if (t.row === 'low' && !t.tall && m.type !== 'base_dw'){
+  if (t.row === 'low' && !t.tall && t.carcass !== 'none'){
     h += `<label class="chk"><input type="checkbox" id="edSink" ${m.cut.sink ? 'checked' : ''}> Мойка: вырез в столешнице</label>
       <label class="chk"><input type="checkbox" id="edHob" ${m.cut.hob ? 'checked' : ''}> Варочная панель: вырез в столешнице</label>`;
   }
-  if (t.row === 'low' && m.type !== 'base_dw') h += `<label class="chk"><input type="checkbox" id="edPipe" ${m.cut.pipe ? 'checked' : ''}> Вырез под трубы и коммуникации</label>`;
+  if (t.row === 'low' && t.carcass !== 'none') h += `<label class="chk"><input type="checkbox" id="edPipe" ${m.cut.pipe ? 'checked' : ''}> Вырез под трубы и коммуникации</label>`;
   if (t.row === 'mezz') h += `<div class="small muted">Над пеналом ставьте глубину 560, над верхними 300.</div>`;
-  if (m.type.includes('corner')) h += `<div class="field"><span class="flabel">Глухая часть (заходит под соседний ряд)</span><div class="seg"><button data-act="blind" data-v="left" aria-pressed="${m.blind !== 'right'}">Слева</button><button data-act="blind" data-v="right" aria-pressed="${m.blind === 'right'}">Справа</button></div></div>`;
+  if (t.corner) h += `<div class="field"><span class="flabel">Глухая часть (заходит под соседний ряд)</span><div class="seg"><button data-act="blind" data-v="left" aria-pressed="${m.blind !== 'right'}">Слева</button><button data-act="blind" data-v="right" aria-pressed="${m.blind === 'right'}">Справа</button></div></div>`;
   const hw = r.hw, dr = DRAWERS[S.mat.drawers];
   const hwl = [hw.hinge && `петли CLIP top ${hw.hinge}`, hw.slide && `${dr.n} ${hw.slide}`, hw.lift && `AVENTOS ${hw.lift}`, hw.cargo && `карго ${hw.cargo}`,
     hw.fridge && `крепления холодильника ${hw.fridge}`, hw.dw && `крепление ПММ ${hw.dw}`, hw.bar && `ручки ${hw.bar}`, hw.push && `TIP-ON ${hw.push}`,
@@ -1363,6 +1469,36 @@ function applyImport(){
   $('importDlg').close(); renderPrices(); update(); toast(`Загружено: новых ${added}, обновлено ${updated}`);
 }
 
+/* ---------------- библиотека модулей ---------------- */
+const customTpls = () => load(KTPL) || [];
+const LIB_EXAMPLE = {code:'base_door_wide', name:'Широкий с дверцами', cat:'low', row:'low', w:1000, h:720, d:560, widths:[1000, 1100, 1200], shelves:[{y:'round(H/2)'}], facades:[{kind:'doors', y:'2', h:'H-4'}]};
+function renderLib(msg = ''){
+  const groups = CATS.map(([c, n]) => [n, Object.entries(TYPES).filter(([, t]) => t.cat === c)]).filter(([, l]) => l.length);
+  $('libBody').innerHTML = `
+    <div class="small muted" style="margin-bottom:8px">Модуль — это шаблон: размеры, детали, полки и фасады записаны данными и формулами, а не кодом. Новый модуль добавляется вставкой шаблона в формате JSON. Шаблоны ведёт технолог.</div>
+    ${groups.map(([n, list]) => `<h4 class="muted" style="margin:14px 0 2px;font-size:11px;letter-spacing:.07em;text-transform:uppercase">${n}</h4>${list.map(([code, t]) => `
+      <div class="lib-row"><div>${esc(t.name)}<span class="tag">${esc(code)}</span>${t.custom ? '<span class="tag">свой</span>' : ''}${t.todo ? `<span class="tag w" title="${esc(t.todo)}">проверить</span>` : ''}<br><small>${t.gap ? t.w : `${t.w}×${t.h}×${t.d}`} · ширины ${t.widths.join(', ')}</small></div>
+      <div class="btns"><button class="btn sm" data-act="lib-json" data-v="${code}">В редактор</button>${t.custom ? `<button class="btn sm danger" data-act="lib-del" data-v="${code}" aria-label="Удалить шаблон ${esc(t.name)}">×</button>` : ''}</div></div>`).join('')}`).join('')}
+    <h4 style="margin:18px 0 6px;font-size:13px">Добавить свой модуль</h4>
+    <div class="small muted">Вставьте шаблон JSON (один или список). Кнопка «В редактор» у любого модуля подставляет его шаблон как основу: поменяйте <b>code</b> и название. Формулы можно писать от <b>W</b>, <b>H</b>, <b>D</b> (ширина, высота, глубина), функции round, floor, ceil, min, max, abs, условия <b>? :</b>.</div>
+    <textarea id="libJson" aria-label="Шаблон модуля, JSON" placeholder='${esc(JSON.stringify(LIB_EXAMPLE))}'></textarea>
+    ${msg ? `<div class="lib-err" role="alert">${msg}</div>` : ''}
+    <div class="btns" style="margin-top:8px"><button class="btn pri" data-act="lib-add">Добавить в библиотеку</button><button class="btn" data-act="lib-example">Подставить пример</button></div>`;
+}
+function libAdd(){
+  const raw = $('libJson').value.trim(); if (!raw){ renderLib('Вставьте шаблон JSON.'); return; }
+  let data; try { data = JSON.parse(raw); } catch(e){ renderLib('Это не JSON: ' + esc(e.message)); $('libJson').value = raw; return; }
+  const list = Array.isArray(data) ? data : [data], taken = Object.keys(TYPES), errors = [];
+  list.forEach((t, i) => { const er = validateTemplate(t, taken); if (er.length) errors.push(`<b>${esc(t && t.code || 'шаблон ' + (i + 1))}</b>: ${er.map(esc).join('; ')}`); else taken.push(t.code); });
+  if (errors.length){ renderLib(errors.join('<br>')); $('libJson').value = raw; return; }
+  store(KTPL, [...customTpls(), ...list]); setTemplates(customTpls()); renderLib(); renderLeft(); toast(`Добавлено шаблонов: ${list.length}`);
+}
+function libDel(code){
+  const used = S.modules.filter(m => m.type === code).length;
+  if (used){ toast(`Модуль используется в проекте (${used} шт.). Сначала удалите его из кухни`); return; }
+  store(KTPL, customTpls().filter(t => t.code !== code)); setTemplates(customTpls()); renderLib(); renderLeft();
+}
+
 /* ---------------- copy ---------------- */
 function smetaText(){
   const num = numberMap(), L = [`Смета на кухню, заказ ${S.order || ''}`.trim()];
@@ -1522,7 +1658,7 @@ function renderModbar(){
     <button class="mb" data-act="w-step" data-v="1" title="Шире: следующая стандартная ширина" aria-label="Шире">+</button><span class="sep"></span>
     <button class="mb" data-act="mv" data-v="-1" title="Левее (стрелка ←)" aria-label="Левее">←</button>
     <button class="mb" data-act="mv" data-v="1" title="Правее (стрелка →)" aria-label="Правее">→</button><span class="sep"></span>
-    ${t.gap || m.type === 'upper_open' ? '' : `<button class="mb" data-act="toggle-open" title="Открыть или закрыть все дверцы и ящики модуля. Одну дверцу или один ящик открывает двойной клик по ней">${modOpen(m) ? 'Закрыть' : 'Открыть'}</button>`}
+    ${!canOpen(m) ? '' : `<button class="mb" data-act="toggle-open" title="Открыть или закрыть все дверцы и ящики модуля. Одну дверцу или один ящик открывает двойной клик по ней">${modOpen(m) ? 'Закрыть' : 'Открыть'}</button>`}
     <button class="mb" data-act="dup" title="Копия (Ctrl+D)">Копия</button>
     <button class="mb danger" data-act="del" title="Удалить (Delete)">Удалить</button>`;
   bar.hidden = false;
@@ -1580,6 +1716,7 @@ function ensureRefs(){
   ['corpus','facade','milling','top'].forEach(k => { if (!C[k].some(r => r.id === S.mat[k])) S.mat[k] = C[k][0].id; });
   if (!C.fcolor.some(r => r.id === S.mat.fLow)) S.mat.fLow = C.fcolor[0].id;
   if (!C.fcolor.some(r => r.id === S.mat.fUp)) S.mat.fUp = C.fcolor[0].id;
+  const before = S.modules.length; S.modules = S.modules.filter(m => TYPES[m.type]); if (S.modules.length < before) setTimeout(() => toast('Убраны модули, шаблонов которых больше нет в библиотеке: ' + (before - S.modules.length)), 300);
   S.modules.forEach(m => { if (m.corpus && !C.corpus.some(r => r.id === m.corpus)) m.corpus = null; if (m.facade && !C.fcolor.some(r => r.id === m.facade)) m.facade = null; if (!m.cut) m.cut = {sink:false, hob:false, pipe:false}; });
 }
 
@@ -1627,6 +1764,11 @@ document.addEventListener('click', e => {
     case 'imp-mode': imp.mode = v; renderImport(); break;
     case 'imp-apply': applyImport(); break;
     case 'imp-undo': { const bk = load(KBACKUP); if (!bk) break; C[bk.key] = bk.items; ensureRefs(); store(KC, C); try { localStorage.removeItem(KBACKUP); } catch(e){} renderPrices(); update(); toast('Загрузка отменена'); break; }
+    case 'lib-open': renderLib(); $('libDlg').showModal(); break;
+    case 'lib-add': libAdd(); break;
+    case 'lib-del': libDel(v); break;
+    case 'lib-example': $('libJson').value = JSON.stringify(LIB_EXAMPLE, null, 2); break;
+    case 'lib-json': { const t = TYPES[v]; if (t){ const c = JSON.parse(JSON.stringify(t.tpl)); delete c.custom; c.code = v + '_copy'; c.name = t.name + ' (копия)'; $('libJson').value = JSON.stringify(c, null, 2); $('libJson').focus(); $('libJson').scrollIntoView({block:'center'}); } break; }
     case 'undo': undo(); break;
     case 'redo': redo(); break;
     case 'toggle-open': if (m){ toggleModOpen(m); renderLeft(); renderModbar(); } break;
@@ -1685,8 +1827,8 @@ document.addEventListener('change', e => {
     case 'inDisc': { const n = parseNum(t.value); S.disc = Math.min(50, Math.max(0, isFinite(n) ? n : 0)); update({left:false, rebuild:false}); break; }
     case 'edType': if (m){
       const nt = t.value, d = TYPES[nt], o = TYPES[m.type];
-      if (o.row !== d.row || o.cat !== d.cat || (!d.widths.includes(m.w) && (nt.includes('corner') || nt === 'base_oven' || nt.startsWith('tall_') || nt === 'base_cargo'))) m.w = d.w;
-      m.type = nt; m.h = d.h; m.d = d.d; m.cut = {sink:nt === 'base_sink', hob:nt === 'base_oven', pipe:nt === 'base_sink'}; update(); } break;
+      if (o.row !== d.row || o.cat !== d.cat || (!d.widths.includes(m.w) && d.strictW)) m.w = d.w;
+      m.type = nt; m.h = d.h; m.d = d.d; m.cut = defCut(nt); update(); } break;
     case 'mbW': if (m){ const nv = clampNum(t.value, 150, 2400, m.w); if (nv !== Math.round(parseNum(t.value))) toast('Допустимо от 150 до 2400 мм'); m.w = nv; update(); } break;
     case 'edW': case 'edH': case 'edD': if (m){
       const k = {edW:'w', edH:'h', edD:'d'}[id], lim = {w:[150, 2400], h:[200, 2400], d:[250, 700]}[k];
@@ -1917,23 +2059,23 @@ function buildModule(m, pos){
   const dr = DRAWERS[S.mat.drawers], dcol = dr.colors.find(c => c.id === S.mat.drawerColor) || dr.colors[0];
   const dmat = plainMat('drawer', dcol.hex, dcol.metal ? .3 : .45, dcol.metal ? .7 : .25), white = plainMat('dbottom', '#EDEDE8', .7);
 
-  if (m.type === 'base_dw') box(g, W - 4, H - 10, D - 20, 2, baseY, 10, dark);
-  else {
+  if (t.appliance === 'dw') box(g, W - 4, H - 10, D - 20, 2, baseY, 10, dark);
+  else if (t.carcass !== 'none'){
     box(g, T, H, D, 0, baseY, 0, corp); box(g, T, H, D, W - T, baseY, 0, corp);
     box(g, W - 2*T, T, D, T, baseY, 0, corp);
     if (t.row === 'low' && !t.tall){ box(g, W - 2*T, T, 100, T, baseY + H - T, D - 100, corp); box(g, W - 2*T, T, 100, T, baseY + H - T, 0, corp); }
     else box(g, W - 2*T, T, D, T, baseY + H - T, 0, corp);
-    if (m.type !== 'base_sink') box(g, W - 2*T, H - 2*T, 4, T, baseY + T, 0, corp, false);
+    if (t.back) box(g, W - 2*T, H - 2*T, 4, T, baseY + T, 0, corp, false);
     shelvesOf(m).forEach(y => box(g, W - 2*T - 2, T, D - 20, T + 1, baseY + y - T / 2, 0, corp));
   }
-  if (m.type === 'base_oven'){ const oy = baseY + H - 597; box(g, W - 6, 535, 22, 3, oy, D, dark); box(g, W - 6, 60, 24, 3, oy + 535, D, steel); box(g, W - 120, 10, 16, 60, oy + 485, D + 22, steel); box(g, W - 40, 560, D - 40, 20, oy, 20, dark); }
-  if (m.type === 'tall_oven'){
+  if (t.appliance === 'oven'){ const oy = baseY + H - 597; box(g, W - 6, 535, 22, 3, oy, D, dark); box(g, W - 6, 60, 24, 3, oy + 535, D, steel); box(g, W - 120, 10, 16, 60, oy + 485, D + 22, steel); box(g, W - 40, 560, D - 40, 20, oy, 20, dark); }
+  if (t.appliance === 'tall_oven'){
     box(g, W - 6, 535, 22, 3, baseY + 520, D, dark); box(g, W - 6, 60, 24, 3, baseY + 1055, D, steel); box(g, W - 120, 10, 16, 60, baseY + 1005, D + 22, steel);
     box(g, W - 6, 380, 22, 3, baseY + 1115, D, steel); box(g, W - 180, 300, 24, 20, baseY + 1155, D, dark);
   }
-  if (m.type === 'tall_fridge') box(g, W - 2*T - 10, 1740, D - 40, T + 5, baseY + T + 5, 20, plainMat('fridge', '#F4F4F2', .4));
-  if (m.type === 'upper_lift') box(g, W - 40, 60, D + 40, 20, baseY - 60, 0, steel);
-  if (m.type === 'base_cargo'){
+  if (t.appliance === 'fridge') box(g, W - 2*T - 10, 1740, D - 40, T + 5, baseY + T + 5, 20, plainMat('fridge', '#F4F4F2', .4));
+  if (t.appliance === 'lift' && t.row === 'up') box(g, W - 40, 60, D + 40, 20, baseY - 60, 0, steel);
+  if (t.appliance === 'cargo'){
     const cg = new THREE.Group(); g.add(cg);
     [80, 380].forEach(y => { box(cg, W - 2*T - 20, 4, D - 60, T + 10, baseY + y, 20, steel); box(cg, W - 2*T - 20, 60, 3, T + 10, baseY + y, D - 45, steel); });
     box(cg, 10, H - 80, 10, W / 2 - 5, baseY + 40, D - 30, steel);
@@ -1958,6 +2100,8 @@ function buildModule(m, pos){
     } else if (f.k === 'dw'){
       piv.position.set(f.x / 1000, (baseY + f.y) / 1000, D / 1000); g.add(piv);
       facadePanel(piv, f.w, f.h, 0, 0, fac, mill, false); addAnim(fid, piv, 'rx', 1.35);
+    } else if (f.k === 'panel'){
+      piv.position.set(f.x / 1000, (baseY + f.y) / 1000, D / 1000); g.add(piv); facadePanel(piv, f.w, f.h, 0, 0, fac, mill, false);
     } else if (f.k === 'drawer'){
       const slide = new THREE.Group(); slide.userData.fid = fid; g.add(slide);
       const side = Math.min(f.h - 50, f.h < 220 ? 90 : f.h < 330 ? 177 : 241), len = D - 70, iw = W - 2*T - 26, by = baseY + f.y + 22, z0 = D - len - 8;
@@ -1968,7 +2112,7 @@ function buildModule(m, pos){
       facadePanel(piv, f.w, f.h, 0, 0, fac, mill, false);
       addAnim(fid, slide, 'z', (len * .8) / 1000);
     }
-    if (S.mat.handle === 'bar'){
+    if (S.mat.handle === 'bar' && f.k !== 'panel'){
       if (f.k === 'door' || f.k === 'fridge'){
         const hx = hx0 + (f.hinge === 'left' ? f.w - 46 : 36);
         let hy;
