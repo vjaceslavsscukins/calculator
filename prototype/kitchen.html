@@ -649,6 +649,14 @@ const BUILTIN_TEMPLATES = [
   {code:'s_tall_drawers', name:'Пенал с ящиками', family:'shop', cat:'tall', row:'low', tall:true, w:600, h:2070, d:560, widths:[400, 450, 500, 600], strictW:true,
     note:'Четыре выдвижных ящика на всю высоту пенала (кладовая).', todo:'Число и высота ящиков примерные (в моделях Базиса Firmax Newline), уточнить у технолога.',
     facades:[{kind:'drawer', y:'2', h:'round(H/4)-4'}, {kind:'drawer', y:'round(H/4)+2', h:'round(H/4)-4'}, {kind:'drawer', y:'round(H/2)+2', h:'round(H/4)-4'}, {kind:'drawer', y:'round(H*3/4)+2', h:'H-round(H*3/4)-4'}]},
+  {code:'s_base_corner', name:'Угловой нижний', family:'shop', cat:'low', row:'low', w:1050, h:720, d:510, widths:[900, 1000, 1050, 1100], corner:true, strictW:true, golaKeep:true, golaRise:60, panels:SHOP_LOW_SHELF, shelves:[{y:'round(H/2)'}],
+    note:SHOP_NOTE + ' Одна дверца на открытой части, глухая часть 600 мм заходит под соседний ряд; угловая фальшпланка (60 мм) входит по умолчанию.',
+    todo:'Конструкция углового взята как у нижнего модуля цеха; в моделях Базиса угловой собирается из нескольких обычных модулей, ведомости углового уточнить у технолога.',
+    facades:[{kind:'corner', blind:600}]},
+  {code:'s_up_corner', name:'Угловой верхний', family:'shop', cat:'up', row:'up', w:620, h:720, d:340, widths:[620, 650, 700], corner:true, strictW:true, panels:SHOP_UP, shelves:SHELVES_UP,
+    note:SHOP_NOTE + ' Одна дверца на открытой части, глухая часть 320 мм заходит под соседний ряд; угловая фальшпланка (60 мм) входит по умолчанию.',
+    todo:'Конструкция углового верхнего взята как у верхнего модуля цеха; ведомости углового уточнить у технолога.',
+    facades:[{kind:'corner', blind:320}]},
   {code:'base_door', legacy:true, name:'С дверцами', cat:'low', row:'low', w:600, h:720, d:560, widths:[300,400,450,500,600,800,900], shelves:[{y:'round(H/2)'}], facades:[{kind:'doors', y:'2', h:'H-4'}]},
   {code:'base_drawer_door', legacy:true, name:'Ящик и дверцы', cat:'low', row:'low', w:600, h:720, d:560, widths:[400,450,500,600,800,900], shelves:[{y:'round(H*0.39)'}],
     facades:[{kind:'doors', y:'2', h:'H-round(H*0.22)-4'}, {kind:'drawer', y:'H-round(H*0.22)+2', h:'round(H*0.22)-4'}]},
@@ -664,12 +672,12 @@ const BUILTIN_TEMPLATES = [
     facades:[{kind:'drawer', y:'2', h:'max(H-600,60)-4'}]},
   {code:'base_dw', legacy:true, name:'Посудомойка', cat:'low', row:'low', w:600, h:720, d:560, widths:[450,600], carcass:'none', appliance:'dw', facades:[{kind:'single', k:'dw', y:'2', h:'H-4'}]},
   {code:'base_cargo', legacy:true, name:'Бутылочница', cat:'low', row:'low', w:200, h:720, d:560, widths:[150,200,300], strictW:true, appliance:'cargo', facades:[{kind:'single', k:'cargo', y:'2', h:'H-4'}]},
-  {code:'base_corner', name:'Угловой нижний', cat:'low', row:'low', w:1050, h:720, d:560, widths:[900,1000,1050,1100], corner:true, strictW:true, shelves:[{y:'round(H/2)'}], facades:[{kind:'corner', blind:600}]},
+  {code:'base_corner', legacy:true, name:'Угловой нижний', cat:'low', row:'low', w:1050, h:720, d:560, widths:[900,1000,1050,1100], corner:true, strictW:true, shelves:[{y:'round(H/2)'}], facades:[{kind:'corner', blind:600}]},
   {code:'upper_door', legacy:true, name:'С дверцами', cat:'up', row:'up', w:600, h:720, d:300, widths:[300,400,450,500,600,800,900], shelves:SHELVES_UP, facades:[{kind:'doors', y:'2', h:'H-4'}]},
   {code:'upper_glass', legacy:true, name:'Витрина со стеклом', cat:'up', row:'up', w:600, h:720, d:300, widths:[400,450,500,600,800], shelves:SHELVES_UP, facades:[{kind:'doors', y:'2', h:'H-4', glass:true}]},
   {code:'upper_lift', name:'С подъёмником', cat:'up', row:'up', w:600, h:360, d:300, widths:[500,600,800,900], appliance:'lift', facades:[{kind:'single', k:'lift', y:'2', h:'H-4'}]},
   {code:'upper_open', legacy:true, name:'Открытая полка', cat:'up', row:'up', w:600, h:720, d:300, widths:[300,400,600,800], noOpen:true, shelves:SHELVES_UP, facades:[]},
-  {code:'upper_corner', name:'Угловой верхний', cat:'up', row:'up', w:620, h:720, d:300, widths:[620,650,700], corner:true, strictW:true, shelves:SHELVES_UP, facades:[{kind:'corner', blind:320}]},
+  {code:'upper_corner', legacy:true, name:'Угловой верхний', cat:'up', row:'up', w:620, h:720, d:300, widths:[620,650,700], corner:true, strictW:true, shelves:SHELVES_UP, facades:[{kind:'corner', blind:320}]},
   {code:'mezz_door', legacy:true, name:'Антресоль с дверцами', cat:'mezz', row:'mezz', w:600, h:360, d:300, widths:[400,600,800,900], shelves:[{y:'round(H/2)', when:'H>450'}], facades:[{kind:'doors', y:'2', h:'H-4'}]},
   {code:'mezz_lift', name:'Антресоль с подъёмником', cat:'mezz', row:'mezz', w:600, h:360, d:300, widths:[600,800,900], facades:[{kind:'single', k:'lift', y:'2', h:'H-4'}]},
   {code:'tall_door', legacy:true, name:'Пенал с дверцами', cat:'tall', row:'low', tall:true, w:600, h:2070, d:560, widths:[400,450,500,600], strictW:true,
@@ -867,7 +875,7 @@ function facadesOf(m, S){
       out.push(Object.assign({x:2, y:ev(fd.y), w:W - 4, h:ev(fd.h), k:'drawer'}, ex));
     }
     else if (fd.kind === 'single') out.push(Object.assign({x:2, y:ev(fd.y), w:W - 4, h:ev(fd.h), k:fd.k}, fd.hinge ? {hinge:fd.hinge} : null, fd.part ? {part:fd.part} : null, fd.second ? {second:true} : null));
-    else if (fd.kind === 'corner'){ const dw = Math.max(W - fd.blind, 250); if (m.blind === 'right') door(2, 2, dw - 4, H - 4, 'left'); else door(W - dw + 2, 2, dw - 4, H - 4, 'right'); }
+    else if (fd.kind === 'corner'){ const dw = Math.max(W - fd.blind, 250), dh = t.tpl.golaKeep ? H - 4 + 30*G : H - 4; if (m.blind === 'right') door(2, 2, dw - 4, dh, 'left'); else door(W - dw + 2, 2, dw - 4, dh, 'right'); }
   });
   if (S.mat.handle === 'gola' && !t.noGola){
     if (t.row === 'low' && !t.tall) out.forEach(f => { if (!t.tpl.golaKeep) f.h -= GOLA; f.channel = true; });   // golaKeep: высоты фасадов задаёт шаблон через G, как в ведомостях технолога
@@ -1146,7 +1154,7 @@ function deepMerge(base, over){
 function load(key){ try { const s = localStorage.getItem(key); return s ? JSON.parse(s) : null; } catch(e){ return null; } }
 function store(key, v){ try { localStorage.setItem(key, JSON.stringify(v)); } catch(e){} if (key === KS) projectChanged(); else if (key === KP) settingsChanged('prices'); else if (key === KC) settingsChanged('catalogs'); }
 // Проекты: общая база для тестирования. Настройки подключения лежат в браузере, данные проектов на сервере (kitchen-api, PostgreSQL).
-const BUILD = '21.10.2026, сборка 13'; // меняется при каждом выпуске: по ней видно, какая версия открыта
+const BUILD = '21.10.2026, сборка 14'; // меняется при каждом выпуске: по ней видно, какая версия открыта
 const KSRV = 'kitchen.server.v1', API_DEFAULT = 'https://kitchen-api-c112.onrender.com';
 const PKEYS = ['client', 'order', 'layout', 'walls', 'room', 'mat', 'disc', 'modules', 'nextId', 'extra', 'parts', 'kp'];
 let srv = Object.assign({url:API_DEFAULT, code:'', name:'', role:''}, load(KSRV) || {});
@@ -1193,6 +1201,7 @@ function kpText(m){
   const t = TYPES[m.type], r = resultOf(m.id), ms = modS(m, S), dsys = DRAWERS[ms.mat.drawers], hd = ms.mat.handle;
   const nd = r.facs.filter(f => f.k === 'drawer').length, nr = r.facs.filter(f => f.k === 'door').length, frame = r.facs.some(f => f.frame);
   const out = [`${modLabel(m)}, ширина ${m.w} мм, высота ${m.h + riseOf(m)} мм, глубина ${m.d} мм.`];
+  if (t.corner){ const cf = (t.tpl.facades || []).find(f => f.kind === 'corner'); if (cf) out.push(`Открытая часть ${m.w - cf.blind} мм с дверцей, глухая часть ${cf.blind} мм заходит под соседний ряд${+m.plank > 0 ? `, угловая фальшпланка ${m.plank} мм` : ''}.`); }
   if (frame) out.push(`Фасады в алюминиевой рамке ${(FRAMES[m.frame || t.tpl.frame] || '').replace(/ \(.*\)/, '')} со стеклом.`);
   if (nd) out.push(`Ящики ${dsys.n} полного выдвижения с доводчиком${m.inner ? ', внутренний ящик в верхнем' : ''}.`);
   if (nr) out.push(`Петли ${m.hingeBrand === 'hettich' ? 'Hettich Sensys' : 'Blum CLIP top BLUMOTION'}.`);
