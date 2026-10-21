@@ -502,6 +502,10 @@ dialog.dlg::backdrop{background:rgba(20,18,15,.5)}
   <div class="dlg-h"><b>Библиотека модулей</b><button class="btn sm" data-act="dlg-close" data-v="libDlg" aria-label="Закрыть">×</button></div>
   <div class="dlg-b" id="libBody"></div>
 </dialog>
+<dialog id="consDlg" class="dlg" aria-label="Свой модуль">
+  <div class="dlg-h"><b>Свой модуль</b><button class="btn sm" data-act="dlg-close" data-v="consDlg" aria-label="Закрыть">×</button></div>
+  <div class="dlg-b" id="consBody"></div>
+</dialog>
 <div class="toast" id="toast" hidden></div>
 <div id="printArea" aria-hidden="true"></div>
 
@@ -1176,11 +1180,14 @@ function calcModule(m, S, P, C){
 function layoutOf(S){
   const res = {pos:{}, walls:{}, tops:[], warnings:[]};
   const ws = wallsOf(S);
+  // Угловой модуль можно поставить на любую из двух стен угла: чья стена первая в углу (первый в ряду угловой), та начинается с нуля, соседняя отступает под глухую часть
+  const ownsCorner = (wl, row) => { const f = S.modules.find(m => m.wall === wl && TYPES[m.type].row === row && !TYPES[m.type].gap); return !!(f && TYPES[f.type].corner && TYPES[f.type].family === 'shop'); };
+  const own = {B:{low:ownsCorner('B', 'low'), up:ownsCorner('B', 'up')}, C:{low:ownsCorner('C', 'low'), up:ownsCorner('C', 'up')}};
   ws.forEach(wl => {
     const L = S.walls[wl], side = wl !== 'A';
     const mods = S.modules.filter(m => m.wall === wl);
     const by = r => mods.filter(m => TYPES[m.type].row === r);
-    const offL = side ? 600 : 0, offU = side ? 320 : 0;
+    const offL = side ? (own[wl].low ? 0 : 600) : (own.B.low ? 600 : 0), offU = side ? (own[wl].up ? 0 : 320) : (own.B.up ? 320 : 0);
     let x = offL; const tallI = [];
     by('low').forEach(m => { res.pos[m.id] = {x, wall:wl}; if (TYPES[m.type].tall) tallI.push([x, x + m.w]); x += m.w; });
     let u = offU;
@@ -1206,13 +1213,13 @@ function layoutOf(S){
   });
   const A = res.walls.A;
   if (ws.includes('B')){
-    if (res.walls.B.nLow && A.lows[0] && !(TYPES[A.lows[0].type].corner && A.lows[0].blind !== 'right')) res.warnings.push('Угол со стеной Б: первым внизу на стене А поставьте «Угловой нижний» с глухой частью слева');
-    if (res.walls.B.nUp && A.ups[0] && !(TYPES[A.ups[0].type].corner && A.ups[0].blind !== 'right')) res.warnings.push('Угол со стеной Б: первым вверху на стене А поставьте «Угловой верхний» с глухой частью слева');
+    if (res.walls.B.nLow && !own.B.low && A.lows[0] && !(TYPES[A.lows[0].type].corner && A.lows[0].blind !== 'right')) res.warnings.push('Угол со стеной Б: первым внизу на стене А поставьте «Угловой нижний» с глухой частью слева');
+    if (res.walls.B.nUp && !own.B.up && A.ups[0] && !(TYPES[A.ups[0].type].corner && A.ups[0].blind !== 'right')) res.warnings.push('Угол со стеной Б: первым вверху на стене А поставьте «Угловой верхний» с глухой частью слева');
   }
   if (ws.includes('C')){
     const ll = A.lows[A.lows.length - 1], lu = A.ups[A.ups.length - 1];
-    if (res.walls.C.nLow && ll && !(TYPES[ll.type].corner && ll.blind === 'right')) res.warnings.push('Угол со стеной В: последним внизу на стене А поставьте «Угловой нижний» с глухой частью справа');
-    if (res.walls.C.nUp && lu && !(TYPES[lu.type].corner && lu.blind === 'right')) res.warnings.push('Угол со стеной В: последним вверху на стене А поставьте «Угловой верхний» с глухой частью справа');
+    if (res.walls.C.nLow && !own.C.low && ll && !(TYPES[ll.type].corner && ll.blind === 'right')) res.warnings.push('Угол со стеной В: последним внизу на стене А поставьте «Угловой нижний» с глухой частью справа');
+    if (res.walls.C.nUp && !own.C.up && lu && !(TYPES[lu.type].corner && lu.blind === 'right')) res.warnings.push('Угол со стеной В: последним вверху на стене А поставьте «Угловой верхний» с глухой частью справа');
   }
   const hiMezz = S.modules.filter(m => ws.includes(m.wall) && TYPES[m.type].row === 'mezz' && !TYPES[m.type].gap && (S.mat.upBottom || 1450) + 720 + m.h > S.room.height);
   if (hiMezz.length) res.warnings.push(`Антресоли выше потолка ${S.room.height} мм: уменьшите высоту антресолей`);
@@ -1342,7 +1349,7 @@ function deepMerge(base, over){
 function load(key){ try { const s = localStorage.getItem(key); return s ? JSON.parse(s) : null; } catch(e){ return null; } }
 function store(key, v){ try { localStorage.setItem(key, JSON.stringify(v)); } catch(e){} if (key === KS) projectChanged(); else if (key === KP) settingsChanged('prices'); else if (key === KC) settingsChanged('catalogs'); }
 // Проекты: общая база для тестирования. Настройки подключения лежат в браузере, данные проектов на сервере (kitchen-api, PostgreSQL).
-const BUILD = '22.10.2026, сборка 24'; // меняется при каждом выпуске: по ней видно, какая версия открыта
+const BUILD = '22.10.2026, сборка 26'; // меняется при каждом выпуске: по ней видно, какая версия открыта
 const KSRV = 'kitchen.server.v1', API_DEFAULT = 'https://kitchen-api-c112.onrender.com';
 const PKEYS = ['client', 'order', 'layout', 'walls', 'room', 'mat', 'disc', 'modules', 'nextId', 'extra', 'parts', 'kp'];
 let srv = Object.assign({url:API_DEFAULT, code:'', name:'', role:''}, load(KSRV) || {});
@@ -1592,7 +1599,7 @@ function leftCatalog(){
     <div class="field" style="margin-top:8px"><span class="flabel">Как показывать модули</span><div class="seg">${Object.entries(HANDLES).map(([k, v]) => `<button data-act="cat-style" data-v="${k}" aria-pressed="${catStyle() === k}">${k === 'bar' ? 'С ручкой' : k === 'gola' ? 'Gola' : 'Push'}</button>`).join('')}</div>
     ${catStyle() === S.mat.handle ? '' : `<div class="small muted" style="margin-top:6px">В проекте сейчас «${esc(HANDLES[S.mat.handle])}». <button class="btn sm" data-act="mat" data-k="handle" data-v="${catStyle()}">Сделать так во всей кухне</button></div>`}</div>
     <div class="cards">${Object.entries(TYPES).filter(([, t]) => t.cat === S.cat && !t.legacy).map(([k, t]) => `<button class="card" data-act="pick" data-v="${k}" data-type="${k}" aria-pressed="${!!placing && placing.type === k}" aria-label="Поставить на стену: ${esc(t.name)}">${thumbGet(k) ? `<img class="cthumb" alt="" src="${thumbGet(k)}">` : moduleSvg(k)}${t.todo ? '<span class="cwarn" title="Правило требует проверки технолога">!</span>' : ''}<span class="cn">${esc(t.name)}</span><span class="cs">${t.gap ? t.w : t.w + '×' + t.h}</span></button>`).join('')}</div>
-    <button class="btn sm" data-act="lib-open">Библиотека модулей…</button>
+    <button class="btn sm" data-act="cons-open">Свой модуль…</button> <button class="btn sm" data-act="lib-open">Библиотека модулей…</button>
     <div class="dnd-note"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex:none;margin-top:2px"><path d="M8 1.5v13M1.5 8h13M8 1.5L6 3.5M8 1.5l2 2M8 14.5l-2-2M8 14.5l2-2M1.5 8l2-2M1.5 8l2 2M14.5 8l-2-2M14.5 8l-2 2"/></svg><span>Перетащите модуль на стену в 3D-виде. На планшете: нажмите на модуль, затем на нужное место на стене.</span></div>
   </div><div class="sec"><h3><span>Состав кухни</span><span>${A.mods.filter(r => !TYPES[r.m.type].gap).length} модулей</span></h3>`;
   ws.forEach(wl => ROWS.forEach(([row, rn]) => {
@@ -2118,6 +2125,107 @@ function libDel(code){
   if (used){ toast(`Модуль используется в проекте (${used} шт.). Сначала удалите его из кухни`); return; }
   store(KTPL, customTpls().filter(t => t.code !== code)); setTemplates(customTpls()); renderLib(); renderLeft();
 }
+
+/* ---------------- конструктор своего модуля ---------------- */
+// Продажник задаёт тип, размеры и раскладку фасадов по высоте; из этого собирается обычный шаблон модуля (данные и формулы), его считает тот же движок.
+const CONS_DEF = {
+  low:{name:'Нижний', w:600, h:720, d:560}, up:{name:'Верхний', w:600, h:720, d:340},
+  mezz:{name:'Антресоль', w:600, h:400, d:340}, tall:{name:'Пенал', w:600, h:2070, d:560}};
+const CONS_ROW = {door:'Дверца', drawer:'Ящик', lift:'Подъёмник (фасад откидной)', panel:'Глухой фасад', niche:'Ниша без фасада'};
+let CONS = null;
+function consReset(cat){ const d = CONS_DEF[cat]; CONS = {name:CONS && CONS.name || 'Свой модуль', cat, w:d.w, h:d.h, d:d.d, rows:[{type:'door', n:1, h:0}], shelves:cat === 'low' ? 1 : 2, glass:false, frame:''}; }
+function consOpen(){ if (!CONS) consReset('low'); renderCons(); $('consDlg').showModal(); }
+// Строки сверху вниз: у всех, кроме нижней, высота задаётся, нижняя занимает остаток
+function consBuild(){
+  const c = CONS, t = {code:'c_' + Date.now().toString(36), name:(c.name || 'Свой модуль').trim(), family:'custom', cat:c.cat, row:c.cat === 'tall' ? 'low' : c.cat, w:c.w, h:c.h, d:c.d, widths:[c.w]};
+  if (c.cat === 'tall') t.tall = true;
+  if (c.cat === 'low'){ t.golaKeep = true; t.golaRise = 60; }
+  if (c.cat === 'up' || c.cat === 'mezz') t.golaKeep = true;
+  const up = c.cat === 'up' || c.cat === 'mezz', low = c.cat === 'low';
+  if (low) t.panels = JSON.parse(JSON.stringify(c.shelves > 0 ? SHOP_LOW_SHELF : SHOP_LOW)); else if (up) t.panels = JSON.parse(JSON.stringify(SHOP_UP));
+  if (c.shelves > 0) t.shelves = Array.from({length:c.shelves}, (_, i) => ({y:`round(H*${i + 1}/${c.shelves + 1})`}));
+  // rows — сверху вниз; нижний ряд занимает остаток, остальные заданной высоты; зазор между фасадами 4 мм
+  const rows = c.rows.slice().reverse(), k = rows.length, base = low ? 'H-4+30*G' : up ? 'H-3-G' : 'H-4';   // rows[0] — нижний
+  const hOf = r => Math.max(50, Math.round(r.h || 300)), fixedTotal = rows.slice(1).reduce((a, r) => a + hOf(r), 0) + 4 * (k - 1);
+  let above = 0, lifts = 0; const fac = [];
+  rows.forEach((r, i) => {
+    const hs = i === 0 ? `(${base})-${fixedTotal}` : String(hOf(r)), y = i === 0 ? '2' : `(${base})-${fixedTotal}+${6 + above}`;
+    if (i > 0) above += hOf(r) + 4;
+    const part = c.cat === 'tall' ? (k === 1 ? 'mid' : i === k - 1 ? 'top' : 'bottom') : undefined;
+    if (r.type === 'door') fac.push(Object.assign({kind:'doors', n:r.n === 2 ? 2 : 1, y, h:hs}, c.glass || (up && c.frame) ? {glass:true} : null, up && c.frame ? {frame:true} : null, part ? {part} : null));
+    else if (r.type === 'drawer') fac.push({kind:'drawer', y, h:hs});
+    else if (r.type === 'lift'){ fac.push(Object.assign({kind:'single', k:'lift', y, h:hs}, lifts ? {second:true} : null)); lifts++; }
+    else if (r.type === 'panel') fac.push({kind:'single', k:'panel', y, h:hs});
+  });
+  t.facades = fac;
+  if (lifts > 1) t.lift = 'hf';
+  if (up && c.frame) t.frame = c.frame;
+  t.note = 'Модуль собран в конструкторе: детали по типовой конструкции цеха, раскладка фасадов задана продажником.';
+  t.todo = 'Свой модуль: раскладку и детали проверить у технолога.';
+  return t;
+}
+function consSvg(){
+  const c = CONS, W = 150, Hh = Math.min(170, Math.max(60, c.h / c.w * W)), rows = c.rows, k = rows.length;
+  const hOf = r => Math.max(50, r.h || 300), fixed = rows.slice(0, k - 1).reduce((a, r) => a + hOf(r), 0), rest = Math.max(50, c.h - fixed), tot = fixed + rest;
+  let y = 0, sv = `<rect x="1" y="1" width="${W}" height="${Hh}" fill="none" stroke="currentColor" stroke-width="1.5"/>`;
+  rows.forEach((r, i) => { const hh = (i === k - 1 ? rest : hOf(r)) / tot * (Hh - 4), y0 = 3 + y; y += hh;
+    if (r.type === 'niche') return;
+    sv += `<rect x="4" y="${y0}" width="${W - 6}" height="${Math.max(2, hh - 2)}" fill="${r.type === 'panel' ? 'currentColor' : 'none'}" fill-opacity=".15" stroke="currentColor" stroke-width="1"/>`;
+    if (r.type === 'door' && r.n === 2) sv += `<line x1="${W / 2 + 1}" x2="${W / 2 + 1}" y1="${y0}" y2="${y0 + hh - 2}" stroke="currentColor"/>`;
+    if (r.type === 'drawer') sv += `<line x1="${W / 2 - 10}" x2="${W / 2 + 12}" y1="${y0 + 5}" y2="${y0 + 5}" stroke="currentColor" stroke-width="2"/>`;
+    if (r.type === 'lift') sv += `<path d="M6 ${y0 + hh - 4}L${W / 2} ${y0 + 4}L${W - 4} ${y0 + hh - 4}" fill="none" stroke="currentColor" stroke-dasharray="3 3"/>`; });
+  return `<svg viewBox="0 0 ${W + 2} ${Hh + 2}" width="${W + 2}" height="${Hh + 2}" aria-hidden="true" style="color:var(--muted)">${sv}</svg>`;
+}
+function renderCons(msg = ''){
+  const c = CONS, k = c.rows.length, num = (id, v, mn, mx) => `<input type="number" id="${id}" min="${mn}" max="${mx}" step="1" value="${v}">`;
+  $('consBody').innerHTML = `
+    <div class="small muted" style="margin-bottom:8px">Соберите модуль, которого нет в библиотеке: размеры, раскладка фасадов по высоте, полки. Расчёт материалов и фурнитуры идёт тем же движком, что у обычных модулей. Готовый модуль ставится в проект и остаётся в каталоге.</div>
+    <div class="field"><label for="cnName">Название</label><input type="text" id="cnName" value="${esc(c.name)}"></div>
+    <div class="field"><span class="flabel">Тип модуля</span><div class="seg">${Object.entries(CONS_DEF).map(([key, v]) => `<button data-cons="cat" data-v="${key}" aria-pressed="${c.cat === key}">${v.name}</button>`).join('')}</div></div>
+    <div class="row3"><div class="field"><label for="cnW">Ширина, мм</label>${num('cnW', c.w, 100, 2400)}</div><div class="field"><label for="cnH">Высота, мм</label>${num('cnH', c.h, 150, 3000)}</div><div class="field"><label for="cnD">Глубина, мм</label>${num('cnD', c.d, 100, 1000)}</div></div>
+    <div style="display:flex;gap:14px;align-items:flex-start;margin:6px 0 10px"><div>${consSvg()}</div>
+    <div style="flex:1;min-width:0"><span class="flabel">Фасады сверху вниз</span>
+      ${c.rows.map((r, i) => `<div class="row3" style="align-items:end;margin-bottom:6px"><div class="field"><label for="cnT${i}">Ряд ${i + 1}</label><select id="cnT${i}" data-cons-row="${i}" data-f="type">${Object.entries(CONS_ROW).map(([key, v]) => `<option value="${key}" ${r.type === key ? 'selected' : ''}>${v}</option>`).join('')}</select></div>
+        <div class="field">${r.type === 'door' ? `<label for="cnN${i}">Дверец</label><select id="cnN${i}" data-cons-row="${i}" data-f="n"><option value="1" ${r.n !== 2 ? 'selected' : ''}>1</option><option value="2" ${r.n === 2 ? 'selected' : ''}>2</option></select>` : ''}</div>
+        <div class="field">${i < k - 1 ? `<label for="cnR${i}">Высота, мм</label><input type="number" id="cnR${i}" data-cons-row="${i}" data-f="h" min="50" max="2500" step="1" value="${r.h || 300}">` : '<label>Высота</label><div class="small muted" style="padding:9px 0">остальное</div>'}</div></div>`).join('')}
+      <div class="btns"><button class="btn sm" data-cons="add" ${k >= 6 ? 'disabled' : ''}>+ Ряд</button><button class="btn sm" data-cons="del" ${k <= 1 ? 'disabled' : ''}>− Ряд</button></div></div></div>
+    <div class="row3"><div class="field"><label for="cnS">Полок, шт</label>${num('cnS', c.shelves, 0, 8)}</div>
+      <div class="field"><label class="chk"><input type="checkbox" id="cnG" ${c.glass ? 'checked' : ''}> Дверцы со стеклом</label></div>
+      ${c.cat === 'up' || c.cat === 'mezz' ? `<div class="field"><label for="cnF">Алюминиевая рамка</label><select id="cnF"><option value="" ${!c.frame ? 'selected' : ''}>Нет</option>${Object.entries(FRAMES).map(([key, v]) => `<option value="${key}" ${c.frame === key ? 'selected' : ''}>${esc(v)}</option>`).join('')}</select></div>` : '<div></div>'}</div>
+    ${msg ? `<div class="lib-err" role="alert">${msg}</div>` : ''}
+    <div class="btns" style="margin-top:8px"><button class="btn pri" data-cons="make">Создать и поставить в проект</button></div>`;
+}
+function consMake(){
+  const t = consBuild(), er = validateTemplate(t, Object.keys(TYPES));
+  const fixed = CONS.rows.slice(0, -1).reduce((a, r) => a + Math.max(50, r.h || 300) + 4, 0);
+  if (fixed > CONS.h - 80) er.push('Ряды выше модуля: уменьшите высоты рядов или увеличьте высоту модуля');
+  if (er.length){ renderCons(er.map(esc).join('<br>')); return; }
+  store(KTPL, [...customTpls(), t]); setTemplates(customTpls());
+  const wl = wallsOf(S).includes(S.place) ? S.place : 'A', nm = newModule(t.code, wl);
+  S.modules.push(nm); S.selected = nm.id; S.cat = t.cat; S.ltab = 'module';
+  $('consDlg').close(); renderLib(); update(); toast(`Добавлен: ${t.name}`);
+  CONS = null;
+}
+$('consDlg').addEventListener('click', e => {
+  const b = e.target.closest('[data-cons]'); if (!b) return; const a = b.dataset.cons;
+  if (a === 'cat'){ consReset(b.dataset.v); renderCons(); }
+  else if (a === 'add'){ CONS.rows.push({type:'drawer', n:1, h:200}); renderCons(); }
+  else if (a === 'del'){ CONS.rows.pop(); renderCons(); }
+  else if (a === 'make') consMake();
+});
+$('consDlg').addEventListener('change', e => {
+  const t = e.target, rd = t.dataset && t.dataset.consRow, n = v => Math.round(+v) || 0;
+  if (rd !== undefined && rd !== ''){ const r = CONS.rows[+rd]; if (t.dataset.f === 'type') r.type = t.value; else if (t.dataset.f === 'n') r.n = +t.value; else r.h = n(t.value); renderCons(); return; }
+  if (t.id === 'cnName'){ CONS.name = t.value; return; }
+  else if (t.id === 'cnW') CONS.w = Math.min(2400, Math.max(100, n(t.value)));
+  else if (t.id === 'cnH') CONS.h = Math.min(3000, Math.max(150, n(t.value)));
+  else if (t.id === 'cnD') CONS.d = Math.min(1000, Math.max(100, n(t.value)));
+  else if (t.id === 'cnS') CONS.shelves = Math.min(8, Math.max(0, n(t.value)));
+  else if (t.id === 'cnG') CONS.glass = t.checked;
+  else if (t.id === 'cnF') CONS.frame = t.value;
+  else return;
+  renderCons();
+});
 
 /* ---------------- режим «Технологу»: детали, фасады, фурнитура, эскизы ---------------- */
 const FACADE_KIND = {door:'Дверца', drawer:'Фасад ящика', lift:'Фасад подъёмника', dw:'Фасад посудомойки', fridge:'Фасад холодильника', cargo:'Фасад бутылочницы', panel:'Планка'};
@@ -2754,6 +2862,7 @@ document.addEventListener('click', e => { document.querySelectorAll('details.men
     case 'proj-theirs': projTakeTheirs(); break;
     case 'proj-mine': projKeepMine(); break;
     case 'lib-open': renderLib(); $('libDlg').showModal(); break;
+    case 'cons-open': consOpen(); break;
     case 'lib-add': libAdd(); break;
     case 'lib-del': libDel(v); break;
     case 'lib-example': $('libJson').value = JSON.stringify(LIB_EXAMPLE, null, 2); break;
@@ -3180,8 +3289,9 @@ function buildModule(m, pos){
   if (cdoor && +m.plank > 4){
     const pw = Math.min(+m.plank, W - cdoor.w - 4), left = cdoor.x < W / 2, px = left ? cdoor.x + cdoor.w + 2 : cdoor.x - 2 - pw, py = (baseY + cdoor.y) / 1000;
     const pf = new THREE.Group(); pf.position.set(px / 1000, py, (D + pw) / 1000); g.add(pf); facadePanel(pf, pw, cdoor.h, 0, 0, fac, mill, false);
-    const ps = new THREE.Group(); ps.rotation.y = left ? Math.PI / 2 : -Math.PI / 2;
-    ps.position.set((left ? px + pw : px) / 1000, py, (left ? D + pw : D) / 1000); g.add(ps); facadePanel(ps, pw, cdoor.h, 0, 0, fac, mill, false);
+    // обе боковые грани, чтобы планка читалась как цельный брусок, а не как лист в воздухе
+    const ps1 = new THREE.Group(); ps1.rotation.y = Math.PI / 2; ps1.position.set((px + pw) / 1000, py, (D + pw) / 1000); g.add(ps1); facadePanel(ps1, pw, cdoor.h, 0, 0, fac, mill, false);
+    const ps2 = new THREE.Group(); ps2.rotation.y = -Math.PI / 2; ps2.position.set(px / 1000, py, D / 1000); g.add(ps2); facadePanel(ps2, pw, cdoor.h, 0, 0, fac, mill, false);
   }
   fsList.forEach((f, fi) => {
     if (f.k === 'cargo') return;
