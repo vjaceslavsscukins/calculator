@@ -507,7 +507,7 @@ dialog.dlg::backdrop{background:rgba(20,18,15,.5)}
 <script>
 // CALC-START
 // TODO(технолог): ширина угловой фальшпланки в ведомостях от 24 до 100 мм (чаще 57–60), высота как у фасада; взято 60
-const CORNER_PLANK = 50;
+const CORNER_PLANK = 60;   // по ведомостям Лидии «Фальш бок» 64×771 (17 деталей), угловые планки чаще 57–64 мм
 const T = 16, SHEET_M2 = 2.8 * 2.07, BASE_Y = 100, UP_TOP = 2170, GOLA = 30, GOLA_RISE = 60;
 
 /* ---------- формулы шаблонов: безопасный разбор, без eval и new Function ---------- */
@@ -630,33 +630,33 @@ const BUILTIN_TEMPLATES = [
     facades:[{kind:'doors', n:2, y:'2', h:'H-3-G'}]},
   {code:'s_mezz_open', name:'Антресоль открытая', family:'shop', cat:'mezz', row:'mezz', w:900, h:400, d:340, widths:[500, 600, 800, 900, 1000, 1200], noOpen:true, panels:SHOP_UP, shelves:[{y:'round(H/2)', when:'H>450'}],
     note:SHOP_NOTE + ' Открытая антресоль без фасада.', facades:[]},
-  {code:'s_tall_1', name:'Пенал с одной дверью', family:'shop', cat:'tall', row:'low', tall:true, w:600, h:2070, d:560, widths:[400, 450, 500, 600], strictW:true,
+  {code:'s_tall_1', name:'Пенал с одной дверью', family:'shop', cat:'tall', row:'low', tall:true, w:600, h:2070, d:510, widths:[400, 450, 500, 600], strictW:true,
     note:'Дверь на всю высоту пенала; высота в моделях Базиса 2000–2990 мм.', todo:'Конструкция пенала (детали, полки) взята общая, ведомостей по пеналам нет: уточнить у технолога.',
     shelves:[{y:'round(H*1/5)'}, {y:'round(H*2/5)'}, {y:'round(H*3/5)'}, {y:'round(H*4/5)'}],
     facades:[{kind:'doors', n:1, y:'2', h:'H-4', part:'mid'}]},
-  {code:'s_tall_2', name:'Пенал с двумя дверями по высоте', family:'shop', cat:'tall', row:'low', tall:true, w:600, h:2070, d:560, widths:[400, 450, 500, 600, 700], strictW:true,
+  {code:'s_tall_2', name:'Пенал с двумя дверями по высоте', family:'shop', cat:'tall', row:'low', tall:true, w:600, h:2070, d:510, widths:[400, 450, 500, 600, 700], strictW:true,
     note:'Две двери одна над другой: нижняя 746 мм, верхняя до верха (по моделям Базиса: у 14 пеналов нижняя дверь 716–746).', todo:'Конструкция пенала (детали, полки) общая, ведомостей нет: уточнить у технолога.',
     shelves:[{y:'round(H*1/5)'}, {y:'round(H*2/5)'}, {y:'round(H*3/5)'}, {y:'round(H*4/5)'}],
     facades:[{kind:'doors', n:1, rows:[{y:'2', h:'746', part:'bottom'}, {y:'750', h:'H-8-746', part:'top'}]}]},
-  {code:'s_tall_3', name:'Пенал с тремя дверями (под холодильник)', family:'shop', cat:'tall', row:'low', tall:true, w:600, h:2400, d:560, widths:[450, 500, 600, 700], strictW:true,
+  {code:'s_tall_3', name:'Пенал с тремя дверями (под холодильник)', family:'shop', cat:'tall', row:'low', tall:true, w:600, h:2400, d:510, widths:[450, 500, 600, 700], strictW:true,
     note:'Нижняя дверь 716 мм, верхняя 346 мм, средняя на остальную высоту (по моделям Базиса, 13 пеналов).', todo:'Конструкция пенала общая, ведомостей нет; для встроенного холодильника есть отдельный «Под встроенный холодильник».',
     shelves:[{y:'round(H*1/6)'}, {y:'round(H*2/6)'}, {y:'round(H*3/6)'}, {y:'round(H*4/6)'}, {y:'round(H*5/6)'}],
     facades:[{kind:'doors', n:1, rows:[{y:'2', h:'716', part:'bottom'}, {y:'720', h:'H-1074', part:'bottom'}, {y:'H-350', h:'346', part:'top'}]}]},
-  {code:'s_tall_door_drawer', name:'Пенал с нишей под технику: ящик внизу, две двери сверху', family:'shop', cat:'tall', row:'low', tall:true, w:600, h:2450, d:560, widths:[450, 500, 600, 700], strictW:true,
+  {code:'s_tall_door_drawer', name:'Пенал с нишей под технику: ящик внизу, две двери сверху', family:'shop', cat:'tall', row:'low', tall:true, w:600, h:2450, d:510, widths:[450, 500, 600, 700], strictW:true,
     note:'Ящик 356 мм внизу, над ним ниша под духовку и микроволновку (около 980 мм при высоте 2450), выше дверь 768 мм и верхняя дверь 346 мм (по моделям Базиса, 11 пеналов).', todo:'Высоты ниши и дверей зависят от техники, уточнить у технолога; техника берётся в «Дополнительно».',
     shelves:[{y:'360'}, {y:'H-1124'}],
     facades:[{kind:'drawer', y:'2', h:'356'}, {kind:'doors', n:1, rows:[{y:'H-1122', h:'768', part:'bottom'}, {y:'H-350', h:'346', part:'top'}]}]},
-  {code:'s_tall_drawers', name:'Пенал с ящиками', family:'shop', cat:'tall', row:'low', tall:true, w:600, h:2450, d:560, widths:[400, 450, 500, 600], strictW:true,
+  {code:'s_tall_drawers', name:'Пенал с ящиками', family:'shop', cat:'tall', row:'low', tall:true, w:600, h:2450, d:510, widths:[400, 450, 500, 600], strictW:true,
     note:'Три выдвижных ящика: нижний 356 мм, верхний 346 мм, средний на остальную высоту (по моделям Базиса).', todo:'Конструкция пенала общая, ведомостей нет: уточнить у технолога (в моделях Firmax Newline).',
     facades:[{kind:'drawer', y:'2', h:'356'}, {kind:'drawer', y:'360', h:'H-12-356-346'}, {kind:'drawer', y:'H-350', h:'346'}]},
   {code:'s_base_corner', name:'Угловой нижний', family:'shop', cat:'low', row:'low', w:1050, h:720, d:510, widths:[900, 1000, 1050, 1100], corner:true, strictW:true, golaKeep:true, golaRise:60, panels:SHOP_LOW_SHELF, shelves:[{y:'round(H/2)'}],
     note:SHOP_NOTE + ' Одна дверца на открытой части, глухая часть 600 мм заходит под соседний ряд; угловая фальшпланка (60 мм) входит по умолчанию.',
     todo:'Конструкция углового взята как у нижнего модуля цеха; в моделях Базиса угловой собирается из нескольких обычных модулей, ведомости углового уточнить у технолога.',
-    facades:[{kind:'corner', blind:600}]},
+    facades:[{kind:'corner', closeBlind:true, blind:600}]},
   {code:'s_up_corner', name:'Угловой верхний', family:'shop', cat:'up', row:'up', w:620, h:720, d:340, widths:[620, 650, 700], corner:true, strictW:true, panels:SHOP_UP, shelves:SHELVES_UP,
     note:SHOP_NOTE + ' Одна дверца на открытой части, глухая часть 320 мм заходит под соседний ряд; угловая фальшпланка (60 мм) входит по умолчанию.',
     todo:'Конструкция углового верхнего взята как у верхнего модуля цеха; ведомости углового уточнить у технолога.',
-    facades:[{kind:'corner', blind:320}]},
+    facades:[{kind:'corner', closeBlind:true, blind:320}]},
   {code:'s_up_hf', name:'Под подъёмник HF (сдвоенный фасад)', family:'shop', cat:'up', row:'up', w:800, h:720, d:340, widths:[600, 700, 800, 900, 1000], golaKeep:true, lift:'hf', panels:SHOP_UP, shelves:SHELVES_UP,
     note:SHOP_NOTE + ' Два фасада один над другим складываются подъёмником AVENTOS HF top: один подъёмник на модуль.',
     todo:'Подъёмник HF подбирается по высоте и весу фасадов; размеры фасадов (поровну) и состав комплекта уточнить у технолога.',
@@ -691,9 +691,13 @@ const BUILTIN_TEMPLATES = [
   {code:'tall_door', legacy:true, name:'Пенал с дверцами', cat:'tall', row:'low', tall:true, w:600, h:2070, d:560, widths:[400,450,500,600], strictW:true,
     shelves:[{y:'round(H*1/5)'}, {y:'round(H*2/5)'}, {y:'round(H*3/5)'}, {y:'round(H*4/5)'}],
     facades:[{kind:'doors', rows:[{y:'2', h:'round(H*0.62)-4', part:'bottom'}, {y:'round(H*0.62)+2', h:'H-round(H*0.62)-4', part:'top'}]}]},
-  {code:'tall_oven', name:'Под духовку и СВЧ', cat:'tall', row:'low', tall:true, w:600, h:2070, d:560, widths:[600], strictW:true, appliance:'tall_oven', shelves:[{y:'520'}, {y:'1115'}, {y:'1495'}],
+  {code:'tall_oven', legacy:true, name:'Под духовку и СВЧ', cat:'tall', row:'low', tall:true, w:600, h:2070, d:560, widths:[600], strictW:true, appliance:'tall_oven', shelves:[{y:'520'}, {y:'1115'}, {y:'1495'}],
     facades:[{kind:'drawer', y:'2', h:'256'}, {kind:'drawer', y:'262', h:'254'}, {kind:'doors', y:'1497', h:'H-1499', part:'top'}]},
-  {code:'tall_fridge', name:'Под встроенный холодильник', cat:'tall', row:'low', tall:true, w:600, h:2070, d:560, widths:[600], strictW:true, appliance:'fridge', shelves:[{y:'1770'}],
+  {code:'s_tall_oven', family:'shop', name:'Под духовку и СВЧ', cat:'tall', row:'low', tall:true, w:600, h:2070, d:510, widths:[600], strictW:true, appliance:'tall_oven', shelves:[{y:'520'}, {y:'1115'}, {y:'1495'}],
+    facades:[{kind:'drawer', y:'2', h:'256'}, {kind:'drawer', y:'262', h:'254'}, {kind:'doors', y:'1497', h:'H-1499', part:'top'}]},
+  {code:'tall_fridge', legacy:true, name:'Под встроенный холодильник', cat:'tall', row:'low', tall:true, w:600, h:2070, d:560, widths:[600], strictW:true, appliance:'fridge', shelves:[{y:'1770'}],
+    facades:[{kind:'single', k:'fridge', hinge:'right', part:'bottom', y:'2', h:'716'}, {kind:'single', k:'fridge', hinge:'right', part:'bottom', y:'722', h:'1046'}, {kind:'doors', y:'1772', h:'H-1774', part:'top'}]},
+  {code:'s_tall_fridge', family:'shop', name:'Под встроенный холодильник', cat:'tall', row:'low', tall:true, w:600, h:2070, d:510, widths:[600], strictW:true, appliance:'fridge', shelves:[{y:'1770'}],
     facades:[{kind:'single', k:'fridge', hinge:'right', part:'bottom', y:'2', h:'716'}, {kind:'single', k:'fridge', hinge:'right', part:'bottom', y:'722', h:'1046'}, {kind:'doors', y:'1772', h:'H-1774', part:'top'}]},
   {code:'gap_low', name:'Проём внизу', cat:'gap', row:'low', gap:true, w:600, h:0, d:0, widths:[600,700,900], facades:[]},
   {code:'gap_up', name:'Проём вверху', cat:'gap', row:'up', gap:true, w:600, h:0, d:0, widths:[400,600,800], facades:[]},
@@ -806,7 +810,165 @@ const HWCOLORS = [{id:'black', name:'Чёрный', hex:'#1E1E20', pattern:'meta
 const hwColorOf = () => HWCOLORS.find(c => c.id === S.mat.hwColor) || HWCOLORS[0];
 
 const DEFAULT_CAT = {
+  // ЛДСП Egger 16 мм, ₽/м² (прайс салона, лист «Еггер», 157 декоров). Первые четыре позиции прежнего каталога остаются в конце для старых проектов.
   corpus:[
+    {id:'eW908SM', name:'W908 Белый Базовый SM', hex:'#EEEEEA', pattern:'plain', price:2770, brand:'Egger'},
+    {id:'eW908ST2', name:'W908 Белый Базовый ST2', hex:'#EEEEEA', pattern:'plain', price:2770, brand:'Egger'},
+    {id:'eW980SM', name:'W980 Белый платиновый SM', hex:'#EEEEEA', pattern:'plain', price:2900, brand:'Egger'},
+    {id:'eW980ST2', name:'W980 Белый платиновый ST2', hex:'#EEEEEA', pattern:'plain', price:2900, brand:'Egger'},
+    {id:'eW1000ST9', name:'W1000 Белый Премиум ST9', hex:'#EEEEEA', pattern:'plain', price:3000, brand:'Egger'},
+    {id:'eW1000ST19', name:'W1000 Белый Премиум ST19', hex:'#EEEEEA', pattern:'plain', price:3945, brand:'Egger'},
+    {id:'eW1000ST38', name:'W1000 Белый Премиум ST38', hex:'#EEEEEA', pattern:'plain', price:5165, brand:'Egger'},
+    {id:'eW1000ST30ST2', name:'W1000 Белый Премиум ST30/ST2', hex:'#EEEEEA', pattern:'plain', price:3850, brand:'Egger'},
+    {id:'eW1100ST9', name:'W1100 Белый Альпийский ST9', hex:'#EEEEEA', pattern:'plain', price:3450, brand:'Egger'},
+    {id:'eW1100ST30ST2', name:'W1100 Белый Альпийский ST30/ST2', hex:'#EEEEEA', pattern:'plain', price:3850, brand:'Egger'},
+    {id:'eW1300ST9', name:'W1300 Белый полярный ST9', hex:'#EEEEEA', pattern:'plain', price:3200, brand:'Egger'},
+    {id:'eU104ST9', name:'U104 Алебастр белый ST9', hex:'#EEEEEA', pattern:'plain', price:2700, brand:'Egger'},
+    {id:'eU108ST9', name:'U108 Ванильный жёлтый ST9', hex:'#F0E3B0', pattern:'plain', price:2700, brand:'Egger'},
+    {id:'eU113ST9', name:'U113 Коттон бежевый ST9', hex:'#E6D9C0', pattern:'plain', price:2800, brand:'Egger'},
+    {id:'eU114ST9', name:'U114 Жёлтый бриллиант ST9', hex:'#E6C13A', pattern:'plain', price:3020, brand:'Egger'},
+    {id:'eU131ST9', name:'U131 Цитрусовый желтый ST9', hex:'#E6C13A', pattern:'plain', price:3100, brand:'Egger'},
+    {id:'eU156ST9', name:'U156 Бежевый песок ST9', hex:'#D8C7A8', pattern:'plain', price:2700, brand:'Egger'},
+    {id:'eU163ST9', name:'U163 Карри жёлтый ST9', hex:'#E6C13A', pattern:'plain', price:3180, brand:'Egger'},
+    {id:'eU200ST9', name:'U200 Бежевый ST9', hex:'#D8C7A8', pattern:'plain', price:2900, brand:'Egger'},
+    {id:'eU201ST9', name:'U201 Серая галька ST9', hex:'#B5B1A8', pattern:'plain', price:2900, brand:'Egger'},
+    {id:'eU216ST9', name:'U216 Камель бежевый ST9', hex:'#D8C7A8', pattern:'plain', price:2800, brand:'Egger'},
+    {id:'eU222ST9', name:'U222 Крем бежевый ST9', hex:'#D8C7A8', pattern:'plain', price:2800, brand:'Egger'},
+    {id:'eU311ST9', name:'U311 Бургундский красный ST9', hex:'#A83A32', pattern:'plain', price:3500, brand:'Egger'},
+    {id:'eU313ST9', name:'U313 Белая роза ST9', hex:'#EEEEEA', pattern:'plain', price:3180, brand:'Egger'},
+    {id:'eU321ST9', name:'U321 Красный китайский ST9', hex:'#A83A32', pattern:'plain', price:3800, brand:'Egger'},
+    {id:'eU323ST9', name:'U323 Ярко-красный ST9', hex:'#A83A32', pattern:'plain', price:3800, brand:'Egger'},
+    {id:'eU325ST9', name:'U325 Розовый антик ST9', hex:'#D9A7A8', pattern:'plain', price:3800, brand:'Egger'},
+    {id:'eU332ST9', name:'U332 Оранжевый ST9', hex:'#D9772F', pattern:'plain', price:3800, brand:'Egger'},
+    {id:'eU337ST9', name:'U337 Фуксия розовая ST9', hex:'#D9A7A8', pattern:'plain', price:3250, brand:'Egger'},
+    {id:'eU363ST9', name:'U363 Фламинго розовый ST9', hex:'#D9A7A8', pattern:'plain', price:3250, brand:'Egger'},
+    {id:'eU390ST9', name:'U390 Индийский красный ST9', hex:'#A83A32', pattern:'plain', price:3190, brand:'Egger'},
+    {id:'eU400ST9', name:'U400 Фиолетовый ST9', hex:'#6E5A86', pattern:'plain', price:3190, brand:'Egger'},
+    {id:'eU414ST9', name:'U414 Фиолетовый темный ST9', hex:'#6E5A86', pattern:'plain', price:3190, brand:'Egger'},
+    {id:'eU500ST9', name:'U500 Аква голубой ST9', hex:'#9DB8CC', pattern:'plain', price:3045, brand:'Egger'},
+    {id:'eU504ST9', name:'U504 Альпийское озеро ST9', hex:'#F1F0EB', pattern:'plain', price:3250, brand:'Egger'},
+    {id:'eU515ST9', name:'U515 Французский голубой ST9', hex:'#9DB8CC', pattern:'plain', price:3190, brand:'Egger'},
+    {id:'eU522ST9', name:'U522 Голубой горизонт ST9', hex:'#9DB8CC', pattern:'plain', price:3250, brand:'Egger'},
+    {id:'eU525ST9', name:'U525 Делфт голубой ST9', hex:'#9DB8CC', pattern:'plain', price:3250, brand:'Egger'},
+    {id:'eU560ST9', name:'U560 Синяя глубина ST9', hex:'#C9C6BF', pattern:'plain', price:3045, brand:'Egger'},
+    {id:'eU600ST9', name:'U600 Зелёный май ST9', hex:'#5F8A5F', pattern:'plain', price:3250, brand:'Egger'},
+    {id:'eU626ST9', name:'U626 Зелёный киви ST9', hex:'#5F8A5F', pattern:'plain', price:3250, brand:'Egger'},
+    {id:'eU630ST9', name:'U630 Лайм ST9', hex:'#C9C6BF', pattern:'plain', price:3250, brand:'Egger'},
+    {id:'eU636ST9', name:'U636 Фьёрд зелёный ST9', hex:'#5F8A5F', pattern:'plain', price:3190, brand:'Egger'},
+    {id:'eU650ST9', name:'U650 Папортник зелёный ST9', hex:'#5F8A5F', pattern:'plain', price:3190, brand:'Egger'},
+    {id:'eU702ST9', name:'U702 Кашемир серый ST9', hex:'#A3A6A1', pattern:'plain', price:2900, brand:'Egger'},
+    {id:'eU707ST9', name:'U707 Шёлк серый ST9', hex:'#A3A6A1', pattern:'plain', price:2900, brand:'Egger'},
+    {id:'eU708ST9', name:'U708 Светло-серый ST9', hex:'#A3A6A1', pattern:'plain', price:2700, brand:'Egger'},
+    {id:'eU727ST9', name:'U727 Серый камень ST9', hex:'#A3A6A1', pattern:'plain', price:2900, brand:'Egger'},
+    {id:'eU732ST9', name:'U732 Серый пыльный ST9', hex:'#A3A6A1', pattern:'plain', price:2700, brand:'Egger'},
+    {id:'eU741ST9', name:'U741 Лава серая ST9', hex:'#A3A6A1', pattern:'plain', price:2900, brand:'Egger'},
+    {id:'eU748ST9', name:'U748 Трюфель коричневый ST9', hex:'#6B4A3A', pattern:'plain', price:2900, brand:'Egger'},
+    {id:'eU750ST9', name:'U750 Ярко-серый ST9', hex:'#A3A6A1', pattern:'plain', price:2800, brand:'Egger'},
+    {id:'eU763ST9', name:'U763 Серый перламутровый ST9', hex:'#A3A6A1', pattern:'plain', price:2800, brand:'Egger'},
+    {id:'eU767ST9', name:'U767 Кубанит серый ST9', hex:'#A3A6A1', pattern:'plain', price:2900, brand:'Egger'},
+    {id:'eU775ST9', name:'U775 Бело-серый ST9', hex:'#EEEEEA', pattern:'plain', price:2700, brand:'Egger'},
+    {id:'eU780ST9', name:'U780 Серый монументальный ST9', hex:'#A3A6A1', pattern:'plain', price:3000, brand:'Egger'},
+    {id:'eU788ST9', name:'U788 Арктика серый ST9', hex:'#A3A6A1', pattern:'plain', price:3000, brand:'Egger'},
+    {id:'eU818ST9', name:'U818 Тёмно-коричневый ST9', hex:'#6B4A3A', pattern:'plain', price:3250, brand:'Egger'},
+    {id:'eU830ST9', name:'U830 Карамель нюд ST9', hex:'#C9C6BF', pattern:'plain', price:3250, brand:'Egger'},
+    {id:'eU899ST9', name:'U899 Нежный чёрный ST9', hex:'#222222', pattern:'plain', price:3000, brand:'Egger'},
+    {id:'eU960ST9', name:'U960 Оникс серый ST9', hex:'#A3A6A1', pattern:'plain', price:2900, brand:'Egger'},
+    {id:'eU961ST2', name:'U961 Чёрный графит ST2', hex:'#3D4042', pattern:'plain', price:2800, brand:'Egger'},
+    {id:'eU963ST9', name:'U963 Диамант серый ST9', hex:'#A3A6A1', pattern:'plain', price:2800, brand:'Egger'},
+    {id:'eU968ST9', name:'U968 Серый уголь ST9', hex:'#A3A6A1', pattern:'plain', price:2900, brand:'Egger'},
+    {id:'eU998ST38', name:'U998 Лес чёрный ST38', hex:'#222222', pattern:'plain', price:4650, brand:'Egger'},
+    {id:'eU999ST2', name:'U999 Чёрный ST2', hex:'#222222', pattern:'plain', price:2700, brand:'Egger'},
+    {id:'eU999ST19', name:'U999 Чёрный ST19', hex:'#222222', pattern:'plain', price:3550, brand:'Egger'},
+    {id:'eU999ST30ST2', name:'U999 Чёрный ST30/ST2', hex:'#222222', pattern:'plain', price:3850, brand:'Egger'},
+    {id:'eH1113ST10', name:'H1113 Дуб Канзас коричневый ST10', hex:'#6B4A3A', pattern:'wood', price:3000, brand:'Egger'},
+    {id:'eH1115ST12', name:'H1115 Баменда серо-бежевый ST12', hex:'#D8C7A8', pattern:'wood', price:3250, brand:'Egger'},
+    {id:'eH1122ST22', name:'H1122 Древесина белая ST22', hex:'#EEEEEA', pattern:'wood', price:3000, brand:'Egger'},
+    {id:'eH1123ST22', name:'H1123 Древесина графит ST22', hex:'#3D4042', pattern:'wood', price:3250, brand:'Egger'},
+    {id:'eH1137ST12', name:'H1137 Дуб Сорано чёрно-коричневый ST12', hex:'#222222', pattern:'wood', price:2800, brand:'Egger'},
+    {id:'eH1145ST10', name:'H1145 Дуб Бардолино натуральный ST10', hex:'#C9A57A', pattern:'wood', price:2900, brand:'Egger'},
+    {id:'eH1146ST10', name:'H1146 Дуб Бардолино серый ST10', hex:'#A3A6A1', pattern:'wood', price:2900, brand:'Egger'},
+    {id:'eH1151ST10', name:'H1151 Дуб Аризона коричневый ST10', hex:'#6B4A3A', pattern:'wood', price:3250, brand:'Egger'},
+    {id:'eH1176ST37', name:'H1176 Дуб Галифакс белый ST37', hex:'#EEEEEA', pattern:'wood', price:4900, brand:'Egger'},
+    {id:'eH1180ST37', name:'H1180 Дуб Галифакс натуральный ST37', hex:'#C9A57A', pattern:'wood', price:4900, brand:'Egger'},
+    {id:'eH1181ST37', name:'H1181 Дуб Галифакс табак ST37', hex:'#C9A57A', pattern:'wood', price:4900, brand:'Egger'},
+    {id:'eH1199ST12', name:'H1199 Дуб термо чёрно-коричневый ST12', hex:'#222222', pattern:'wood', price:3250, brand:'Egger'},
+    {id:'eH1250ST36', name:'H1250 Ясень Наварра ST36', hex:'#D4BC94', pattern:'wood', price:4650, brand:'Egger'},
+    {id:'eH1251ST19', name:'H1251 Робиния Брэнсон натуральная коричневая ST19', hex:'#6B4A3A', pattern:'wood', price:3800, brand:'Egger'},
+    {id:'eH1253ST19', name:'H1253 Робиния Брэнсон трюфель коричневый ST19', hex:'#6B4A3A', pattern:'wood', price:3800, brand:'Egger'},
+    {id:'eH1277ST9', name:'H1277 Акация Лэйклэнд светлая ST9', hex:'#B89870', pattern:'wood', price:2800, brand:'Egger'},
+    {id:'eH1312ST10', name:'H1312 Дуб Уайт-Ривер песочно-бежевый ST10', hex:'#D8C7A8', pattern:'wood', price:3800, brand:'Egger'},
+    {id:'eH1313ST10', name:'H1313 Дуб Уайт-Ривер серо-коричневый ST10', hex:'#A3A6A1', pattern:'wood', price:3500, brand:'Egger'},
+    {id:'eH1318ST10', name:'H1318 Дикий дуб натуральный ST10', hex:'#C9A57A', pattern:'wood', price:3500, brand:'Egger'},
+    {id:'eH1330ST10', name:'H1330 Дуб Санта-Фе винтаж ST10', hex:'#C9A57A', pattern:'wood', price:3500, brand:'Egger'},
+    {id:'eH1331ST10', name:'H1331 Дуб Санта-Фе серый ST10', hex:'#A3A6A1', pattern:'wood', price:3500, brand:'Egger'},
+    {id:'eH1334ST9', name:'H1334 Дуб Сорано натуральный светлый ST9', hex:'#C9A57A', pattern:'wood', price:2800, brand:'Egger'},
+    {id:'eH1344ST32', name:'H1344 Дуб Шерман коньяк коричневый ST32', hex:'#6B4A3A', pattern:'wood', price:4900, brand:'Egger'},
+    {id:'eH1345ST32', name:'H1345 Дуб Шерман серый ST32', hex:'#A3A6A1', pattern:'wood', price:4900, brand:'Egger'},
+    {id:'eH1346ST32', name:'H1346 Дуб Шерман антрацит ST32', hex:'#44474A', pattern:'wood', price:4900, brand:'Egger'},
+    {id:'eH1387ST10', name:'H1387 Дуб Денвер графит ST10', hex:'#3D4042', pattern:'wood', price:3250, brand:'Egger'},
+    {id:'eH1399ST10', name:'H1399 Дуб Денвер трюфель ST10', hex:'#C9A57A', pattern:'wood', price:3000, brand:'Egger'},
+    {id:'eH1401ST22', name:'H1401 Сосна Касцина ST22', hex:'#CDB48A', pattern:'wood', price:3250, brand:'Egger'},
+    {id:'eH1424ST22', name:'H1424 Файнлайн крем ST22', hex:'#EBDDBF', pattern:'wood', price:2900, brand:'Egger'},
+    {id:'eH1486ST36', name:'H1486 Сосна Пасадена ST36', hex:'#CDB48A', pattern:'wood', price:4650, brand:'Egger'},
+    {id:'eH1487ST22', name:'H1487 Пихта Брамберг ST22', hex:'#B08C62', pattern:'wood', price:3000, brand:'Egger'},
+    {id:'eH1511ST15', name:'H1511 Бук Бавария ST15', hex:'#D7B48A', pattern:'wood', price:2780, brand:'Egger'},
+    {id:'eH1582ST15', name:'H1582 Бук Эльмау ST15', hex:'#D7B48A', pattern:'wood', price:2780, brand:'Egger'},
+    {id:'eH1615ST9', name:'H1615 Вишня Верона ST9', hex:'#9A5A3C', pattern:'wood', price:2660, brand:'Egger'},
+    {id:'eH1636ST12', name:'H1636 Вишня Локарно ST12', hex:'#9A5A3C', pattern:'wood', price:3000, brand:'Egger'},
+    {id:'eH1710ST10', name:'H1710 Каштан Кентукки песочный ST10', hex:'#B08C62', pattern:'wood', price:3800, brand:'Egger'},
+    {id:'eH1714ST19', name:'H1714 Орех Линкольн ST19', hex:'#7A5538', pattern:'wood', price:3800, brand:'Egger'},
+    {id:'eH1733ST9', name:'H1733 Берёза Майнау ST9', hex:'#E0CBA2', pattern:'wood', price:2800, brand:'Egger'},
+    {id:'eH2033ST10', name:'H2033 Дуб Хантон тёмный ST10', hex:'#C9A57A', pattern:'wood', price:3500, brand:'Egger'},
+    {id:'eH3012ST22', name:'H3012 Кокоболо натуральный ST22', hex:'#B08C62', pattern:'wood', price:3000, brand:'Egger'},
+    {id:'eH3058ST22', name:'H3058 Венге Мали ST22', hex:'#4A3629', pattern:'wood', price:3250, brand:'Egger'},
+    {id:'eH3090ST22', name:'H3090 Древесина Шорвуд ST22', hex:'#B08C62', pattern:'wood', price:3000, brand:'Egger'},
+    {id:'eH3131ST12', name:'H3131 Дуб Давос натуральный ST12', hex:'#C9A57A', pattern:'wood', price:3250, brand:'Egger'},
+    {id:'eH3133ST12', name:'H3133 Дуб Давос трюфель ST12', hex:'#C9A57A', pattern:'wood', price:3250, brand:'Egger'},
+    {id:'eH3146ST19', name:'H3146 Дуб Лоренцо бежево-серый ST19', hex:'#D8C7A8', pattern:'wood', price:3800, brand:'Egger'},
+    {id:'eH3154ST36', name:'H3154 Дуб Чарльстон темно-коричневый ST36', hex:'#6B4A3A', pattern:'wood', price:4650, brand:'Egger'},
+    {id:'eH3156ST12', name:'H3156 Дуб Корбридж серый ST12', hex:'#A3A6A1', pattern:'wood', price:3250, brand:'Egger'},
+    {id:'eH3157ST12', name:'H3157 Дуб Винченца ST12', hex:'#C9A57A', pattern:'wood', price:3250, brand:'Egger'},
+    {id:'eH3170ST12', name:'H3170 Дуб Кендал натуральный ST12', hex:'#C9A57A', pattern:'wood', price:3250, brand:'Egger'},
+    {id:'eH3176ST37', name:'H3176 Дуб Галифакс олово ST37', hex:'#C9A57A', pattern:'wood', price:4900, brand:'Egger'},
+    {id:'eH3178ST37', name:'H3178 Дуб Галифакс глазурованный чёрный ST37', hex:'#222222', pattern:'wood', price:4900, brand:'Egger'},
+    {id:'eH3190ST19', name:'H3190 Металлик Файнлайн антрацит ST19', hex:'#44474A', pattern:'wood', price:3800, brand:'Egger'},
+    {id:'eH3192ST19', name:'H3192 Металлик Файнлайн коричневый ST19', hex:'#6B4A3A', pattern:'wood', price:3800, brand:'Egger'},
+    {id:'eH3303ST10', name:'H3303 Дуб Гамильтон натуральный ST10', hex:'#C9A57A', pattern:'wood', price:3000, brand:'Egger'},
+    {id:'eH3309ST28', name:'H3309 Дуб Гладстоун песочный ST28', hex:'#C9A57A', pattern:'wood', price:4900, brand:'Egger'},
+    {id:'eH3325ST28', name:'H3325 Дуб Гладстоун табак ST28', hex:'#C9A57A', pattern:'wood', price:4900, brand:'Egger'},
+    {id:'eH3326ST28', name:'H3326 Дуб Гладстоун серо-бежевый ST28', hex:'#D8C7A8', pattern:'wood', price:4900, brand:'Egger'},
+    {id:'eH3330ST36', name:'H3330 Дуб Антор натуральный ST36', hex:'#C9A57A', pattern:'wood', price:4660, brand:'Egger'},
+    {id:'eH3331ST10', name:'H3331 Дуб Небраска натуральный ST10', hex:'#C9A57A', pattern:'wood', price:3250, brand:'Egger'},
+    {id:'eH3342ST28', name:'H3342 Дуб Гладстоун сепия ST28', hex:'#C9A57A', pattern:'wood', price:4970, brand:'Egger'},
+    {id:'eH3395ST12', name:'H3395 Дуб Корбридж натуральный ST12', hex:'#C9A57A', pattern:'wood', price:2900, brand:'Egger'},
+    {id:'eH3398ST12', name:'H3398 Дуб Кендал коньяк ST12', hex:'#C9A57A', pattern:'wood', price:2900, brand:'Egger'},
+    {id:'eH3403ST38', name:'H3403 Лиственница горная белая ST38', hex:'#EEEEEA', pattern:'wood', price:4900, brand:'Egger'},
+    {id:'eH3408ST38', name:'H3408 Лиственница горная коричневая термо ST38', hex:'#6B4A3A', pattern:'wood', price:4900, brand:'Egger'},
+    {id:'eH3430ST22', name:'H3430 Сосна Аланд белая ST22', hex:'#EEEEEA', pattern:'wood', price:3250, brand:'Egger'},
+    {id:'eH3433ST22', name:'H3433 Сосна Аланд полярная ST22', hex:'#CDB48A', pattern:'wood', price:3250, brand:'Egger'},
+    {id:'eH3450ST22', name:'H3450 Флитвуд белый ST22', hex:'#EEEEEA', pattern:'wood', price:3250, brand:'Egger'},
+    {id:'eH3451ST22', name:'H3451 Флитвуд шампань ST22', hex:'#B08C62', pattern:'wood', price:3250, brand:'Egger'},
+    {id:'eH3453ST22', name:'H3453 Флитвуд серая лава ST22', hex:'#A3A6A1', pattern:'wood', price:3250, brand:'Egger'},
+    {id:'eH3700ST10', name:'H3700 Орех Пацифик натуральный ST10', hex:'#7A5538', pattern:'wood', price:3250, brand:'Egger'},
+    {id:'eH3702ST10', name:'H3702 Орех Пацифик табак ST10', hex:'#7A5538', pattern:'wood', price:3250, brand:'Egger'},
+    {id:'eH3710ST9', name:'H3710 Орех карини натуральный ST9', hex:'#7A5538', pattern:'wood', price:3250, brand:'Egger'},
+    {id:'eH3730ST10', name:'H3730 Гикори натуральный ST10', hex:'#A58562', pattern:'wood', price:3000, brand:'Egger'},
+    {id:'eH3734ST9', name:'H3734 Орех Дижон натуральный ST9', hex:'#7A5538', pattern:'wood', price:2800, brand:'Egger'},
+    {id:'eH3840ST9', name:'H3840 Клен Мандал натуральный ST9', hex:'#D8BE92', pattern:'wood', price:2800, brand:'Egger'},
+    {id:'eH3860ST9', name:'H3860 Клен сахарный шампань ST9', hex:'#D8BE92', pattern:'wood', price:3030, brand:'Egger'},
+    {id:'eF186ST9', name:'F186 Бетон Чикаго светло-серый ST9', hex:'#A3A6A1', pattern:'plain', price:3550, brand:'Egger'},
+    {id:'eF187ST9', name:'F187 Бетон Чикаго темно-серый ST9', hex:'#A3A6A1', pattern:'plain', price:3550, brand:'Egger'},
+    {id:'eF204ST9', name:'F204 Мрамор Каррара белый ST9', hex:'#EEEEEA', pattern:'plain', price:3800, brand:'Egger'},
+    {id:'eF206ST9', name:'F206 Камень Пьетра Гриджиа чёрный ST9', hex:'#222222', pattern:'plain', price:3800, brand:'Egger'},
+    {id:'eF416ST10', name:'F416 Текстиль бежевый ST10', hex:'#D8C7A8', pattern:'plain', price:3550, brand:'Egger'},
+    {id:'eF417ST10', name:'F417 Текстиль серый ST10', hex:'#A3A6A1', pattern:'plain', price:3550, brand:'Egger'},
+    {id:'eF433ST10', name:'F433 Лён антрацит ST10', hex:'#44474A', pattern:'plain', price:3550, brand:'Egger'},
+    {id:'eF501ST2', name:'F501 Алюминий матированный ST2', hex:'#B5B2AB', pattern:'plain', price:3250, brand:'Egger'},
+    {id:'eF509ST2', name:'F509 Алюминий ST2', hex:'#B5B2AB', pattern:'plain', price:3250, brand:'Egger'},
+    {id:'eF629ST16', name:'F629 Сланец Металл золотисто-чёрный ST16', hex:'#222222', pattern:'plain', price:3550, brand:'Egger'},
+    {id:'eF637ST16', name:'F637 Хромикс белый ST16', hex:'#EEEEEA', pattern:'plain', price:3550, brand:'Egger'},
+    {id:'eF642ST16', name:'F642 Хромикс бронза ST16', hex:'#BDBFC2', pattern:'plain', price:3550, brand:'Egger'},
+    {id:'eF812ST9', name:'F812 Мрамор Леванто белый ST9', hex:'#EEEEEA', pattern:'plain', price:3550, brand:'Egger'},
     {id:'c1', name:'Белый', hex:'#EDEDE8', pattern:'plain', price:1100},
     {id:'c2', name:'Серый камень', hex:'#A3A6A1', pattern:'plain', price:1150},
     {id:'c3', name:'Графит', hex:'#3D4042', pattern:'plain', price:1150},
@@ -884,7 +1046,13 @@ function facadesOf(m, S){
       out.push(Object.assign({x:2, y:ev(fd.y), w:W - 4, h:ev(fd.h), k:'drawer'}, ex));
     }
     else if (fd.kind === 'single') out.push(Object.assign({x:2, y:ev(fd.y), w:W - 4, h:ev(fd.h), k:fd.k}, fd.hinge ? {hinge:fd.hinge} : null, fd.part ? {part:fd.part} : null, fd.second ? {second:true} : null));
-    else if (fd.kind === 'corner'){ const dw = Math.max(W - fd.blind, 250), dh = t.tpl.golaKeep ? H - 4 + 30*G : H - 4; if (m.blind === 'right') door(2, 2, dw - 4, dh, 'left'); else door(W - dw + 2, 2, dw - 4, dh, 'right'); }
+    else if (fd.kind === 'corner'){
+      const dw = Math.max(W - fd.blind, 250), dh = t.tpl.golaKeep ? H - 4 + 30*G : H - 4, bw = W - dw - (+m.plank > 4 ? +m.plank : 0) - 4, right = m.blind === 'right';
+      const hg = m.hinge === 'left' || m.hinge === 'right' ? m.hinge : (right ? 'left' : 'right');   // по умолчанию петли с наружной стороны, выбор в панели модуля
+      if (right) door(2, 2, dw - 4, dh, hg); else door(W - dw + 2, 2, dw - 4, dh, hg);
+      // Глухая часть закрыта панелью из материала фасада (без ручки), рядом с дверцей стоит угловая планка
+      if (fd.closeBlind && bw > 20) out.push({x:right ? dw + (+m.plank > 4 ? +m.plank : 0) + 2 : 2, y:2, w:bw, h:dh, k:'panel'});
+    }
   });
   if (S.mat.handle === 'gola' && !t.noGola){
     if (t.row === 'low' && !t.tall) out.forEach(f => { if (!t.tpl.golaKeep) f.h -= GOLA; f.channel = true; });   // golaKeep: высоты фасадов задаёт шаблон через G, как в ведомостях технолога
@@ -1139,8 +1307,8 @@ function bomOf(A, S, P, C){
 /* ---------------- state ---------------- */
 const KPR = 'kitchen.presets.v1';
 const BUILTIN_PRESETS = [
-  {id:'b1', name:'Белая эмаль, скоба', builtin:true, mat:{corpus:'c1', facade:'f2', milling:'n0', fLow:'k1', fUp:'k1', handle:'bar'}},
-  {id:'b2', name:'Шалфей и белый, Gola', builtin:true, mat:{corpus:'c1', facade:'f2', milling:'n1', fLow:'k4', fUp:'k1', handle:'gola'}},
+  {id:'b1', name:'Белая эмаль, скоба', builtin:true, mat:{corpus:'eW1000ST9', facade:'f2', milling:'n0', fLow:'k1', fUp:'k1', handle:'bar'}},
+  {id:'b2', name:'Шалфей и белый, Gola', builtin:true, mat:{corpus:'eW1000ST9', facade:'f2', milling:'n1', fLow:'k4', fUp:'k1', handle:'gola'}},
   {id:'b3', name:'Дуб и графит, push', builtin:true, mat:{corpus:'c3', facade:'f1', milling:'n0', fLow:'k8', fUp:'k7', handle:'push'}}];
 const userPresets = () => load(KPR) || [];
 const KS = 'kitchen.state.v2', KP = 'kitchen.prices.v2', KC = 'kitchen.catalog.v2';
@@ -1159,7 +1327,7 @@ function sampleState(){
     mk('gap_mezz','B', {w:1330}), mk('mezz_door','B', {d:560})];
   return {client:'Анна И. (пример)', order:'К-0142', layout:'L', walls:{A:3200, B:2400, C:2400},
     room:{height:2700, wall:'#E7E4DD', floor:'oakL'},
-    mat:{corpus:'c1', facade:'f2', milling:'n1', fLow:'k4', fUp:'k1', handle:'bar', hwColor:'black', drawers:'legrabox', drawerColor:'orion', top:'t4', splash:true},
+    mat:{corpus:'eW1000ST9', facade:'f2', milling:'n1', fLow:'k4', fUp:'k1', handle:'bar', hwColor:'black', drawers:'legrabox', drawerColor:'orion', top:'t4', splash:true},
     disc:0, modules, selected:null, showDims:false, clientView:false, nextId:id + 1, tab:'smeta', ltab:'catalog', cat:'low', place:'A', drawer:false, sideHidden:false, view:'color', cam:'persp', bright:1, extra:[], parts:[], kp:Object.assign({}, KP_DEFAULT)};
 }
 function deepMerge(base, over){
@@ -1170,7 +1338,7 @@ function deepMerge(base, over){
 function load(key){ try { const s = localStorage.getItem(key); return s ? JSON.parse(s) : null; } catch(e){ return null; } }
 function store(key, v){ try { localStorage.setItem(key, JSON.stringify(v)); } catch(e){} if (key === KS) projectChanged(); else if (key === KP) settingsChanged('prices'); else if (key === KC) settingsChanged('catalogs'); }
 // Проекты: общая база для тестирования. Настройки подключения лежат в браузере, данные проектов на сервере (kitchen-api, PostgreSQL).
-const BUILD = '22.10.2026, сборка 21'; // меняется при каждом выпуске: по ней видно, какая версия открыта
+const BUILD = '22.10.2026, сборка 22'; // меняется при каждом выпуске: по ней видно, какая версия открыта
 const KSRV = 'kitchen.server.v1', API_DEFAULT = 'https://kitchen-api-c112.onrender.com';
 const PKEYS = ['client', 'order', 'layout', 'walls', 'room', 'mat', 'disc', 'modules', 'nextId', 'extra', 'parts', 'kp'];
 let srv = Object.assign({url:API_DEFAULT, code:'', name:'', role:''}, load(KSRV) || {});
@@ -1269,7 +1437,7 @@ function renderThumb(type, o = {}){
   const sig = thumbSig(), key = o.key || type; (thumbs[sig] = thumbs[sig] || {});
   if (thumbs[sig][key]) return thumbs[sig][key];
   // Нейтральный вид: белый корпус и светлый фасад, чтобы было видно конструкцию, а не цвет проекта
-  const m = {id:'th_' + type, type, wall:'A', w:t.w, h:t.h, d:t.d, blind:'left', corpus:'c1', facade:THUMB_FACADE, light:false, cut:defCut(type), handle:catStyle(), legs:100};
+  const m = {id:'th_' + type, type, wall:'A', w:t.w, h:t.h, d:t.d, blind:'left', corpus:'eW1000ST9', facade:THUMB_FACADE, light:false, cut:defCut(type), handle:catStyle(), legs:100};
   const nAnim = anims.length, nDisp = disposables.length, opened = [];
   if (o.open) facadesOf(m, S).forEach((f, i) => { if (f.k === 'drawer'){ const id = m.id + ':' + i; if (!openSet.has(id)){ openSet.add(id); opened.push(id); } } });
   let url = '', g = null; const old = renderer.getSize(new THREE.Vector2()), rootWas = root.visible, helperWas = helper && helper.visible;
@@ -1458,7 +1626,7 @@ function leftModule(){
       ${catField('fcolor', m.facade, 'ov', 'facade', {none:'как у кухни'})}</div>` : ''}
   </div><div class="sec"><h3>Опции</h3>`;
   { const dx = new Set(r.facs.filter(f => f.k === 'door').map(f => f.x));
-    if (dx.size === 1 && t.carcass !== 'none') h += `<div class="field"><span class="flabel">Петли дверцы</span><div class="seg"><button data-act="mod-hinge" data-v="left" aria-pressed="${m.hinge !== 'right'}">Слева</button><button data-act="mod-hinge" data-v="right" aria-pressed="${m.hinge === 'right'}">Справа</button></div></div>`; }
+    if (dx.size === 1 && t.carcass !== 'none') h += `<div class="field"><span class="flabel">Петли дверцы</span><div class="seg"><button data-act="mod-hinge" data-v="left" aria-pressed="${(r.facs.find(f => f.k === 'door') || {}).hinge !== 'right'}">Слева</button><button data-act="mod-hinge" data-v="right" aria-pressed="${(r.facs.find(f => f.k === 'door') || {}).hinge === 'right'}">Справа</button></div></div>`; }
   if (r.facs.some(f => f.k === 'drawer')) h += `<div class="field"><span class="flabel">Система ящиков этого модуля</span><div class="seg wrap"><button data-act="mod-drawers" data-v="" aria-pressed="${!m.drawers}">Как в кухне</button>${Object.entries(DRAWERS).map(([k, v]) => `<button data-act="mod-drawers" data-v="${k}" aria-pressed="${m.drawers === k}">${esc(v.n.replace('Hettich InnoTech ', 'Hettich ').replace('Hettich ', 'H. '))}</button>`).join('')}</div></div>`;
   if (r.facs.some(f => f.k === 'door')) h += `<div class="field"><span class="flabel">Петли этого модуля</span><div class="seg"><button data-act="mod-hbrand" data-v="" aria-pressed="${m.hingeBrand !== 'hettich'}">Blum CLIP top</button><button data-act="mod-hbrand" data-v="hettich" aria-pressed="${m.hingeBrand === 'hettich'}">Hettich Sensys</button></div></div>`;
   if (t.innerOpt) h += `<label class="chk"><input type="checkbox" id="edInner" ${m.inner ? 'checked' : ''}> Внутренний ящик в верхнем ящике</label>`;
@@ -1488,8 +1656,8 @@ function leftModule(){
   if (t.carcass !== 'none') h += `<div class="field"><span class="flabel">Фасадный бок (боковина из материала фасада)</span>
     <label class="chk"><input type="checkbox" id="edEndL" ${m.endL ? 'checked' : ''}> Слева</label>
     <label class="chk"><input type="checkbox" id="edEndR" ${m.endR ? 'checked' : ''}> Справа</label></div>`;
-  if (t.row === 'mezz') h += `<div class="small muted">Над пеналом ставьте глубину 560, над верхними 300.</div>`;
-  if (t.corner) h += `<div class="field"><label for="edPlank">Угловая фальшпланка, ширина мм (0 — без планки)</label><input type="number" id="edPlank" min="0" max="300" step="1" value="${m.plank || 0}"><div class="small muted" style="margin-top:4px">Высота как у модуля, материал фасадный. Угловая планка 50×50 мм (бывает 40×40): это её ширина. В ведомостях встречается от 24 до 100 мм.</div><div class="seg" style="margin-top:6px"><button data-act="plank" data-v="40" aria-pressed="${m.plank === 40}">40 мм</button><button data-act="plank" data-v="50" aria-pressed="${m.plank === 50}">50 мм</button></div></div>`;
+  if (t.row === 'mezz') h += `<div class="small muted">Над пеналом ставьте глубину 510, над верхними 340.</div>`;
+  if (t.corner) h += `<div class="field"><label for="edPlank">Угловая фальшпланка, ширина мм (0 — без планки)</label><input type="number" id="edPlank" min="0" max="300" step="1" value="${m.plank || 0}"><div class="small muted" style="margin-top:4px">Высота как у модуля, материал фасадный. Ширина и вылет планки. В ведомостях Лидии чаще 57–64 мм («Фальш бок» 64×771), бывает 40 и 50.</div><div class="seg" style="margin-top:6px"><button data-act="plank" data-v="40" aria-pressed="${m.plank === 40}">40 мм</button><button data-act="plank" data-v="50" aria-pressed="${m.plank === 50}">50 мм</button><button data-act="plank" data-v="60" aria-pressed="${m.plank === 60}">60 мм</button></div></div>`;
   if (t.corner) h += `<div class="field"><span class="flabel">Глухая часть (заходит под соседний ряд)</span><div class="seg"><button data-act="blind" data-v="left" aria-pressed="${m.blind !== 'right'}">Слева</button><button data-act="blind" data-v="right" aria-pressed="${m.blind === 'right'}">Справа</button></div></div>`;
   const hw = r.hw, dr = DRAWERS[S.mat.drawers];
   const hwl = hwText(hw);
@@ -2513,7 +2681,7 @@ document.addEventListener('click', e => { document.querySelectorAll('details.men
     case 'mod-frame': if (m){ m.frame = v; update(); } break;
     case 'mod-lift': if (m){ m.lift = v; update(); } break;
     case 'plank': if (m){ m.plank = +v; update(); } break;
-    case 'mod-hinge': if (m){ if (v === 'right') m.hinge = 'right'; else delete m.hinge; update(); } break;
+    case 'mod-hinge': if (m){ if (v === 'right') m.hinge = 'right'; else if (TYPES[m.type].corner) m.hinge = 'left'; else delete m.hinge; update(); } break;
     case 'mod-handle': if (m){ if (v) m.handle = v; else delete m.handle; update(); } break;
     case 'mod-legs': if (m){ if (v) m.legs = +v; else delete m.legs; update(); } break;
     case 'ov': setOverride(k, v); break;
