@@ -373,6 +373,10 @@ dialog.dlg::backdrop{background:rgba(20,18,15,.5)}
 .kp tr.g{break-after:avoid}
 .kp h2{break-after:avoid}
 .kp .g td{font-size:8.5pt;text-transform:uppercase;letter-spacing:.07em;color:#6A665E;font-weight:600;border-bottom:0;padding-top:4mm}
+.kp-cards{display:grid;grid-template-columns:1fr 1fr;gap:3mm 6mm}
+.kp-card{display:flex;gap:3mm;break-inside:avoid;border-bottom:1px solid #E5E1D8;padding-bottom:3mm;font-size:9.5pt}
+.kp-card img,.kp-card .ph{width:26mm;height:26mm;flex:none;object-fit:contain;border-radius:4px;background:#F3F0EA}
+.kp-card small{color:#6A665E}.kp-card .d{margin-top:1mm;color:#2c2a26}
 .kp-sums{break-inside:avoid;margin:5mm 0 0 auto;width:90mm;font-size:10.5pt;font-variant-numeric:tabular-nums}
 .kp-sums div{display:flex;justify-content:space-between;padding:1mm 0}
 .kp-sums .t{border-top:2px solid #1C1B19;margin-top:2mm;padding-top:3mm;font-size:15pt;font-weight:600}
@@ -1338,7 +1342,7 @@ function deepMerge(base, over){
 function load(key){ try { const s = localStorage.getItem(key); return s ? JSON.parse(s) : null; } catch(e){ return null; } }
 function store(key, v){ try { localStorage.setItem(key, JSON.stringify(v)); } catch(e){} if (key === KS) projectChanged(); else if (key === KP) settingsChanged('prices'); else if (key === KC) settingsChanged('catalogs'); }
 // Проекты: общая база для тестирования. Настройки подключения лежат в браузере, данные проектов на сервере (kitchen-api, PostgreSQL).
-const BUILD = '22.10.2026, сборка 22'; // меняется при каждом выпуске: по ней видно, какая версия открыта
+const BUILD = '22.10.2026, сборка 23'; // меняется при каждом выпуске: по ней видно, какая версия открыта
 const KSRV = 'kitchen.server.v1', API_DEFAULT = 'https://kitchen-api-c112.onrender.com';
 const PKEYS = ['client', 'order', 'layout', 'walls', 'room', 'mat', 'disc', 'modules', 'nextId', 'extra', 'parts', 'kp'];
 let srv = Object.assign({url:API_DEFAULT, code:'', name:'', role:''}, load(KSRV) || {});
@@ -1379,6 +1383,19 @@ function newModule(type, wall, o = {}){
   if (t.corner && !t.gap) o = Object.assign({plank:CORNER_PLANK}, o);   // угловая фальшпланка есть в угловом модуле по умолчанию
   return Object.assign({id:'m' + (S.nextId++), type, wall, w:t.w, h:t.h, d:t.d, blind:wall === 'B' ? 'right' : 'left', corpus:null, facade:null,
     light:false, cut:defCut(type)}, o);
+}
+// Состав модуля одной фразой для карточки в КП: считается по тем же фасадам и полкам, что и смета
+const plRu = (n, a, b, c) => { const k = n % 100, d = n % 10; return `${n} ${k > 10 && k < 20 ? c : d === 1 ? a : d > 1 && d < 5 ? b : c}`; };
+function kpLead(m){
+  const r = resultOf(m.id); if (!r) return '';
+  const nd = r.facs.filter(f => f.k === 'drawer').length, nr = r.facs.filter(f => f.k === 'door').length, nl = r.facs.filter(f => f.k === 'lift').length, ns = shelvesOf(m).length;
+  const p = [];
+  if (nd) p.push(plRu(nd, 'ящик', 'ящика', 'ящиков') + ' полного выдвижения');
+  if (nr) p.push(plRu(nr, 'распашная дверца', 'распашные дверцы', 'распашных дверец') + (r.facs.some(f => f.frame) ? ' в алюминиевой рамке со стеклом' : r.facs.some(f => f.glass) ? ' со стеклом' : ''));
+  if (nl) p.push(plRu(nl, 'фасад', 'фасада', 'фасадов') + ' с подъёмником');
+  if (!r.facs.length && TYPES[m.type].carcass !== 'none') p.push('открытый корпус без фасада');
+  if (ns) p.push(plRu(ns, 'полка', 'полки', 'полок'));
+  return p.length ? 'Состав: ' + p.join(', ') + '.' : '';
 }
 // Текст для КП из параметров модуля: всегда совпадает с тем, что посчитано
 function kpText(m){
@@ -1552,6 +1569,8 @@ function leftRoom(){
       <div class="field"><label for="inValid">Действует, дней</label><input type="number" id="inValid" min="1" max="365" value="${S.kp.valid}"></div>
       <div class="field"><label for="inLead">Срок изготовления</label><input type="text" id="inLead" value="${esc(S.kp.lead)}"></div>
     </div>
+    <label class="chk"><input type="checkbox" id="inKpMods" ${S.kp.noMods ? '' : 'checked'}> Показывать цены по каждому модулю</label>
+    <label class="chk"><input type="checkbox" id="inKpCards" ${S.kp.noCards ? '' : 'checked'}> Раздел «Что входит в кухню»: картинки и описание модулей</label>
   </div>
   <div class="sec"><h3>Планировка</h3>
     <div class="plan">${[['I','Прямая'],['L','Угловая'],['U','П-образная']].map(([k, n]) => `<button data-act="layout" data-v="${k}" aria-pressed="${S.layout === k}">${planSvg(k)}${n}</button>`).join('')}</div>
@@ -2163,7 +2182,7 @@ function specRows(){
   const ws = wallsOf(S), dr = DRAWERS[S.mat.drawers], dc = dr.colors.find(c => c.id === S.mat.drawerColor) || dr.colors[0], top = catFind(C.top, S.mat.top);
   return [
     ['Планировка', {I:'Прямая', L:'Угловая', U:'П-образная'}[S.layout] + ' · ' + ws.map(w => `стена ${WN[w]} ${S.walls[w]} мм`).join(', ') + ` · потолок ${S.room.height} мм`],
-    ['Корпус', 'ЛДСП 16 мм, ' + catFind(C.corpus, S.mat.corpus).name.toLowerCase()],
+    ['Корпус', (catFind(C.corpus, S.mat.corpus).brand ? 'ЛДСП ' + catFind(C.corpus, S.mat.corpus).brand + ' 16 мм, ' : 'ЛДСП 16 мм, ') + catFind(C.corpus, S.mat.corpus).name],
     ['Фасады', catFind(C.facade, S.mat.facade).name + ', ' + catFind(C.milling, S.mat.milling).name.toLowerCase()],
     ['Цвет фасадов', `низ — ${catFind(C.fcolor, S.mat.fLow).name.toLowerCase()}, верх — ${catFind(C.fcolor, S.mat.fUp).name.toLowerCase()}`],
     ['Открывание', HANDLES[S.mat.handle].toLowerCase() + (S.mat.handle === 'push' ? '' : ', ' + hwColorOf().name.toLowerCase())],
@@ -2222,13 +2241,22 @@ function kpHtml(img){
   const demo = JSON.stringify(P) === JSON.stringify(deepMerge(DEFAULT_PRICES, {})) && JSON.stringify(C) === JSON.stringify(DEFAULT_CAT);
   const spec = [
     ['Планировка', {I:'Прямая', L:'Угловая', U:'П-образная'}[S.layout] + ' · ' + ws.map(w => `стена ${WN[w]} ${S.walls[w]} мм`).join(', ') + ` · потолок ${S.room.height} мм`],
-    ['Корпус', 'ЛДСП 16 мм, ' + catFind(C.corpus, S.mat.corpus).name.toLowerCase()],
+    ['Корпус', (catFind(C.corpus, S.mat.corpus).brand ? 'ЛДСП ' + catFind(C.corpus, S.mat.corpus).brand + ' 16 мм, ' : 'ЛДСП 16 мм, ') + catFind(C.corpus, S.mat.corpus).name],
     ['Фасады', catFind(C.facade, S.mat.facade).name + ', ' + catFind(C.milling, S.mat.milling).name.toLowerCase()],
     ['Цвет фасадов', `низ — ${catFind(C.fcolor, S.mat.fLow).name.toLowerCase()}, верх — ${catFind(C.fcolor, S.mat.fUp).name.toLowerCase()}`],
     ['Открывание', HANDLES[S.mat.handle].toLowerCase() + (S.mat.handle === 'push' ? '' : ', ' + hwColorOf().name.toLowerCase())],
     ['Фурнитура', `Blum: петли CLIP top BLUMOTION, ящики ${dr.n} (${dc.name.toLowerCase()})`],
     ['Столешница', top.name + (S.mat.splash ? ', стеновая панель (фартук)' : '')]];
   const grp = n => `<tr class="g"><td colspan="4">${esc(n)}</td></tr>`;
+  // Что входит в кухню: одинаковые модули собираются в одну карточку с картинкой и описанием из параметров модуля
+  const cards = []; const cardIdx = {};
+  orderedMods().filter(m => !TYPES[m.type].gap && resultOf(m.id)).forEach(m => {
+    const txt = kpText(m), k = m.type + '|' + txt + '|' + sizeStr(m);
+    if (cardIdx[k] === undefined){ cardIdx[k] = cards.length; cards.push({m, txt, nums:[], n:0}); }
+    const c = cards[cardIdx[k]]; c.nums.push(num[m.id]); c.n++;
+  });
+  const cardsHtml = kp.noCards ? '' : `<h2>Что входит в кухню</h2><div class="kp-cards">${cards.map(c => { const im = thumbGet(c.m.type) || renderThumb(c.m.type);
+    return `<div class="kp-card">${im ? `<img src="${im}" alt="">` : '<div class="ph"></div>'}<div><b>${esc(modLabel(c.m))}</b> · ${sizeStr(c.m)} мм${c.n > 1 ? ` · ${c.n} шт` : ''}<br><small>№ ${c.nums.join(', ')}</small><div class="d">${esc(kpLead(c.m))} ${esc(c.txt.replace(/^[^.]*\.\s*/, ''))}</div></div></div>`; }).join('')}</div>`;
   const ln = c => `<tr><td></td><td>${esc(c.n)}</td><td class="r">${nf2.format(c.q)} ${esc(c.u)}</td><td class="r">${rub(c.price)}</td></tr>`;
   let rows = '';
   ws.forEach(wl => ROWS.forEach(([row, rn]) => {
@@ -2236,7 +2264,7 @@ function kpHtml(img){
     if (!list.length) return;
     rows += grp((ws.length > 1 ? 'Стена ' + WN[wl] + ' · ' : '') + rn);
     list.forEach(r => { const nt = modNotes(r.m);
-      rows += `<tr><td>${num[r.m.id]}</td><td>${esc(modLabel(r.m))}${nt ? `<br><small style="color:#6A665E">${esc(nt)}</small>` : ''}</td><td class="r">${sizeStr(r.m)}</td><td class="r">${rub(r.price)}</td></tr>`; });
+      rows += `<tr><td>${num[r.m.id]}</td><td>${esc(modLabel(r.m))}${nt ? `<br><small style="color:#6A665E">${esc(nt)}</small>` : ''}</td><td class="r">${sizeStr(r.m)}</td><td class="r">${kp.noMods ? '' : rub(r.price)}</td></tr>`; });
   }));
   if (A.common.length){ rows += grp('Столешница и отделка'); A.common.forEach(c => rows += ln(c)); }
   if (A.extras.length){ rows += grp('Дополнительные позиции'); A.extras.forEach(c => rows += ln(c)); }
@@ -2248,6 +2276,7 @@ function kpHtml(img){
     ${img ? `<div style="margin-top:6mm"><img class="kp-img" src="${img}" alt="Вид кухни"></div>` : ''}
     <h2>Состав кухни</h2>
     <dl class="kp-spec">${spec.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl>
+    ${cardsHtml}
     <h2>Смета</h2>
     <table><thead><tr><th style="width:8mm">№</th><th>Позиция</th><th class="r">Размер, мм</th><th class="r">Цена</th></tr></thead><tbody>${rows}</tbody></table>
     <div class="kp-sums">
@@ -2806,6 +2835,8 @@ document.addEventListener('change', e => {
     case 'edX1': if (m){ m.x1 = clampNum(t.value, 150, 600, TYPES[m.type].x1); t.value = m.x1; update(); } break;
     case 'edPlank': if (m){ m.plank = clampNum(t.value, 0, 300, 0); t.value = m.plank; update(); } break;
     case 'edFrL': case 'edFrR': if (m){ m[id === 'edFrL' ? 'frL' : 'frR'] = t.checked; update(); } break;
+    case 'inKpMods': S.kp.noMods = !t.checked; store(KS, S); break;
+    case 'inKpCards': S.kp.noCards = !t.checked; store(KS, S); break;
     case 'edEndL': case 'edEndR': if (m){ m[id === 'edEndL' ? 'endL' : 'endR'] = t.checked; update(); } break;
     case 'edSink': if (m){ m.cut.sink = t.checked; update(); } break;
     case 'edHob': if (m){ m.cut.hob = t.checked; update(); } break;
