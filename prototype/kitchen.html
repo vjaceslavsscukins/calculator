@@ -1170,7 +1170,7 @@ function deepMerge(base, over){
 function load(key){ try { const s = localStorage.getItem(key); return s ? JSON.parse(s) : null; } catch(e){ return null; } }
 function store(key, v){ try { localStorage.setItem(key, JSON.stringify(v)); } catch(e){} if (key === KS) projectChanged(); else if (key === KP) settingsChanged('prices'); else if (key === KC) settingsChanged('catalogs'); }
 // Проекты: общая база для тестирования. Настройки подключения лежат в браузере, данные проектов на сервере (kitchen-api, PostgreSQL).
-const BUILD = '22.10.2026, сборка 20'; // меняется при каждом выпуске: по ней видно, какая версия открыта
+const BUILD = '22.10.2026, сборка 21'; // меняется при каждом выпуске: по ней видно, какая версия открыта
 const KSRV = 'kitchen.server.v1', API_DEFAULT = 'https://kitchen-api-c112.onrender.com';
 const PKEYS = ['client', 'order', 'layout', 'walls', 'room', 'mat', 'disc', 'modules', 'nextId', 'extra', 'parts', 'kp'];
 let srv = Object.assign({url:API_DEFAULT, code:'', name:'', role:''}, load(KSRV) || {});
@@ -2974,12 +2974,15 @@ function buildModule(m, pos){
   const rz = TYPES[m.type].tpl.golaKeep ? 0 : riseOf(m), fs0 = facadesOf(m, S), top0 = Math.max(0, ...fs0.map(f => f.y + f.h)), up = TYPES[m.type].tpl.golaKeep && riseOf(m) ? Math.max(0, m.h + riseOf(m) - 32 - top0) : 0;
   const fsList = fs0.map(f => rz && f.y + f.h >= m.h - 40 ? Object.assign({}, f, {h:f.h + rz}) : up && f.k !== 'panel' && f.y + f.h >= top0 - 1 ? Object.assign({}, f, {h:f.h + up}) : f);
   const golaTop = Math.max(0, ...fsList.map(f => f.y + f.h));
-  // Угловая фальшпланка 50×50 (бывает 40×40) закрывает щель между глухой частью и дверцей: стоит в глухой части вплотную к дверце, из материала фасада.
-  // TODO(технолог): положение и ширина планки (24–100 мм по ведомостям), нужна ли вторая полоса вдоль соседней стены.
+  // Угловая планка 50×50 (бывает 40×40): стоит у дверцы со стороны глухой части и выступает вперёд на свою ширину, чтобы сойтись с фасадами соседнего ряда.
+  // Две видимые грани из материала фасада: передняя и боковая (к соседнему ряду).
+  // TODO(технолог): вылет вперёд и ширина планки (24–100 мм по ведомостям).
   const cdoor = t.corner ? fsList.find(f => f.k === 'door') : null;
   if (cdoor && +m.plank > 4){
-    const pw = Math.min(+m.plank, W - cdoor.w - 4), px = cdoor.x < W / 2 ? cdoor.x + cdoor.w + 2 : cdoor.x - 2 - pw, pg = new THREE.Group();
-    pg.position.set(px / 1000, (baseY + cdoor.y) / 1000, D / 1000); g.add(pg); facadePanel(pg, pw, cdoor.h, 0, 0, fac, mill, false);
+    const pw = Math.min(+m.plank, W - cdoor.w - 4), left = cdoor.x < W / 2, px = left ? cdoor.x + cdoor.w + 2 : cdoor.x - 2 - pw, py = (baseY + cdoor.y) / 1000;
+    const pf = new THREE.Group(); pf.position.set(px / 1000, py, (D + pw) / 1000); g.add(pf); facadePanel(pf, pw, cdoor.h, 0, 0, fac, mill, false);
+    const ps = new THREE.Group(); ps.rotation.y = left ? Math.PI / 2 : -Math.PI / 2;
+    ps.position.set((left ? px + pw : px) / 1000, py, (left ? D + pw : D) / 1000); g.add(ps); facadePanel(ps, pw, cdoor.h, 0, 0, fac, mill, false);
   }
   fsList.forEach((f, fi) => {
     if (f.k === 'cargo') return;
