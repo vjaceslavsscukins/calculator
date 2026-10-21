@@ -613,6 +613,42 @@ const BUILTIN_TEMPLATES = [
     todo:'Рамка: размеры вставки стекла и входит ли стекло в цену рамки уточнить у технолога.',
     facades:[{kind:'doors', n:2, y:'2', h:'H-3', glass:true, frame:true}]},
   {code:'s_up_open', name:'Открытый', family:'shop', cat:'up', row:'up', w:600, h:720, d:340, widths:[300, 400, 450, 500, 600, 800], noOpen:true, panels:SHOP_UP, shelves:SHELVES_UP, note:SHOP_NOTE + ' Проверено по К-1974.', facades:[]},
+  {code:'s_base_drawers4', name:'4 ящика', family:'shop', cat:'low', row:'low', w:600, h:720, d:510, widths:SHOP_W.slice(2), golaKeep:true, golaRise:60, panels:SHOP_LOW, note:SHOP_NOTE + ' Четыре ящика поровну.',
+    todo:'Высоты четырёх ящиков взяты поровну: такой модуль в моделях Базиса редкий (4 из 255), уточнить у технолога.',
+    facades:[{kind:'drawer', y:'2', h:'round(H/4)-4'}, {kind:'drawer', y:'round(H/4)+2', h:'round(H/4)-4'}, {kind:'drawer', y:'round(H/2)+2', h:'round(H/4)-4'}, {kind:'drawer', y:'round(H*3/4)+2', h:'H-round(H*3/4)-4'}]},
+  {code:'s_up_door4', name:'Четыре дверцы в два яруса', family:'shop', cat:'up', row:'up', w:800, h:1250, d:340, widths:[600, 700, 800, 900, 1000, 1200], panels:SHOP_UP, shelves:SHELVES_UP, x1:346,
+    note:SHOP_NOTE + ' Верхний в два яруса: по две дверцы в ярусе, верхний ярус 346 мм (в моделях Базиса 276–346).',
+    todo:'Полки и высота верхнего яруса уточнить у технолога; панели по формулам верхнего модуля.',
+    facades:[{kind:'doors', n:2, rows:[{y:'2', h:'H-X1-8'}, {y:'H-X1-2', h:'X1'}]}]},
+  {code:'s_mezz_door', name:'Антресоль с дверцей', family:'shop', cat:'mezz', row:'mezz', w:600, h:400, d:340, widths:[400, 500, 600, 700], panels:SHOP_UP, shelves:[{y:'round(H/2)', when:'H>450'}],
+    note:SHOP_NOTE + ' Антресоль над верхним рядом (в моделях Базиса высота 350–450, низ около 2200 от пола).',
+    todo:'Глубина антресоли в моделях 343 и 599 (над пеналом): над пеналом ставьте глубину 560. Панели по формулам верхнего модуля, уточнить у технолога.',
+    facades:[{kind:'doors', n:1, y:'2', h:'H-3'}]},
+  {code:'s_mezz_door2', name:'Антресоль с двумя дверцами', family:'shop', cat:'mezz', row:'mezz', w:900, h:400, d:340, widths:[800, 900, 1000, 1100, 1200], panels:SHOP_UP, shelves:[{y:'round(H/2)', when:'H>450'}],
+    note:SHOP_NOTE + ' Антресоль шириной 800–1200 мм с двумя дверцами.',
+    todo:'Панели по формулам верхнего модуля, уточнить у технолога.',
+    facades:[{kind:'doors', n:2, y:'2', h:'H-3'}]},
+  {code:'s_mezz_open', name:'Антресоль открытая', family:'shop', cat:'mezz', row:'mezz', w:900, h:400, d:340, widths:[500, 600, 800, 900, 1000, 1200], noOpen:true, panels:SHOP_UP, shelves:[{y:'round(H/2)', when:'H>450'}],
+    note:SHOP_NOTE + ' Открытая антресоль без фасада.', facades:[]},
+  {code:'s_tall_1', name:'Пенал с одной дверью', family:'shop', cat:'tall', row:'low', tall:true, w:600, h:2070, d:560, widths:[400, 450, 500, 600], strictW:true,
+    note:'Дверь на всю высоту пенала; высота в моделях Базиса 2000–2990 мм.', todo:'Конструкция пенала (детали, полки) взята общая, ведомостей по пеналам нет: уточнить у технолога.',
+    shelves:[{y:'round(H*1/5)'}, {y:'round(H*2/5)'}, {y:'round(H*3/5)'}, {y:'round(H*4/5)'}],
+    facades:[{kind:'doors', n:1, y:'2', h:'H-4', part:'mid'}]},
+  {code:'s_tall_2', name:'Пенал с двумя дверями по высоте', family:'shop', cat:'tall', row:'low', tall:true, w:600, h:2070, d:560, widths:[400, 450, 500, 600, 700], strictW:true,
+    note:'Две двери одна над другой: нижняя примерно 62% высоты.', todo:'Конструкция пенала и деление дверей уточнить у технолога.',
+    shelves:[{y:'round(H*1/5)'}, {y:'round(H*2/5)'}, {y:'round(H*3/5)'}, {y:'round(H*4/5)'}],
+    facades:[{kind:'doors', n:1, rows:[{y:'2', h:'round(H*0.62)-4', part:'bottom'}, {y:'round(H*0.62)+2', h:'H-round(H*0.62)-4', part:'top'}]}]},
+  {code:'s_tall_3', name:'Пенал с тремя дверями по высоте', family:'shop', cat:'tall', row:'low', tall:true, w:600, h:2400, d:560, widths:[450, 500, 600, 700], strictW:true,
+    note:'Три двери по высоте; нижние часто под холодильник.', todo:'Деление дверей поровну (по трети), уточнить у технолога; для холодильника лучше «Под встроенный холодильник».',
+    shelves:[{y:'round(H*1/6)'}, {y:'round(H*2/6)'}, {y:'round(H*3/6)'}, {y:'round(H*4/6)'}, {y:'round(H*5/6)'}],
+    facades:[{kind:'doors', n:1, rows:[{y:'2', h:'round(H/3)-4', part:'bottom'}, {y:'round(H/3)+2', h:'round(H/3)-4', part:'bottom'}, {y:'round(H*2/3)+2', h:'H-round(H*2/3)-4', part:'top'}]}]},
+  {code:'s_tall_door_drawer', name:'Пенал с дверями и ящиком внизу', family:'shop', cat:'tall', row:'low', tall:true, w:600, h:2400, d:560, widths:[450, 500, 600, 700], strictW:true,
+    note:'Ящик внизу, над ним две двери по высоте.', todo:'Высота ящика и деление дверей примерные, уточнить у технолога.',
+    shelves:[{y:'round(H*0.3)'}, {y:'round(H*0.45)'}, {y:'round(H*0.7)'}, {y:'round(H*0.85)'}],
+    facades:[{kind:'drawer', y:'2', h:'round(H*0.14)-4'}, {kind:'doors', n:1, rows:[{y:'round(H*0.14)+2', h:'round(H*0.5)-round(H*0.14)-4', part:'bottom'}, {y:'round(H*0.5)+2', h:'H-round(H*0.5)-4', part:'top'}]}]},
+  {code:'s_tall_drawers', name:'Пенал с ящиками', family:'shop', cat:'tall', row:'low', tall:true, w:600, h:2070, d:560, widths:[400, 450, 500, 600], strictW:true,
+    note:'Четыре выдвижных ящика на всю высоту пенала (кладовая).', todo:'Число и высота ящиков примерные (в моделях Базиса Firmax Newline), уточнить у технолога.',
+    facades:[{kind:'drawer', y:'2', h:'round(H/4)-4'}, {kind:'drawer', y:'round(H/4)+2', h:'round(H/4)-4'}, {kind:'drawer', y:'round(H/2)+2', h:'round(H/4)-4'}, {kind:'drawer', y:'round(H*3/4)+2', h:'H-round(H*3/4)-4'}]},
   {code:'base_door', legacy:true, name:'С дверцами', cat:'low', row:'low', w:600, h:720, d:560, widths:[300,400,450,500,600,800,900], shelves:[{y:'round(H/2)'}], facades:[{kind:'doors', y:'2', h:'H-4'}]},
   {code:'base_drawer_door', legacy:true, name:'Ящик и дверцы', cat:'low', row:'low', w:600, h:720, d:560, widths:[400,450,500,600,800,900], shelves:[{y:'round(H*0.39)'}],
     facades:[{kind:'doors', y:'2', h:'H-round(H*0.22)-4'}, {kind:'drawer', y:'H-round(H*0.22)+2', h:'round(H*0.22)-4'}]},
@@ -623,7 +659,7 @@ const BUILTIN_TEMPLATES = [
     facades:[{kind:'drawer', y:'2', h:'round(H/2)-4', box:'C'}, {kind:'drawer', y:'round(H/2)+2', h:'H-round(H/2)-4', box:'D', inner:'M'}]},
   {code:'base_drawers3', legacy:true, name:'3 ящика', cat:'low', row:'low', w:600, h:720, d:560, widths:[400,450,500,600,800,900,1000],
     facades:[{kind:'drawer', y:'2', h:'round(H*0.39)-4'}, {kind:'drawer', y:'round(H*0.39)+2', h:'round(H*0.39)-4'}, {kind:'drawer', y:'round(H*0.39)*2+2', h:'H-round(H*0.39)*2-4'}]},
-  {code:'base_sink', name:'Под мойку', cat:'low', row:'low', w:800, h:720, d:560, widths:[600,800,900], back:false, appliance:'sink', cutDefaults:{sink:true, pipe:true}, facades:[{kind:'doors', y:'2', h:'H-4'}]},
+  {code:'base_sink', legacy:true, name:'Под мойку', cat:'low', row:'low', w:800, h:720, d:560, widths:[600,800,900], back:false, appliance:'sink', cutDefaults:{sink:true, pipe:true}, facades:[{kind:'doors', y:'2', h:'H-4'}]},
   {code:'base_oven', name:'Под духовой шкаф', cat:'low', row:'low', w:600, h:720, d:560, widths:[600], strictW:true, appliance:'oven', cutDefaults:{hob:true}, shelves:[{y:'H-600'}],
     facades:[{kind:'drawer', y:'2', h:'max(H-600,60)-4'}]},
   {code:'base_dw', legacy:true, name:'Посудомойка', cat:'low', row:'low', w:600, h:720, d:560, widths:[450,600], carcass:'none', appliance:'dw', facades:[{kind:'single', k:'dw', y:'2', h:'H-4'}]},
@@ -634,9 +670,9 @@ const BUILTIN_TEMPLATES = [
   {code:'upper_lift', name:'С подъёмником', cat:'up', row:'up', w:600, h:360, d:300, widths:[500,600,800,900], appliance:'lift', facades:[{kind:'single', k:'lift', y:'2', h:'H-4'}]},
   {code:'upper_open', legacy:true, name:'Открытая полка', cat:'up', row:'up', w:600, h:720, d:300, widths:[300,400,600,800], noOpen:true, shelves:SHELVES_UP, facades:[]},
   {code:'upper_corner', name:'Угловой верхний', cat:'up', row:'up', w:620, h:720, d:300, widths:[620,650,700], corner:true, strictW:true, shelves:SHELVES_UP, facades:[{kind:'corner', blind:320}]},
-  {code:'mezz_door', name:'Антресоль с дверцами', cat:'mezz', row:'mezz', w:600, h:360, d:300, widths:[400,600,800,900], shelves:[{y:'round(H/2)', when:'H>450'}], facades:[{kind:'doors', y:'2', h:'H-4'}]},
+  {code:'mezz_door', legacy:true, name:'Антресоль с дверцами', cat:'mezz', row:'mezz', w:600, h:360, d:300, widths:[400,600,800,900], shelves:[{y:'round(H/2)', when:'H>450'}], facades:[{kind:'doors', y:'2', h:'H-4'}]},
   {code:'mezz_lift', name:'Антресоль с подъёмником', cat:'mezz', row:'mezz', w:600, h:360, d:300, widths:[600,800,900], facades:[{kind:'single', k:'lift', y:'2', h:'H-4'}]},
-  {code:'tall_door', name:'Пенал с дверцами', cat:'tall', row:'low', tall:true, w:600, h:2070, d:560, widths:[400,450,500,600], strictW:true,
+  {code:'tall_door', legacy:true, name:'Пенал с дверцами', cat:'tall', row:'low', tall:true, w:600, h:2070, d:560, widths:[400,450,500,600], strictW:true,
     shelves:[{y:'round(H*1/5)'}, {y:'round(H*2/5)'}, {y:'round(H*3/5)'}, {y:'round(H*4/5)'}],
     facades:[{kind:'doors', rows:[{y:'2', h:'round(H*0.62)-4', part:'bottom'}, {y:'round(H*0.62)+2', h:'H-round(H*0.62)-4', part:'top'}]}]},
   {code:'tall_oven', name:'Под духовку и СВЧ', cat:'tall', row:'low', tall:true, w:600, h:2070, d:560, widths:[600], strictW:true, appliance:'tall_oven', shelves:[{y:'520'}, {y:'1115'}, {y:'1495'}],
@@ -647,18 +683,18 @@ const BUILTIN_TEMPLATES = [
   {code:'gap_up', name:'Проём вверху', cat:'gap', row:'up', gap:true, w:600, h:0, d:0, widths:[400,600,800], facades:[]},
   {code:'gap_mezz', name:'Проём на антресолях', cat:'gap', row:'mezz', gap:true, w:600, h:0, d:0, widths:[600,800,1200], facades:[]},
   // --- новые модули: раскладка предположительная, нужна проверка технолога ---
-  {code:'base_hob', name:'Под варочную', cat:'low', row:'low', w:600, h:720, d:560, widths:[600,800,900], cutDefaults:{hob:true}, todo:'Высота ящиков под варочной панелью и вырез: уточнить у технолога.',
+  {code:'base_hob', legacy:true, name:'Под варочную', cat:'low', row:'low', w:600, h:720, d:560, widths:[600,800,900], cutDefaults:{hob:true}, todo:'Высота ящиков под варочной панелью и вырез: уточнить у технолога.',
     facades:[{kind:'drawer', y:'2', h:'round(H/2)-4'}, {kind:'drawer', y:'round(H/2)+2', h:'H-round(H/2)-4'}]},
-  {code:'base_drawers4', name:'4 ящика', cat:'low', row:'low', w:600, h:720, d:560, widths:[400,450,500,600,800,900], todo:'Высоты четырёх ящиков взяты поровну: уточнить у технолога.',
+  {code:'base_drawers4', legacy:true, name:'4 ящика', cat:'low', row:'low', w:600, h:720, d:560, widths:[400,450,500,600,800,900], todo:'Высоты четырёх ящиков взяты поровну: уточнить у технолога.',
     facades:[{kind:'drawer', y:'2', h:'round(H/4)-4'}, {kind:'drawer', y:'round(H/4)+2', h:'round(H/4)-4'}, {kind:'drawer', y:'round(H/4)*2+2', h:'round(H/4)-4'}, {kind:'drawer', y:'round(H/4)*3+2', h:'H-round(H/4)*3-4'}]},
   {code:'base_open', legacy:true, name:'Открытая полка', cat:'low', row:'low', w:400, h:720, d:560, widths:[200,300,400,600], noOpen:true, shelves:[{y:'round(H/2)'}], facades:[]},
   {code:'filler_low', name:'Добор (планка)', cat:'low', row:'low', w:100, h:720, d:560, widths:[50,100,150,200,250,300], carcass:'none', noGola:true, todo:'Материал и расчёт добора (фасад или ЛДСП): уточнить у технолога.',
     facades:[{kind:'single', k:'panel', y:'2', h:'H-4'}]},
-  {code:'upper_short', name:'Низкий над вытяжкой', cat:'up', row:'up', w:600, h:360, d:300, widths:[500,600,800,900], facades:[{kind:'doors', y:'2', h:'H-4'}]},
+  {code:'upper_short', legacy:true, name:'Низкий над вытяжкой', cat:'up', row:'up', w:600, h:360, d:300, widths:[500,600,800,900], facades:[{kind:'doors', y:'2', h:'H-4'}]},
   {code:'filler_up', name:'Добор (планка) верхний', cat:'up', row:'up', w:100, h:720, d:300, widths:[50,100,150,200,250,300], carcass:'none', noGola:true, todo:'Материал и расчёт добора (фасад или ЛДСП): уточнить у технолога.',
     facades:[{kind:'single', k:'panel', y:'2', h:'H-4'}]},
-  {code:'mezz_open', name:'Антресоль открытая', cat:'mezz', row:'mezz', w:600, h:360, d:300, widths:[400,600,800,900], noOpen:true, facades:[]},
-  {code:'tall_drawers', name:'Пенал с ящиками', cat:'tall', row:'low', tall:true, w:600, h:2070, d:560, widths:[400,450,500,600], strictW:true, todo:'Раскладка ящиков и полок примерная: уточнить у технолога.',
+  {code:'mezz_open', legacy:true, name:'Антресоль открытая', cat:'mezz', row:'mezz', w:600, h:360, d:300, widths:[400,600,800,900], noOpen:true, facades:[]},
+  {code:'tall_drawers', legacy:true, name:'Пенал с ящиками', cat:'tall', row:'low', tall:true, w:600, h:2070, d:560, widths:[400,450,500,600], strictW:true, todo:'Раскладка ящиков и полок примерная: уточнить у технолога.',
     shelves:[{y:'round(H*0.45)'}, {y:'round(H*0.62)'}, {y:'round(H*0.79)'}],
     facades:[{kind:'drawer', y:'2', h:'round(H*0.12)-4'}, {kind:'drawer', y:'round(H*0.12)+2', h:'round(H*0.12)-4'}, {kind:'drawer', y:'round(H*0.12)*2+2', h:'round(H*0.12)-4'}, {kind:'doors', y:'round(H*0.12)*3+2', h:'H-round(H*0.12)*3-4', part:'top'}]},
 ];
@@ -701,7 +737,7 @@ function validateTemplate(t, takenCodes = []){
     if (fd.kind === 'doors' && fd.n !== undefined && ![1, 2].includes(fd.n)) e.push(`${at}.n: число дверец 1 или 2`);
     if (fd.kind === 'single' && !TPL_SINGLE.includes(fd.k)) e.push(`${at}.k: одно из ${TPL_SINGLE.join(', ')}`);
     (fd.kind === 'doors' && fd.rows ? fd.rows.map((r, j) => [r, `${at}.rows[${j}]`]) : [[fd, at]]).forEach(([r, w]) => {
-      if (r.part !== undefined && !['top', 'bottom'].includes(r.part)) e.push(`${w}.part: top или bottom`);
+      if (r.part !== undefined && !['top', 'bottom', 'mid'].includes(r.part)) e.push(`${w}.part: top, mid или bottom`);
       num(r.y, `${w}.y`, v => v >= 0); num(r.h, `${w}.h`, v => v > 0);
     });
   });
@@ -1110,7 +1146,7 @@ function deepMerge(base, over){
 function load(key){ try { const s = localStorage.getItem(key); return s ? JSON.parse(s) : null; } catch(e){ return null; } }
 function store(key, v){ try { localStorage.setItem(key, JSON.stringify(v)); } catch(e){} if (key === KS) projectChanged(); else if (key === KP) settingsChanged('prices'); else if (key === KC) settingsChanged('catalogs'); }
 // Проекты: общая база для тестирования. Настройки подключения лежат в браузере, данные проектов на сервере (kitchen-api, PostgreSQL).
-const BUILD = '21.10.2026, сборка 12'; // меняется при каждом выпуске: по ней видно, какая версия открыта
+const BUILD = '21.10.2026, сборка 13'; // меняется при каждом выпуске: по ней видно, какая версия открыта
 const KSRV = 'kitchen.server.v1', API_DEFAULT = 'https://kitchen-api-c112.onrender.com';
 const PKEYS = ['client', 'order', 'layout', 'walls', 'room', 'mat', 'disc', 'modules', 'nextId', 'extra', 'parts', 'kp'];
 let srv = Object.assign({url:API_DEFAULT, code:'', name:'', role:''}, load(KSRV) || {});
@@ -1260,7 +1296,7 @@ function moduleSvg(type){
     if (f.k === 'panel'){ /* добор: ручки нет */ }
     else if (f.k === 'door' || f.k === 'fridge'){
       const hx = f.hinge === 'left' ? ox + (f.x + f.w) * sc - 3 : ox + f.x * sc + 3;
-      const hy = t.row === 'low' && !t.tall ? top + 3 : (f.part === 'bottom' ? top + 3 : top + f.h * sc - 9);
+      const hy = t.row === 'low' && !t.tall ? top + 3 : (f.part === 'mid' ? top + f.h * sc / 2 - 3 : f.part === 'bottom' ? top + 3 : top + f.h * sc - 9);
       s += `<line x1="${hx}" x2="${hx}" y1="${hy}" y2="${hy + 6}" stroke="var(--ink)" stroke-width="1.4"/>`;
     } else { const ly = f.k === 'lift' ? top + f.h * sc - 3 : top + 3; s += `<line x1="${cx - 5}" x2="${cx + 5}" y1="${ly}" y2="${ly}" stroke="var(--ink)" stroke-width="1.4"/>`; }
   });
@@ -2936,7 +2972,7 @@ function buildModule(m, pos){
         const hx = hx0 + (f.hinge === 'left' ? f.w - 46 : 36);
         let hy;
         if (t.row === 'up' || t.row === 'mezz') hy = 40;
-        else if (t.tall) hy = f.part === 'bottom' ? f.h - 60 - 160 : 60;
+        else if (t.tall) hy = f.part === 'mid' ? Math.round(f.h / 2 - 80) : f.part === 'bottom' ? f.h - 60 - 160 : 60;
         else hy = f.h - 60 - 128;
         handleBar(piv, hx, hy, 10, t.tall ? 160 : 128, handleM);
       } else {
