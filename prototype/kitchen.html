@@ -2007,6 +2007,7 @@ function plainMat(key, hex, rough = .6, metal = 0, extra = {}){
   const k = key + hex + rough + metal; if (matCache[k]) return matCache[k];
   return matCache[k] = Object.assign(new THREE.MeshStandardMaterial(Object.assign({color:col(hex), roughness:rough, metalness:metal}, extra)), {userData:{kind:key}});
 }
+const WALL_T = 100; // толщина стен, мм: на плане контур комнаты должен читаться
 function box(parent, w, h, d, x, y, z, material, cast = true){
   const me = new THREE.Mesh(new THREE.BoxGeometry(Math.max(w, 1) / 1000, Math.max(h, 1) / 1000, Math.max(d, 1) / 1000), material);
   me.position.set((x + w / 2) / 1000, (y + h / 2) / 1000, (z + d / 2) / 1000);
@@ -2125,7 +2126,7 @@ function fitCamera(){
   persp.up.set(0, 1, 0);
   const ws = wallsOf(S), La = S.walls.A, Lb = S.walls.B, Lc = S.walls.C;
   const depth = Math.max(ws.includes('B') ? Lb : 0, ws.includes('C') ? Lc : 0, 700);
-  const lo = new THREE.Vector3((ws.includes('B') ? -20 : 0) / 1000, 0, -20 / 1000), hi = new THREE.Vector3((La + (ws.includes('C') ? 20 : 0)) / 1000, Math.min(S.room.height, 2650) / 1000, (depth + 250) / 1000);
+  const lo = new THREE.Vector3((ws.includes('B') ? -WALL_T : 0) / 1000, 0, -WALL_T / 1000), hi = new THREE.Vector3((La + (ws.includes('C') ? WALL_T : 0)) / 1000, Math.min(S.room.height, 2650) / 1000, (depth + 250) / 1000);
   const c = lo.clone().add(hi).multiplyScalar(.5), dir = (S.layout === 'L' ? new THREE.Vector3(.62, .32, 1) : S.layout === 'U' ? new THREE.Vector3(.12, .32, 1) : new THREE.Vector3(.22, .22, 1)).normalize();
   const corners = []; [lo.x, hi.x].forEach(x => [lo.y, hi.y].forEach(y => [lo.z, hi.z].forEach(z => corners.push(new THREE.Vector3(x, y, z)))));
   let dist = 12; const tgt = new THREE.Vector3(c.x, Math.min(c.y, 1.15), c.z);
@@ -2145,13 +2146,14 @@ function orthoSnapshot(mode, w = 1600, h = 900, labels = true){
   if (!labels) root.traverse(o => { if (o.isSprite) hide(o); });
   if (mode === 'top') root.children.forEach(o => { if (o.userData.row && o.userData.row !== 'low') hide(o); });
   if (helper) hide(helper); if (ghost) hide(ghost);
+  const caps = root.children.find(o => o.userData.wallCaps), capsWas = caps && caps.visible; if (caps) caps.visible = mode === 'top';
   const old = renderer.getSize(new THREE.Vector2()); let url = '';
   try {
     renderer.setSize(w, h, false); renderer.render(scene, cam);
     const c = document.createElement('canvas'); c.width = renderer.domElement.width; c.height = renderer.domElement.height; const g = c.getContext('2d'), gr = g.createLinearGradient(0, 0, 0, c.height);
     gr.addColorStop(0, '#F8F6F2'); gr.addColorStop(1, '#E2DED5'); g.fillStyle = gr; g.fillRect(0, 0, c.width, c.height); g.drawImage(renderer.domElement, 0, 0); url = c.toDataURL('image/jpeg', .88);
   } catch(e){ url = ''; }
-  renderer.setSize(old.x, old.y, false); hidden.forEach(o => { o.visible = true; });
+  renderer.setSize(old.x, old.y, false); hidden.forEach(o => { o.visible = true; }); if (caps) caps.visible = capsWas;
   return url;
 }
 function addAnim(id, obj, prop, open){
@@ -2340,7 +2342,7 @@ function buildModule(m, pos){
 // режимы показа как в Базис-Мебельщике: прозрачный, контуры, корпуса без фасадов
 function applyViewMode(){
   const mode = S.view || 'color'; if (mode === 'color') return;
-  const room = new Set(['wall', 'floor']), ink = cssVar('--ink') || '#1C1B19';
+  const room = new Set(['wall', 'wallcap', 'floor']), ink = cssVar('--ink') || '#1C1B19';
   const edgeMat = new THREE.LineBasicMaterial({color:col(ink), transparent:true, opacity:mode === 'lines' ? .9 : .5, toneMapped:false}); disposables.push(edgeMat);
   const hidden = new THREE.MeshBasicMaterial({visible:false}); disposables.push(hidden);
   const clones = new Map(), alpha = {corp:.22, fac:.16, top:.3, handle:.85, glass:.2};
@@ -2366,16 +2368,19 @@ function build3D(resetCam){
   anims = [];
   root = new THREE.Group(); scene.add(root); curNum = numberMap();
   const ws = wallsOf(S), La = S.walls.A, Lb = S.walls.B, Lc = S.walls.C, Hc = S.room.height;
-  const wallM = plainMat('wall', S.room.wall, .95);
-  box(root, La + (ws.includes('B') ? 20 : 0) + (ws.includes('C') ? 20 : 0), Hc, 20, ws.includes('B') ? -20 : 0, 0, -20, wallM, false);
-  if (ws.includes('B')) box(root, 20, Hc, Lb, -20, 0, 0, wallM, false);
-  if (ws.includes('C')) box(root, 20, Hc, Lc, La, 0, 0, wallM, false);
+  const wallM = plainMat('wall', S.room.wall, .95), capM = plainMat('wallcap', '#34322E', .9), caps = new THREE.Group();
+  caps.userData.wallCaps = true; caps.visible = S.cam === 'top'; root.add(caps);   // тёмная кромка стен: нужна только на плане сверху
+  const wall = (w, d, x, z) => { box(root, w, Hc, d, x, 0, z, wallM, false); box(caps, w, 2, d, x, Hc, z, capM, false); };
+  wall(La + (ws.includes('B') ? WALL_T : 0) + (ws.includes('C') ? WALL_T : 0), WALL_T, ws.includes('B') ? -WALL_T : 0, -WALL_T);
+  if (ws.includes('B')) wall(WALL_T, Lb, -WALL_T, 0);
+  if (ws.includes('C')) wall(WALL_T, Lc, La, 0);
   const fl = FLOORS.find(f => f.id === S.room.floor) || FLOORS[0];
-  const fw = La + 2600, fd = Math.max(ws.includes('B') ? Lb : 0, ws.includes('C') ? Lc : 0, 1200) + 2600;
+  // пол только в контуре комнаты: стены замыкают его, за ними пустоты нет. Без боковых стен глубина пола условная.
+  const fw = La, fd = ws.includes('B') || ws.includes('C') ? Math.max(ws.includes('B') ? Lb : 0, ws.includes('C') ? Lc : 0) : 2400;
   const fkey = 'floor:' + fl.id;
   if (!matCache[fkey]){ const p = {roughness:.85}; if (fl.pattern === 'planks'){ p.map = planksTex(fl.hex); p.color = 0xffffff; } else if (fl.pattern === 'tiles'){ p.map = tilesTex(fl.hex); p.color = 0xffffff; } else p.color = col(fl.hex); matCache[fkey] = Object.assign(new THREE.MeshStandardMaterial(p), {userData:{kind:'floor'}}); }
   const fm = matCache[fkey]; if (fm.map) fm.map.repeat.set(fw / (fl.pattern === 'tiles' ? 600 : 1600), fd / (fl.pattern === 'tiles' ? 600 : 1100));
-  box(root, fw, 10, fd, -1300, -10, -20, fm, false);
+  box(root, fw, 10, fd, 0, -10, 0, fm, false);
   if (S.showDims){
     root.add(label(`А · ${La}`, La / 2, Hc - 220, 30, true));
     if (ws.includes('B')) root.add(label(`Б · ${Lb}`, 30, Hc - 220, Lb / 2, true));
