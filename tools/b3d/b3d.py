@@ -38,7 +38,7 @@ class B3D:
         if p == len(x): return True
         if p + 9 > len(x): return False
         idx, nch, typ = struct.unpack_from('<IIB', x, p)
-        return (0 < idx <= len(self.names) or idx == 0xffffffff) and nch < 3000 and typ in (0, 1, 2, 3, 4, 5, 6, 7, 9)
+        return (0 < idx <= len(self.names) or idx == 0xffffffff) and nch < 3000 and typ in (0, 1, 2, 3, 4, 5, 6, 7, 8, 9)
     def node(self, depth=0):
         x = self.x; p = self.p
         idx, nch, typ = struct.unpack_from('<IIB', x, p); p += 9
@@ -47,7 +47,7 @@ class B3D:
         elif typ == 1:
             if self.ok(p + 1) and p + 1 <= len(x): val = x[p]; p += 1
             else: val = True
-        elif typ == 2: pass   # без значения
+        elif typ in (2, 8): pass   # без значения
         elif typ == 3: val = x[p]; p += 1
         elif typ == 9: val, = struct.unpack_from('<d', x, p); p += 8
         elif typ == 4: val, = struct.unpack_from('<i', x, p); p += 4
