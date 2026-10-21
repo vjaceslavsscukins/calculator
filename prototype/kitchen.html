@@ -2,89 +2,99 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&family=Unbounded:wght@500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <style>
-/* Layout: workbench. Operating menu on the left (Помещение / Каталог / Модуль / Материалы), 3D stage + documents on the right; stacks on phones */
+/* Layout: 3D is the hero. Left: project menu (Помещение / Каталог / Модуль / Материалы). Right: 3D stage with a bottom drawer for the estimate. Below 1080px everything stacks. */
 :root{
-  --bg:#EDEFEB; --surface:#FFFFFF; --sunk:#E3E7E1; --input:#FBFCFA;
-  --ink:#1A211F; --muted:#5D6864; --line:#D2D8D1;
-  --accent:#2C52C4; --accent-ink:#FFFFFF; --accent-soft:#E2E8F9;
+  --bg:#F1EFEA; --surface:#FFFFFF; --sunk:#EAE7E0; --input:#FAF9F6;
+  --ink:#1C1B19; --muted:#6A665E; --line:#DCD8CF;
+  --accent:#A9532A; --accent-ink:#FFFFFF; --accent-soft:#F6E6DB;
+  --pri:#1C1B19; --pri-ink:#FFFFFF;
   --warn:#B23E0C; --warn-soft:#FBE8DD; --ok:#2E7649;
-  --stage:#E5E8E3; --glass:rgba(255,255,255,.88);
-  --f-display:"Unbounded","Golos Text",system-ui,sans-serif;
+  --stage-a:#F8F6F2; --stage-b:#E2DED5; --glass:rgba(255,255,255,.84);
+  --shadow:0 1px 2px rgba(28,27,25,.06),0 10px 30px rgba(28,27,25,.08);
   --f-body:"Golos Text",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --bg:#131716; --surface:#1B201E; --sunk:#232927; --input:#161A19;
-  --ink:#E6EBE8; --muted:#97A29E; --line:#2D3532;
-  --accent:#7D9BFF; --accent-ink:#0E1430; --accent-soft:#222C4A;
+  --bg:#141311; --surface:#1D1C19; --sunk:#26241F; --input:#181714;
+  --ink:#ECE8E1; --muted:#A19C92; --line:#34322C;
+  --accent:#E58B5A; --accent-ink:#1B0F08; --accent-soft:#3A2519;
+  --pri:#ECE8E1; --pri-ink:#1A1816;
   --warn:#FF9A62; --warn-soft:#3A2418; --ok:#6FCB91;
-  --stage:#202523; --glass:rgba(27,32,30,.88); color-scheme:dark }}
+  --stage-a:#2B2926; --stage-b:#191816; --glass:rgba(29,28,25,.84);
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px rgba(0,0,0,.35); color-scheme:dark }}
 :root[data-theme="dark"]{
-  --bg:#131716; --surface:#1B201E; --sunk:#232927; --input:#161A19;
-  --ink:#E6EBE8; --muted:#97A29E; --line:#2D3532;
-  --accent:#7D9BFF; --accent-ink:#0E1430; --accent-soft:#222C4A;
+  --bg:#141311; --surface:#1D1C19; --sunk:#26241F; --input:#181714;
+  --ink:#ECE8E1; --muted:#A19C92; --line:#34322C;
+  --accent:#E58B5A; --accent-ink:#1B0F08; --accent-soft:#3A2519;
+  --pri:#ECE8E1; --pri-ink:#1A1816;
   --warn:#FF9A62; --warn-soft:#3A2418; --ok:#6FCB91;
-  --stage:#202523; --glass:rgba(27,32,30,.88); color-scheme:dark }
+  --stage-a:#2B2926; --stage-b:#191816; --glass:rgba(29,28,25,.84);
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px rgba(0,0,0,.35); color-scheme:dark }
 
 *{box-sizing:border-box}
-html,body{background:var(--bg);color:var(--ink)}
-body{font-family:var(--f-body);font-size:14px;line-height:1.45;
-  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:12px 40px}
+html,body{margin:0;background:var(--bg);color:var(--ink)}
+body{font-family:var(--f-body);font-size:14px;line-height:1.45;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
 button,input,select,textarea{font:inherit;color:inherit}
 button{cursor:pointer}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.app{max-width:1600px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+.app{height:100vh;height:100dvh;display:flex;flex-direction:column}
 
-.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 28px}
+.top{flex:none;height:64px;padding:0 max(14px,env(safe-area-inset-right,0px)) 0 max(14px,env(safe-area-inset-left,0px));display:flex;align-items:center;justify-content:space-between;gap:16px}
 .brand{display:flex;gap:12px;align-items:center;min-width:0}
-.mark{width:38px;height:38px;border-radius:9px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;flex:none}
-.brand-name{font-family:var(--f-display);font-weight:600;font-size:17px;letter-spacing:-.01em}
-.brand-sub{color:var(--muted);font-size:13px}
-.hdr-total{text-align:right}
+.mark{width:36px;height:36px;border-radius:10px;background:var(--pri);color:var(--pri-ink);display:grid;place-items:center;flex:none}
+.brand-name{font-weight:600;font-size:16px;letter-spacing:-.01em;line-height:1.2}
+.brand-sub{color:var(--muted);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.top-flag{font-size:12px;background:var(--warn-soft);color:var(--warn);padding:4px 10px;border-radius:999px;font-weight:500;white-space:nowrap}
+.hdr-total{text-align:right;flex:none}
 .lbl{font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:600}
-.hdr-total .num{font-family:var(--f-display);font-size:28px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.02em;line-height:1.15}
-.hdr-split{color:var(--muted);font-size:12.5px;font-variant-numeric:tabular-nums}
+.hdr-total .num{font-size:26px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.02em;line-height:1.1}
+.hdr-split{color:var(--muted);font-size:12px;font-variant-numeric:tabular-nums}
 
-.work{display:grid;grid-template-columns:390px minmax(0,1fr);grid-template-areas:"side stage" "side docs";gap:14px;align-items:start}
-.stage-wrap{grid-area:stage;position:relative;height:clamp(380px,64vh,720px);border-radius:14px;overflow:hidden;background:var(--stage);border:1px solid var(--line)}
+.work{flex:1;min-height:0;display:grid;grid-template-columns:372px minmax(0,1fr);gap:12px;padding:0 12px 12px}
+.stagecol{position:relative;min-height:0;min-width:0}
+.stage-wrap{position:absolute;inset:0;border-radius:18px;overflow:hidden;background:radial-gradient(120% 95% at 50% 25%,var(--stage-a),var(--stage-b));border:1px solid var(--line);box-shadow:var(--shadow)}
 #stage{position:absolute;inset:0}
 #stage canvas{display:block;width:100%;height:100%;touch-action:none}
-.stage-tools{position:absolute;top:10px;right:10px;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
-.gbtn{border:1px solid var(--line);background:var(--glass);backdrop-filter:blur(6px);border-radius:8px;padding:6px 10px;font-size:12.5px;font-weight:500}
-.gbtn[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
-.stage-flag{position:absolute;left:10px;top:10px;max-width:calc(100% - 330px);font-size:12px;background:var(--warn-soft);color:var(--warn);padding:5px 9px;border-radius:7px;font-weight:500}
-.stage-hint{position:absolute;left:10px;bottom:10px;right:10px;font-size:12px;color:var(--muted);pointer-events:none}
+.stage-tools{position:absolute;top:12px;right:12px;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.gbtn{border:1px solid var(--line);background:var(--glass);backdrop-filter:blur(8px);border-radius:10px;padding:7px 12px;font-size:12.5px;font-weight:500;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.gbtn:hover{border-color:var(--muted)}
+.gbtn[aria-pressed="true"]{background:var(--pri);color:var(--pri-ink);border-color:var(--pri)}
+.stage-hint{position:absolute;left:16px;bottom:78px;right:16px;font-size:12px;color:var(--muted);pointer-events:none}
 .stage-err{position:absolute;inset:0;display:grid;place-items:center;padding:24px;text-align:center;color:var(--muted)}
+.place-banner{position:absolute;left:50%;top:12px;transform:translateX(-50%);display:flex;align-items:center;gap:10px;background:var(--pri);color:var(--pri-ink);padding:8px 8px 8px 14px;border-radius:999px;font-size:13px;font-weight:500;box-shadow:var(--shadow);z-index:4;max-width:calc(100% - 330px)}
+.place-banner button{border:0;background:rgba(255,255,255,.18);color:inherit;border-radius:999px;padding:4px 10px;font-size:12px}
+.place-banner[hidden]{display:none}
 
-.side{grid-area:side;position:sticky;top:12px;max-height:calc(100vh - 24px);display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.side{min-height:0;display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--line);border-radius:18px;overflow:hidden;box-shadow:var(--shadow)}
 .ltabs{display:grid;grid-template-columns:repeat(4,1fr);gap:2px;padding:6px;background:var(--sunk);border-bottom:1px solid var(--line)}
-.ltab{border:0;background:transparent;border-radius:8px;padding:8px 4px;font-size:13px;font-weight:500;color:var(--muted)}
-.ltab[aria-selected="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.12)}
-.lbody{overflow:auto;padding:14px;display:flex;flex-direction:column;gap:16px;scrollbar-width:thin;min-height:0}
+.ltab{border:0;background:transparent;border-radius:10px;padding:8px 4px;font-size:13px;font-weight:500;color:var(--muted)}
+.ltab:hover{color:var(--ink)}
+.ltab[aria-selected="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.lbody{overflow:auto;padding:16px;display:flex;flex-direction:column;gap:16px;scrollbar-width:thin;min-height:0;flex:1}
 .sec{display:flex;flex-direction:column;gap:10px}
-.sec+.sec{padding-top:14px;border-top:1px solid var(--line)}
+.sec+.sec{padding-top:16px;border-top:1px solid var(--line)}
 .sec h3{margin:0;font-size:11.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:600;display:flex;justify-content:space-between;gap:8px}
 .field{display:flex;flex-direction:column;gap:5px;min-width:0}
 .field>label,.flabel{font-size:12.5px;color:var(--muted)}
-input[type=number],input[type=text],select,textarea{width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:8px;background:var(--input);min-width:0}
+input[type=number],input[type=text],select,textarea{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:var(--input);min-width:0}
 input[type=number]{font-family:var(--f-mono);font-size:13px}
-input[type=color]{width:36px;height:30px;padding:2px;border:1px solid var(--line);border-radius:7px;background:var(--input)}
+input[type=color]{width:36px;height:30px;padding:2px;border:1px solid var(--line);border-radius:8px;background:var(--input)}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
-.seg{display:flex;background:var(--sunk);border-radius:9px;padding:3px;gap:3px}
-.seg button{flex:1;border:0;background:transparent;border-radius:7px;padding:6px 8px;font-size:13px;font-weight:500;color:var(--muted);white-space:nowrap}
-.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.12)}
-.swatches{display:flex;flex-wrap:wrap;gap:7px;align-items:center}
-.sw{width:28px;height:28px;border-radius:50%;border:1px solid rgba(0,0,0,.18);padding:0;background-size:cover}
+.seg{display:flex;background:var(--sunk);border-radius:11px;padding:3px;gap:3px}
+.seg button{flex:1;border:0;background:transparent;border-radius:8px;padding:6px 8px;font-size:13px;font-weight:500;color:var(--muted);white-space:nowrap}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.swatches{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.sw{width:30px;height:30px;border-radius:50%;border:1px solid rgba(0,0,0,.16);padding:0;background-size:cover}
 .sw[aria-pressed="true"]{box-shadow:0 0 0 2px var(--surface),0 0 0 4px var(--accent)}
-.sw.none{background:var(--surface);font-size:11px;color:var(--muted);width:auto;border-radius:14px;padding:0 9px;border:1px dashed var(--muted)}
+.sw.none{background:var(--surface);font-size:11px;color:var(--muted);width:auto;border-radius:15px;padding:0 10px;border:1px dashed var(--muted)}
 .swname{font-size:12.5px;color:var(--ink);font-weight:500}
 .chk{display:flex;gap:8px;align-items:center;font-size:13px}
 .chk input{width:16px;height:16px;accent-color:var(--accent);flex:none}
 .plan{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
-.plan button{border:1px solid var(--line);background:var(--input);border-radius:9px;padding:8px 4px 6px;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:12.5px;color:var(--muted)}
+.plan button{border:1px solid var(--line);background:var(--input);border-radius:12px;padding:8px 4px 6px;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:12.5px;color:var(--muted)}
 .plan button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);color:var(--ink)}
 .plan svg{width:44px;height:30px}
 
@@ -96,40 +106,43 @@ input[type=color]{width:36px;height:30px;padding:2px;border:1px solid var(--line
 .bar.over i{background:var(--warn)}
 .fillnote{grid-column:2;font-family:var(--f-mono);font-size:11.5px;color:var(--muted);margin-top:-3px}
 .fillnote.over{color:var(--warn)}
-.warn{font-size:12.5px;color:var(--warn);background:var(--warn-soft);border-radius:8px;padding:7px 9px}
+.warn{font-size:12.5px;color:var(--warn);background:var(--warn-soft);border-radius:10px;padding:8px 10px}
 
 .cats{display:flex;flex-wrap:wrap;gap:5px}
-.cat{border:1px solid var(--line);background:var(--input);border-radius:16px;padding:5px 11px;font-size:12.5px;font-weight:500}
-.cat[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
-.cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
-.card{border:1px solid var(--line);background:var(--input);border-radius:10px;padding:8px 6px 7px;display:flex;flex-direction:column;align-items:center;gap:5px;text-align:center;min-width:0}
-.card:hover{border-color:var(--accent);background:var(--accent-soft)}
-.card svg{width:100%;height:64px}
-.card .cn{font-size:11.5px;line-height:1.25;font-weight:500}
-.card .cs{font-family:var(--f-mono);font-size:10.5px;color:var(--muted)}
+.cat{border:1px solid var(--line);background:var(--input);border-radius:999px;padding:5px 12px;font-size:12.5px;font-weight:500}
+.cat[aria-pressed="true"]{background:var(--pri);color:var(--pri-ink);border-color:var(--pri)}
+.cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.card{border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:8px 6px 8px;display:flex;flex-direction:column;align-items:center;gap:5px;text-align:center;min-width:0;cursor:grab;user-select:none;-webkit-user-select:none;touch-action:pan-y;transition:transform .12s,box-shadow .12s,border-color .12s}
+.card:hover{border-color:var(--accent);box-shadow:0 4px 14px rgba(28,27,25,.1);transform:translateY(-1px)}
+.card[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.card svg{width:100%;height:64px;pointer-events:none}
+.card .cn{font-size:11.5px;line-height:1.25;font-weight:500;pointer-events:none}
+.card .cs{font-family:var(--f-mono);font-size:10.5px;color:var(--muted);pointer-events:none}
+.dnd-note{display:flex;gap:8px;align-items:flex-start;font-size:12.5px;color:var(--muted);background:var(--sunk);border-radius:10px;padding:8px 10px}
+.dragchip{position:fixed;z-index:50;pointer-events:none;background:var(--pri);color:var(--pri-ink);padding:6px 12px;border-radius:999px;font-size:12.5px;font-weight:500;box-shadow:var(--shadow);transform:translate(-50%,-140%);white-space:nowrap}
 
 .mgroup{display:flex;flex-direction:column;gap:2px}
 .mgroup h4{margin:4px 0 2px;font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:600}
-.mitem{display:grid;grid-template-columns:22px minmax(0,1fr) auto;gap:8px;align-items:center;text-align:left;border:1px solid transparent;background:transparent;border-radius:8px;padding:5px 8px;width:100%}
+.mitem{display:grid;grid-template-columns:22px minmax(0,1fr) auto;gap:8px;align-items:center;text-align:left;border:1px solid transparent;background:transparent;border-radius:10px;padding:6px 8px;width:100%}
 .mitem:hover{background:var(--sunk)}
 .mitem[aria-current="true"]{background:var(--accent-soft);border-color:var(--accent)}
 .mitem .n{font-family:var(--f-mono);font-size:11.5px;color:var(--muted)}
 .mitem .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px}
 .mitem .nm small{font-family:var(--f-mono);color:var(--muted);font-size:11.5px;margin-left:4px}
 .mitem .pr{font-variant-numeric:tabular-nums;font-size:12.5px;color:var(--muted)}
-.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:7px 11px;font-size:13px;font-weight:500;white-space:nowrap}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:8px 13px;font-size:13px;font-weight:500;white-space:nowrap}
 .btn:hover{background:var(--sunk)}
-.btn.pri{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
-.btn.pri:hover{filter:brightness(1.07)}
+.btn.pri{background:var(--pri);color:var(--pri-ink);border-color:var(--pri)}
+.btn.pri:hover{filter:brightness(1.2)}
 .btn.danger{color:var(--warn)}
-.btn.sm{padding:4px 8px;font-size:12px}
+.btn.sm{padding:5px 9px;font-size:12px}
 .btns{display:flex;flex-wrap:wrap;gap:6px}
 .chips{display:flex;flex-wrap:wrap;gap:5px}
-.chip{border:1px solid var(--line);background:var(--input);border-radius:6px;padding:3px 7px;font-family:var(--f-mono);font-size:12px}
+.chip{border:1px solid var(--line);background:var(--input);border-radius:8px;padding:3px 8px;font-family:var(--f-mono);font-size:12px}
 .chip[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);color:var(--ink)}
 .edhead{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
 .edhead .ttl{font-weight:600;font-size:15px}
-.edhead .pr{font-family:var(--f-display);font-weight:600;font-size:17px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.edhead .pr{font-weight:600;font-size:17px;font-variant-numeric:tabular-nums;white-space:nowrap}
 .mini{width:100%;border-collapse:collapse;font-size:12px}
 .mini td{padding:4px 0;border-bottom:1px dashed var(--line);vertical-align:top}
 .mini td:last-child{text-align:right;font-family:var(--f-mono);white-space:nowrap;padding-left:8px}
@@ -138,40 +151,63 @@ input[type=color]{width:36px;height:30px;padding:2px;border:1px solid var(--line
 .small{font-size:12.5px}
 .empty{color:var(--muted);font-size:13px;padding:6px 0}
 
-.docs{grid-area:docs;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:0 16px 18px;min-width:0}
-.tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);overflow-x:auto}
-.tab{padding:13px 12px 11px;border:0;background:none;font-weight:500;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;font-size:14px}
-.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
-.dochead{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px 16px;padding:14px 0 10px}
-.dochead h2{margin:0;font-family:var(--f-display);font-size:17px;font-weight:600;letter-spacing:-.01em;text-wrap:balance}
+/* estimate drawer over the stage */
+.docs{position:absolute;left:12px;right:12px;bottom:12px;z-index:5;display:flex;flex-direction:column;background:var(--glass);backdrop-filter:blur(16px) saturate(1.15);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);max-height:calc(100% - 24px)}
+.docs[data-open="true"]{background:var(--surface)}
+.dockbar{display:flex;align-items:center;gap:10px;padding-right:10px}
+.tabs{display:flex;gap:2px;overflow-x:auto;flex:1;padding-left:8px}
+.tab{padding:14px 12px 12px;border:0;background:none;font-weight:500;color:var(--muted);border-bottom:2px solid transparent;white-space:nowrap;font-size:14px}
+.tab:hover{color:var(--ink)}
+.docs[data-open="true"] .tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.dockinfo{display:flex;align-items:baseline;gap:8px;white-space:nowrap}
+.dockinfo b{font-size:16px;font-variant-numeric:tabular-nums;font-weight:600}
+.dockbtn{display:inline-flex;align-items:center;gap:6px}
+.dockbtn svg{transition:transform .2s}
+.docs[data-open="true"] .dockbtn svg{transform:rotate(180deg)}
+.docbody{display:none;overflow:auto;padding:0 20px 20px;min-height:0;border-top:1px solid var(--line)}
+.docs[data-open="true"] .docbody{display:block;max-height:min(56vh,640px)}
+.dochead{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px 16px;padding:16px 0 12px}
+.dochead h2{margin:0;font-size:18px;font-weight:600;letter-spacing:-.01em;text-wrap:balance}
 .dochead .meta{color:var(--muted);font-size:13px;max-width:90ch}
 .doctools{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .disc{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted)}
 .disc input{width:70px}
-.tblwrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px}
-table.t{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums;font-size:13px}
-.t th,.t td{padding:8px 11px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+.tblwrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px}
+table.t{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums;font-size:12.5px}
+.t th,.t td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
 .t th{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600;background:var(--sunk)}
 .t tr:last-child td{border-bottom:0}
 .t .num{text-align:right}
-.t .sz{font-family:var(--f-mono);font-size:12.5px;color:var(--muted)}
+.t .sz{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
 .t .sub{display:block;font-size:11.5px;color:var(--muted)}
 .t .grp td{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600;padding-top:12px}
 .t .strong{font-weight:600}
 .t tr.sel td{background:var(--accent-soft)}
 .t tbody tr[data-id]{cursor:pointer}
+.t tbody tr[data-id]:hover td{background:var(--sunk)}
+.t tbody tr.sel[data-id]:hover td{background:var(--accent-soft)}
 .t input{padding:4px 6px;font-size:12.5px}
 .t input[type=number]{width:96px;text-align:right}
 .t input[type=text]{min-width:190px}
 .t select{width:auto;padding:4px 6px;font-size:12.5px}
-.sums{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 24px;max-width:460px;margin:16px 0 0 auto;font-variant-numeric:tabular-nums}
+.t.smeta td:nth-child(2){white-space:normal;min-width:210px}
+.t.smeta th:last-child,.t.smeta td:last-child{position:sticky;right:0;background:var(--surface);box-shadow:-8px 0 8px -8px rgba(0,0,0,.14)}
+.t.smeta th:last-child{background:var(--sunk)}
+.t.smeta tr.sel td:last-child{background:var(--accent-soft)}
+.t.smeta tr.grp td:last-child{position:static;box-shadow:none;background:transparent}
+.extras{margin-top:20px;display:flex;flex-direction:column;gap:8px}
+.extras h3{margin:0;font-size:14px;font-weight:600}
+.extras .t input[type=number]{width:84px}
+.extras .t input[type=text]{min-width:230px}
+.extras .t td:last-child{width:1%}
+.sums{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 24px;max-width:460px;margin:18px 0 0 auto;font-variant-numeric:tabular-nums}
 .sums dt{color:var(--muted)}
 .sums dd{margin:0;text-align:right}
-.sums .total{font-family:var(--f-display);font-weight:600;font-size:20px;color:var(--ink);padding-top:8px;border-top:1px solid var(--line)}
+.sums .total{font-weight:600;font-size:22px;letter-spacing:-.01em;color:var(--ink);padding-top:8px;border-top:1px solid var(--line)}
 .sums .cost{font-size:12.5px}
 .note{font-size:12.5px;color:var(--muted);margin:14px 0 0;max-width:80ch}
 .pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
-.pgroup{border:1px solid var(--line);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:7px}
+.pgroup{border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:7px}
 .pgroup h4{margin:0 0 3px;font-size:12px;font-weight:600}
 .prow{display:grid;grid-template-columns:minmax(0,1fr) 96px 62px;gap:8px;align-items:center;font-size:13px}
 .prow .u{font-size:11.5px;color:var(--muted)}
@@ -179,38 +215,81 @@ table.t{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums;fo
 .catblock{display:flex;flex-direction:column;gap:8px;margin-top:22px}
 .catblock h3{margin:0;font-size:14px;font-weight:600}
 details.paste summary{cursor:pointer;font-size:13px;color:var(--accent);font-weight:500}
-details.paste[open]{background:var(--sunk);border-radius:10px;padding:10px}
+details.paste[open]{background:var(--sunk);border-radius:12px;padding:10px}
 details.paste textarea{min-height:90px;font-family:var(--f-mono);font-size:12px;margin:8px 0}
 
-.toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:9px 14px;border-radius:9px;font-size:13px;z-index:20;box-shadow:0 6px 20px rgba(0,0,0,.2)}
+.toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--pri);color:var(--pri-ink);padding:9px 16px;border-radius:999px;font-size:13px;z-index:60;box-shadow:var(--shadow)}
 .copybox{width:100%;min-height:160px;margin-top:10px;font-family:var(--f-mono);font-size:12px}
 
 @media (max-width: 1080px){
-  .work{grid-template-columns:minmax(0,1fr);grid-template-areas:"stage" "side" "docs"}
-  .side{position:static;max-height:none}
+  .app{height:auto;min-height:100vh}
+  .top{height:auto;padding-block:12px;flex-wrap:wrap}
+  .work{display:flex;flex-direction:column;flex:none}
+  .stagecol{display:contents}
+  .stage-wrap{position:relative;inset:auto;order:1;height:clamp(340px,56vh,560px)}
+  .side{order:2}
   .lbody{overflow:visible}
-  .stage-wrap{height:clamp(320px,52vh,540px)}
+  .docs{position:static;order:3;max-height:none;background:var(--surface)}
+  .docs .docbody{display:block;max-height:none}
+  .docs .tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+  .dockbtn,.dockinfo{display:none}
+  .stage-hint{bottom:12px}
+  .place-banner{max-width:calc(100% - 24px);top:56px}
 }
 @media (max-width: 560px){
   .hdr-total{text-align:left}
-  .stage-flag{max-width:calc(100% - 20px);top:auto;bottom:34px}
+  .top-flag{display:none}
   .cards{grid-template-columns:repeat(2,minmax(0,1fr))}
   .row3{grid-template-columns:1fr 1fr}
 }
 @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
+
+/* commercial proposal (КП): hidden on screen, the only thing printed */
+#printArea{display:none}
+@page{size:A4;margin:14mm}
+@media print{
+  html,body{background:#fff!important}
+  .app,.toast,.dragchip{display:none!important}
+  #printArea{display:block}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+.kp{color:#1C1B19;font-family:var(--f-body);font-size:11pt;line-height:1.4}
+.kp-head{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2px solid #1C1B19;padding-bottom:10px}
+.kp-brand{font-size:20pt;font-weight:600;letter-spacing:-.01em}
+.kp-title{font-size:10pt;color:#6A665E;text-transform:uppercase;letter-spacing:.1em}
+.kp-meta{text-align:right;font-size:10pt;color:#4a463f}
+.kp-grid{display:grid;grid-template-columns:1fr 1fr;gap:6mm;margin-top:6mm}
+.kp-img{width:100%;max-height:105mm;object-fit:cover;object-position:50% 60%;border-radius:6px;border:1px solid #DCD8CF;display:block}
+.kp h2{font-size:10pt;text-transform:uppercase;letter-spacing:.1em;color:#6A665E;margin:6mm 0 2mm;font-weight:600}
+.kp-spec{margin:0;display:grid;grid-template-columns:auto 1fr;gap:1.5mm 4mm;font-size:10pt}
+.kp-spec dt{color:#6A665E}.kp-spec dd{margin:0}
+.kp table{width:100%;border-collapse:collapse;font-size:10pt;font-variant-numeric:tabular-nums}
+.kp th{text-align:left;font-size:8.5pt;text-transform:uppercase;letter-spacing:.07em;color:#6A665E;border-bottom:1px solid #1C1B19;padding:2mm 2mm}
+.kp td{padding:1.8mm 2mm;border-bottom:1px solid #E5E1D8;vertical-align:top}
+.kp .r{text-align:right;white-space:nowrap}
+.kp tr{break-inside:avoid}
+.kp thead{display:table-header-group}
+.kp tr.g{break-after:avoid}
+.kp h2{break-after:avoid}
+.kp .g td{font-size:8.5pt;text-transform:uppercase;letter-spacing:.07em;color:#6A665E;font-weight:600;border-bottom:0;padding-top:4mm}
+.kp-sums{break-inside:avoid;margin:5mm 0 0 auto;width:90mm;font-size:10.5pt;font-variant-numeric:tabular-nums}
+.kp-sums div{display:flex;justify-content:space-between;padding:1mm 0}
+.kp-sums .t{border-top:2px solid #1C1B19;margin-top:2mm;padding-top:3mm;font-size:15pt;font-weight:600}
+.kp-foot{margin-top:8mm;font-size:9.5pt;color:#4a463f;border-top:1px solid #DCD8CF;padding-top:3mm;break-inside:avoid}
 </style>
 
 <div class="app">
   <header class="top">
     <div class="brand">
       <div class="mark" aria-hidden="true">
-        <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2.5" y="2.5" width="17" height="17" rx="1.5"/><path d="M11 2.5v17M2.5 12h17"/><path d="M8 7v2M14 7v2M8 15h-1.5M15.5 15H14"/></svg>
+        <svg width="20" height="20" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2.5" y="2.5" width="17" height="17" rx="1.5"/><path d="M11 2.5v17M2.5 12h17"/><path d="M8 7v2M14 7v2M8 15h-1.5M15.5 15H14"/></svg>
       </div>
       <div style="min-width:0">
         <div class="brand-name">Конструктор кухонь</div>
         <div class="brand-sub" id="hdrProject"></div>
       </div>
     </div>
+    <span class="top-flag">Цены примерные. Свои загружаются во вкладке «Прайс и каталоги»</span>
     <div class="hdr-total">
       <div class="lbl">Итого для клиента</div>
       <div class="num" id="hdrTotal">0 ₽</div>
@@ -229,33 +308,47 @@ details.paste textarea{min-height:90px;font-family:var(--f-mono);font-size:12px;
       <div class="lbody" id="lbody"></div>
     </aside>
 
-    <div class="stage-wrap">
-      <div id="stage" aria-label="3D-вид кухни"></div>
-      <div class="stage-flag">Цены примерные. Свои загружаются во вкладке «Прайс и каталоги»</div>
-      <div class="stage-tools">
-        <button class="gbtn" id="btnOpen" data-act="open-all" aria-pressed="false">Открыть всё</button>
-        <button class="gbtn" id="btnDims" data-act="toggle-dims" aria-pressed="true">Размеры</button>
-        <button class="gbtn" data-act="reset-view">Сбросить вид</button>
+    <div class="stagecol">
+      <div class="stage-wrap" id="stageWrap">
+        <div id="stage" aria-label="3D-вид кухни"></div>
+        <div class="place-banner" id="placeBanner" hidden><span id="placeText"></span><button data-act="place-cancel">Отмена</button></div>
+        <div class="stage-tools">
+          <button class="gbtn" id="btnOpen" data-act="open-all" aria-pressed="false">Открыть всё</button>
+          <button class="gbtn" id="btnDims" data-act="toggle-dims" aria-pressed="false">Размеры</button>
+          <button class="gbtn" data-act="reset-view">Сбросить вид</button>
+        </div>
+        <div class="stage-hint" id="stageHint">Вращение: перетаскивание. Выбранный шкаф можно переставить, потянув за него. Двойной клик открывает дверцы.</div>
       </div>
-      <div class="stage-hint">Вращение: перетаскивание. Клик по шкафу выбирает модуль, двойной клик открывает его.</div>
-    </div>
 
-    <section class="docs">
-      <div class="tabs" role="tablist">
-        <button class="tab" role="tab" id="tb-smeta" data-act="tab" data-v="smeta">Смета</button>
-        <button class="tab" role="tab" id="tb-bom" data-act="tab" data-v="bom">Материалы</button>
-        <button class="tab" role="tab" id="tb-prices" data-act="tab" data-v="prices">Прайс и каталоги</button>
-      </div>
-      <div id="tab-smeta" role="tabpanel"></div>
-      <div id="tab-bom" role="tabpanel" hidden></div>
-      <div id="tab-prices" role="tabpanel" hidden></div>
-    </section>
+      <section class="docs" id="docs" data-open="false" aria-label="Документы">
+        <div class="dockbar">
+          <div class="tabs" role="tablist">
+            <button class="tab" role="tab" id="tb-smeta" data-act="tab" data-v="smeta">Смета</button>
+            <button class="tab" role="tab" id="tb-bom" data-act="tab" data-v="bom">Материалы</button>
+            <button class="tab" role="tab" id="tb-prices" data-act="tab" data-v="prices">Прайс и каталоги</button>
+          </div>
+          <div class="dockinfo"><span class="lbl">Итого</span><b id="dockTotal">0 ₽</b></div>
+          <button class="gbtn dockbtn" id="btnDrawer" data-act="drawer" aria-expanded="false" aria-controls="docbody">
+            <span id="drawerLbl">Показать смету</span>
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 8l4-4 4 4"/></svg>
+          </button>
+        </div>
+        <div class="docbody" id="docbody">
+          <div id="tab-smeta" role="tabpanel"><div id="smHead"></div><div id="smTable"></div><div id="smExtras"></div><div id="smSums"></div></div>
+          <div id="tab-bom" role="tabpanel" hidden></div>
+          <div id="tab-prices" role="tabpanel" hidden></div>
+        </div>
+      </section>
+    </div>
   </main>
 </div>
+
 <div class="toast" id="toast" hidden></div>
+<div id="printArea" aria-hidden="true"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/environments/RoomEnvironment.js"></script>
 <script>
 // CALC-START
 const T = 16, SHEET_M2 = 2.8 * 2.07, BASE_Y = 100, UP_TOP = 2170, GOLA = 30;
@@ -522,9 +615,18 @@ function calcAll(S, P, C){
   const sum = (a, f) => a.reduce((s, x) => s + f(x), 0);
   const furnCost = sum(mods, r => r.cost), furnPrice = sum(mods, r => r.price);
   const commonCost = sum(common, c => c.cost), commonPrice = sum(common, c => c.price);
-  const sub = furnPrice + commonPrice, disc = sub * (S.disc || 0) / 100, after = sub - disc;
-  const install = after * P.install / 100, delivery = +P.delivery || 0, total = after + install + delivery;
-  return {R, mods, common, topLen, plinthLen, ledLen, joints, cuts, furnCost, furnPrice, commonCost, commonPrice, sub, disc, after, install, delivery, total, totalCost:furnCost + commonCost, margin:after - furnCost - commonCost};
+  // Произвольные строки (техника, смесители, услуги). Цена за единицу — клиенту; закупка необязательна:
+  // если пусто, считаем закупку как цену / (1 + наценка), то есть строка даёт стандартную маржу.
+  // TODO(технолог): подтвердить правила — скидка и монтаж по этим строкам, строки «без скидки» (техника).
+  const extras = (S.extra || []).filter(x => x.name || +x.price).map(x => {
+    const q = +x.q || 0, up = +x.price || 0, uc = x.cost === '' || x.cost == null ? up / k : +x.cost || 0;
+    return {id:x.id, n:x.name || 'Позиция', q, u:x.u || 'шт', unit:up, unitCost:uc, cost:q * uc, price:q * up, nd:!!x.nd};
+  });
+  const extrasCost = sum(extras, x => x.cost), exDisc = sum(extras.filter(x => !x.nd), x => x.price), exFree = sum(extras.filter(x => x.nd), x => x.price);
+  const sub = furnPrice + commonPrice + exDisc, disc = sub * (S.disc || 0) / 100, after = sub - disc;
+  const install = after * P.install / 100, delivery = +P.delivery || 0, total = after + exFree + install + delivery;
+  const totalCost = furnCost + commonCost + extrasCost;
+  return {R, mods, common, extras, topLen, plinthLen, ledLen, joints, cuts, furnCost, furnPrice, commonCost, commonPrice, extrasCost, exDisc, exFree, sub, disc, after, install, delivery, total, totalCost, margin:after + exFree - totalCost};
 }
 
 function bomOf(A, S, P, C){
@@ -563,6 +665,7 @@ const KS = 'kitchen.state.v2', KP = 'kitchen.prices.v2', KC = 'kitchen.catalog.v
 const WALL_COLORS = [{name:'Белый', hex:'#F2F1EC'}, {name:'Тёплый серый', hex:'#D9D5CC'}, {name:'Оливковый', hex:'#B9B89B'}, {name:'Глиняный', hex:'#CDAA90'}, {name:'Сизый', hex:'#A9B4BA'}, {name:'Графит', hex:'#55595B'}];
 const FLOORS = [{id:'oakL', name:'Дуб светлый', hex:'#CDB497', pattern:'planks'}, {id:'oakD', name:'Дуб тёмный', hex:'#7C5C40', pattern:'planks'}, {id:'tile', name:'Плитка серая', hex:'#B9BAB6', pattern:'tiles'}, {id:'conc', name:'Микроцемент', hex:'#C8C6C0', pattern:'plain'}];
 
+const KP_DEFAULT = {brand:'Название салона', manager:'', contacts:'', valid:14, lead:'30–45 рабочих дней'};
 function sampleState(){
   let id = 0;
   const mk = (type, wall, o = {}) => Object.assign({id:'m' + (++id), type, wall, w:TYPES[type].w, h:TYPES[type].h, d:TYPES[type].d, blind:'left', corpus:null, facade:null, light:false, cut:{sink:false, hob:false, pipe:false}}, o);
@@ -575,7 +678,7 @@ function sampleState(){
   return {client:'Анна И. (пример)', order:'К-0142', layout:'L', walls:{A:3200, B:2400, C:2400},
     room:{height:2700, wall:'#E7E4DD', floor:'oakL'},
     mat:{corpus:'c1', facade:'f2', milling:'n1', fLow:'k4', fUp:'k1', handle:'bar', drawers:'legrabox', drawerColor:'orion', top:'t4', splash:true},
-    disc:0, modules, selected:'m3', showDims:true, clientView:false, nextId:id + 1, tab:'smeta', ltab:'catalog', cat:'low', place:'A'};
+    disc:0, modules, selected:'m3', showDims:false, clientView:false, nextId:id + 1, tab:'smeta', ltab:'catalog', cat:'low', place:'A', drawer:false, extra:[], kp:Object.assign({}, KP_DEFAULT)};
 }
 function deepMerge(base, over){
   const out = JSON.parse(JSON.stringify(base));
@@ -695,6 +798,17 @@ function leftRoom(){
     </div>
     <div class="btns"><button class="btn" data-act="load-sample" id="btnSample">Загрузить пример</button><button class="btn danger" data-act="clear-mods" id="btnClear">Очистить модули</button></div>
   </div>
+  <div class="sec"><h3>Для коммерческого предложения</h3>
+    <div class="field"><label for="inBrand">Салон</label><input type="text" id="inBrand" value="${esc(S.kp.brand)}"></div>
+    <div class="row2">
+      <div class="field"><label for="inManager">Менеджер</label><input type="text" id="inManager" value="${esc(S.kp.manager)}"></div>
+      <div class="field"><label for="inContacts">Телефон или email</label><input type="text" id="inContacts" value="${esc(S.kp.contacts)}"></div>
+    </div>
+    <div class="row2">
+      <div class="field"><label for="inValid">Действует, дней</label><input type="number" id="inValid" min="1" max="365" value="${S.kp.valid}"></div>
+      <div class="field"><label for="inLead">Срок изготовления</label><input type="text" id="inLead" value="${esc(S.kp.lead)}"></div>
+    </div>
+  </div>
   <div class="sec"><h3>Планировка</h3>
     <div class="plan">${[['I','Прямая'],['L','Угловая'],['U','П-образная']].map(([k, n]) => `<button data-act="layout" data-v="${k}" aria-pressed="${S.layout === k}">${planSvg(k)}${n}</button>`).join('')}</div>
     <div class="row3">${['A','B','C'].filter(w => ws.includes(w)).map(w => `<div class="field"><label for="inWall${w}">Стена ${WN[w]}, мм</label><input type="number" id="inWall${w}" min="600" max="9000" step="10" value="${S.walls[w]}"></div>`).join('')}
@@ -710,12 +824,10 @@ function leftRoom(){
 }
 function leftCatalog(){
   const ws = wallsOf(S), num = numberMap();
-  if (!ws.includes(S.place)) S.place = 'A';
   let h = `<div class="sec"><h3>Добавить модуль</h3>
-    ${ws.length > 1 ? `<div class="seg" role="group" aria-label="Стена">${ws.map(w => `<button data-act="place" data-v="${w}" aria-pressed="${S.place === w}">Стена ${WN[w]}</button>`).join('')}</div>` : ''}
     <div class="cats">${CATS.map(([k, n]) => `<button class="cat" data-act="cat" data-v="${k}" aria-pressed="${S.cat === k}">${n}</button>`).join('')}</div>
-    <div class="cards">${Object.entries(TYPES).filter(([, t]) => t.cat === S.cat).map(([k, t]) => `<button class="card" data-act="add" data-v="${k}" aria-label="Добавить: ${esc(t.name)}">${moduleSvg(k)}<span class="cn">${esc(t.name)}</span><span class="cs">${t.gap ? t.w : t.w + '×' + t.h}</span></button>`).join('')}</div>
-    <div class="small muted">Модуль встаёт после выбранного в том же ряду или в конец ряда стены ${WN[S.place]}.</div>
+    <div class="cards">${Object.entries(TYPES).filter(([, t]) => t.cat === S.cat).map(([k, t]) => `<button class="card" data-act="pick" data-v="${k}" data-type="${k}" aria-pressed="${!!placing && placing.type === k}" aria-label="Поставить на стену: ${esc(t.name)}">${moduleSvg(k)}<span class="cn">${esc(t.name)}</span><span class="cs">${t.gap ? t.w : t.w + '×' + t.h}</span></button>`).join('')}</div>
+    <div class="dnd-note"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex:none;margin-top:2px"><path d="M8 1.5v13M1.5 8h13M8 1.5L6 3.5M8 1.5l2 2M8 14.5l-2-2M8 14.5l2-2M1.5 8l2-2M1.5 8l2 2M14.5 8l-2-2M14.5 8l-2 2"/></svg><span>Перетащите модуль на стену в 3D-виде. На планшете: нажмите на модуль, затем на нужное место на стене.</span></div>
   </div><div class="sec"><h3><span>Состав кухни</span><span>${A.mods.filter(r => !TYPES[r.m.type].gap).length} модулей</span></h3>`;
   ws.forEach(wl => ROWS.forEach(([row, rn]) => {
     const list = S.modules.filter(m => m.wall === wl && TYPES[m.type].row === row);
@@ -725,7 +837,7 @@ function leftCatalog(){
       h += `<button class="mitem" data-act="select-mod" data-id="${m.id}" aria-current="${m.id === S.selected}"><span class="n">${num[m.id]}</span><span class="nm">${esc(modLabel(m))}<small>${m.w}</small></span><span class="pr">${TYPES[m.type].gap ? '—' : rub(r.price)}</span></button>`; });
     h += '</div>';
   }));
-  if (!activeModules(S).length) h += '<div class="empty">Пока пусто. Нажмите на карточку модуля выше.</div>';
+  if (!activeModules(S).length) h += '<div class="empty">Пока пусто. Перетащите модуль из каталога на стену.</div>';
   return h + '</div>';
 }
 function typeOptions(sel){
@@ -814,8 +926,8 @@ function leftMat(){
 
 function renderHeader(){
   $('hdrProject').textContent = `Заказ ${S.order || '—'} · ${S.client || 'клиент не указан'}`;
-  $('hdrTotal').textContent = rub(A.total);
-  $('hdrSplit').textContent = `мебель и столешница ${rub(A.after)} · монтаж ${rub(A.install)} · доставка ${rub(A.delivery)}`;
+  $('hdrTotal').textContent = rub(A.total); $('dockTotal').textContent = rub(A.total);
+  $('hdrSplit').textContent = `кухня ${rub(A.after + A.exFree)} · монтаж ${rub(A.install)} · доставка ${rub(A.delivery)}`;
 }
 
 /* ---------------- documents ---------------- */
@@ -835,35 +947,52 @@ function renderSmeta(){
         ${cv ? '' : `<td class="num">${nf0.format(r.c.corpus)}</td><td class="num">${nf0.format(r.c.facade)}</td><td class="num">${nf0.format(r.c.hw)}</td><td class="num">${nf0.format(r.c.work)}</td><td class="num">${nf0.format(r.cost)}</td>`}
         <td class="num strong">${rub(r.price)}</td></tr>`; });
   }));
-  if (A.common.length){
-    rows += `<tr class="grp"><td colspan="${cols}">Столешница и отделка</td></tr>`;
-    A.common.forEach(c => rows += `<tr><td></td><td>${esc(c.n)}</td><td class="sz">${nf2.format(c.q)} ${c.u}</td>${cv ? '' : `<td colspan="4" class="num muted">${nf0.format(c.unit)} ₽/${c.u}</td><td class="num">${nf0.format(c.cost)}</td>`}<td class="num strong">${rub(c.price)}</td></tr>`);
-  }
-  if (!rows) rows = `<tr><td colspan="${cols}" class="muted">Добавьте модули в «Каталоге», и смета соберётся автоматически.</td></tr>`;
-  $('tab-smeta').innerHTML = `
+  const line = c => `<tr><td></td><td>${esc(c.n)}${c.nd ? '<span class="sub">без скидки</span>' : ''}</td><td class="sz">${nf2.format(c.q)} ${esc(c.u)}</td>${cv ? '' : `<td colspan="4" class="num muted">${nf0.format(c.unit)} ₽/${esc(c.u)}</td><td class="num">${nf0.format(c.cost)}</td>`}<td class="num strong">${rub(c.price)}</td></tr>`;
+  if (A.common.length){ rows += `<tr class="grp"><td colspan="${cols}">Столешница и отделка</td></tr>`; A.common.forEach(c => rows += line(c)); }
+  if (A.extras.length){ rows += `<tr class="grp"><td colspan="${cols}">Дополнительные позиции</td></tr>`; A.extras.forEach(c => rows += line(c)); }
+  if (!rows) rows = `<tr><td colspan="${cols}" class="muted">Перетащите модули из «Каталога» на стену, и смета соберётся автоматически.</td></tr>`;
+  $('smHead').innerHTML = `
     <div class="dochead">
       <div><h2>Смета на кухню, заказ ${esc(S.order || '—')}</h2><div class="meta">${esc(S.client || '')}${S.client ? ' · ' : ''}${esc(matLine())}</div></div>
       <div class="doctools">
         <div class="seg" role="group" aria-label="Режим сметы"><button data-act="client-view" data-v="0" aria-pressed="${!cv}">Внутренняя</button><button data-act="client-view" data-v="1" aria-pressed="${cv}">Для клиента</button></div>
         <label class="disc" for="inDisc">Скидка, % <input type="number" id="inDisc" min="0" max="50" step="0.5" value="${S.disc || 0}"></label>
+        <button class="btn pri" data-act="print-kp">Печать КП</button>
       </div>
-    </div>
-    <div class="tblwrap"><table class="t">
+    </div>`;
+  $('smTable').innerHTML = `<div class="tblwrap"><table class="t smeta">
       <thead><tr><th>№</th><th>Позиция</th><th>Размер, мм</th>${cv ? '' : '<th class="num">Корпус</th><th class="num">Фасады</th><th class="num">Фурнитура</th><th class="num">Работа</th><th class="num">Себест.</th>'}<th class="num">Цена</th></tr></thead>
-      <tbody>${rows}</tbody></table></div>
+      <tbody>${rows}</tbody></table></div>`;
+  $('smSums').innerHTML = `
     <dl class="sums">
       <dt>Модули</dt><dd>${rub(A.furnPrice)}</dd>
       <dt>Столешница и отделка</dt><dd>${rub(A.commonPrice)}</dd>
+      ${A.exDisc ? `<dt>Дополнительные позиции</dt><dd>${rub(A.exDisc)}</dd>` : ''}
       ${A.disc ? `<dt>Скидка ${nf2.format(S.disc)}%</dt><dd>−${rub(A.disc)}</dd>` : ''}
+      ${A.exFree ? `<dt>Позиции без скидки</dt><dd>${rub(A.exFree)}</dd>` : ''}
       <dt>Монтаж, ${nf2.format(P.install)}%</dt><dd>${rub(A.install)}</dd>
       <dt>Доставка</dt><dd>${rub(A.delivery)}</dd>
       <dt class="total">Итого</dt><dd class="total">${rub(A.total)}</dd>
-      ${cv ? '' : `<dt class="cost">Себестоимость мебели и столешницы</dt><dd class="cost">${rub(A.totalCost)}</dd>
-      <dt class="cost">Маржа до монтажа</dt><dd class="cost" style="color:var(${A.margin >= 0 ? '--ok' : '--warn'})">${rub(A.margin)}${A.after ? ' · ' + nf0.format(A.margin / A.after * 100) + '%' : ''}</dd>`}
+      ${cv ? '' : `<dt class="cost">Себестоимость</dt><dd class="cost">${rub(A.totalCost)}</dd>
+      <dt class="cost">Маржа до монтажа</dt><dd class="cost" style="color:var(${A.margin >= 0 ? '--ok' : '--warn'})">${rub(A.margin)}${A.after + A.exFree ? ' · ' + nf0.format(A.margin / (A.after + A.exFree) * 100) + '%' : ''}</dd>`}
     </dl>
-    <div class="btns" style="margin-top:16px"><button class="btn pri" data-act="copy-text">Скопировать для клиента</button><button class="btn" data-act="copy-tsv">Скопировать в Excel</button></div>
+    <div class="btns" style="margin-top:16px"><button class="btn pri" data-act="print-kp">Печать КП</button><button class="btn" data-act="copy-text">Скопировать для клиента</button><button class="btn" data-act="copy-tsv">Скопировать в Excel</button></div>
     <div id="copyFallback"></div>
-    <p class="note">Режим «Для клиента» скрывает себестоимость и маржу. «Скопировать для клиента» даёт текст для мессенджера, «В Excel» — таблицу, которая вставляется в Excel или Google Таблицы по столбцам.</p>`;
+    <p class="note">Режим «Для клиента» скрывает себестоимость и маржу. «Печать КП» открывает диалог печати: там же можно сохранить PDF. «Скопировать для клиента» даёт текст для мессенджера, «В Excel» — таблицу для вставки по столбцам.</p>`;
+}
+function renderExtras(){
+  const rows = S.extra.map(x => { const a = c => `id="ex_${x.id}_${c}" data-ex="${x.id}" data-col="${c}"`;
+    return `<tr><td><input type="text" ${a('name')} value="${esc(x.name)}" placeholder="Например: смеситель" aria-label="Название позиции"></td>
+      <td><input type="number" ${a('q')} min="0" step="any" value="${x.q}" aria-label="Количество"></td>
+      <td><input type="text" ${a('u')} value="${esc(x.u)}" style="min-width:56px;width:64px" aria-label="Единица"></td>
+      <td><input type="number" ${a('price')} min="0" step="any" value="${x.price}" aria-label="Цена клиенту за единицу, рублей"></td>
+      <td><input type="number" ${a('cost')} min="0" step="any" value="${x.cost}" placeholder="по наценке" aria-label="Закупка за единицу, рублей"></td>
+      <td><input type="checkbox" ${a('nd')} ${x.nd ? 'checked' : ''} aria-label="Без скидки"></td>
+      <td><button class="btn sm danger" data-act="ex-del" data-v="${x.id}" aria-label="Удалить позицию">×</button></td></tr>`; }).join('');
+  $('smExtras').innerHTML = `<div class="extras"><h3>Дополнительные позиции <span class="muted small">· техника, смесители, услуги</span></h3>
+    ${S.extra.length ? `<div class="tblwrap"><table class="t"><thead><tr><th>Название</th><th>Кол-во</th><th>Ед.</th><th>Цена клиенту, ₽/ед.</th><th>Закупка, ₽/ед.</th><th>Без скидки</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>` : ''}
+    <div class="btns"><button class="btn sm" data-act="ex-add">+ Добавить позицию</button></div>
+    ${S.extra.length ? '<div class="small muted">Если закупка не указана, она считается по стандартной наценке. «Без скидки» — позиция не участвует в скидке и в расчёте монтажа.</div>' : ''}</div>`;
 }
 function renderBom(){
   const rows = bomOf(A, S, P, C); let h = '', tot = 0;
@@ -952,23 +1081,95 @@ function smetaText(){
   L.push(matLine(), `Столешница: ${catFind(C.top, S.mat.top).name}`, '');
   orderedMods().forEach(m => { if (TYPES[m.type].gap) return; const r = resultOf(m.id), nt = modNotes(m); L.push(`${num[m.id]}. ${modLabel(m)} ${sizeStr(m)} мм${nt ? ' (' + nt + ')' : ''} — ${rub(r.price)}`); });
   A.common.forEach(c => L.push(`${c.n}, ${nf2.format(c.q)} ${c.u} — ${rub(c.price)}`));
-  L.push('', `Мебель и столешница: ${rub(A.sub)}`);
+  A.extras.forEach(c => L.push(`${c.n}, ${nf2.format(c.q)} ${c.u} — ${rub(c.price)}`));
+  L.push('', `Мебель, столешница и позиции: ${rub(A.sub)}`);
   if (A.disc) L.push(`Скидка ${nf2.format(S.disc)}%: −${rub(A.disc)}`);
+  if (A.exFree) L.push(`Позиции без скидки: ${rub(A.exFree)}`);
   L.push(`Монтаж: ${rub(A.install)}`, `Доставка: ${rub(A.delivery)}`, `ИТОГО: ${rub(A.total)}`);
   return L.join('\n');
 }
 function smetaTSV(){
   const num = numberMap(), R = [['№','Позиция','Размер, мм','Кол-во','Ед.','Цена, ₽']];
   orderedMods().forEach(m => { if (TYPES[m.type].gap) return; const r = resultOf(m.id), nt = modNotes(m); R.push([num[m.id], modLabel(m) + (nt ? ' (' + nt + ')' : ''), sizeStr(m), 1, 'шт', Math.round(r.price)]); });
-  A.common.forEach(c => R.push(['', c.n, '', String(+c.q.toFixed(2)).replace('.', ','), c.u, Math.round(c.price)]));
-  R.push(['', 'Мебель и столешница', '', '', '', Math.round(A.sub)]);
+  [...A.common, ...A.extras].forEach(c => R.push(['', c.n, '', String(+c.q.toFixed(2)).replace('.', ','), c.u, Math.round(c.price)]));
+  R.push(['', 'Мебель, столешница и позиции', '', '', '', Math.round(A.sub)]);
   if (A.disc) R.push(['', `Скидка ${S.disc}%`, '', '', '', -Math.round(A.disc)]);
+  if (A.exFree) R.push(['', 'Позиции без скидки', '', '', '', Math.round(A.exFree)]);
   R.push(['', 'Монтаж', '', '', '', Math.round(A.install)], ['', 'Доставка', '', '', '', Math.round(A.delivery)], ['', 'ИТОГО', '', '', '', Math.round(A.total)]);
   return R.map(r => r.join('\t')).join('\n');
 }
 function copy(text){
   const fb = () => { $('copyFallback').innerHTML = `<textarea class="copybox" id="copyBox" readonly aria-label="Текст сметы">${esc(text)}</textarea><div class="small muted">Выделите текст и скопируйте вручную.</div>`; const b = $('copyBox'); b.focus(); b.select(); };
   try { navigator.clipboard.writeText(text).then(() => { $('copyFallback').innerHTML = ''; toast('Смета скопирована'); }, fb); } catch(e){ fb(); }
+}
+
+/* ---------------- КП на печать ---------------- */
+function snapshot3D(){
+  if (!has3D || !root) return '';
+  const hid = [];
+  try {
+    root.traverse(o => { if (o.isSprite && o.visible){ o.visible = false; hid.push(o); } });
+    const hv = helper ? helper.visible : true; if (helper) helper.visible = false;
+    if (ghost) ghost.visible = false;
+    renderer.render(scene, camera);
+    const src = renderer.domElement, c = document.createElement('canvas'); c.width = src.width; c.height = src.height;
+    const g = c.getContext('2d'), gr = g.createLinearGradient(0, 0, 0, c.height); gr.addColorStop(0, '#F8F6F2'); gr.addColorStop(1, '#E2DED5');
+    g.fillStyle = gr; g.fillRect(0, 0, c.width, c.height); g.drawImage(src, 0, 0);
+    hid.forEach(o => o.visible = true); if (helper) helper.visible = hv; if (ghost) ghost.visible = true;
+    return c.toDataURL('image/jpeg', .9);
+  } catch(e){ hid.forEach(o => o.visible = true); return ''; }
+}
+function kpHtml(img){
+  const num = numberMap(), kp = S.kp, date = new Date().toLocaleDateString('ru-RU'), ws = wallsOf(S);
+  const dr = DRAWERS[S.mat.drawers], dc = dr.colors.find(c => c.id === S.mat.drawerColor) || dr.colors[0], top = catFind(C.top, S.mat.top);
+  const demo = JSON.stringify(P) === JSON.stringify(deepMerge(DEFAULT_PRICES, {})) && JSON.stringify(C) === JSON.stringify(DEFAULT_CAT);
+  const spec = [
+    ['Планировка', {I:'Прямая', L:'Угловая', U:'П-образная'}[S.layout] + ' · ' + ws.map(w => `стена ${WN[w]} ${S.walls[w]} мм`).join(', ') + ` · потолок ${S.room.height} мм`],
+    ['Корпус', 'ЛДСП 16 мм, ' + catFind(C.corpus, S.mat.corpus).name.toLowerCase()],
+    ['Фасады', catFind(C.facade, S.mat.facade).name + ', ' + catFind(C.milling, S.mat.milling).name.toLowerCase()],
+    ['Цвет фасадов', `низ — ${catFind(C.fcolor, S.mat.fLow).name.toLowerCase()}, верх — ${catFind(C.fcolor, S.mat.fUp).name.toLowerCase()}`],
+    ['Открывание', HANDLES[S.mat.handle].toLowerCase()],
+    ['Фурнитура', `Blum: петли CLIP top BLUMOTION, ящики ${dr.n} (${dc.name.toLowerCase()})`],
+    ['Столешница', top.name + (S.mat.splash ? ', стеновая панель (фартук)' : '')]];
+  const grp = n => `<tr class="g"><td colspan="4">${esc(n)}</td></tr>`;
+  const ln = c => `<tr><td></td><td>${esc(c.n)}</td><td class="r">${nf2.format(c.q)} ${esc(c.u)}</td><td class="r">${rub(c.price)}</td></tr>`;
+  let rows = '';
+  ws.forEach(wl => ROWS.forEach(([row, rn]) => {
+    const list = A.mods.filter(r => r.m.wall === wl && TYPES[r.m.type].row === row && !TYPES[r.m.type].gap);
+    if (!list.length) return;
+    rows += grp((ws.length > 1 ? 'Стена ' + WN[wl] + ' · ' : '') + rn);
+    list.forEach(r => { const nt = modNotes(r.m);
+      rows += `<tr><td>${num[r.m.id]}</td><td>${esc(modLabel(r.m))}${nt ? `<br><small style="color:#6A665E">${esc(nt)}</small>` : ''}</td><td class="r">${sizeStr(r.m)}</td><td class="r">${rub(r.price)}</td></tr>`; });
+  }));
+  if (A.common.length){ rows += grp('Столешница и отделка'); A.common.forEach(c => rows += ln(c)); }
+  if (A.extras.length){ rows += grp('Дополнительные позиции'); A.extras.forEach(c => rows += ln(c)); }
+  const sum = (n, v) => `<div><span>${n}</span><span>${v}</span></div>`;
+  return `<div class="kp">
+    <div class="kp-head"><div><div class="kp-brand">${esc(kp.brand || '')}</div><div class="kp-title">Коммерческое предложение</div></div>
+      <div class="kp-meta">Заказ ${esc(S.order || '—')} · ${date}<br>${esc(S.client || '')}</div></div>
+    ${demo ? '<div style="margin:4mm 0 0;padding:2mm 3mm;border:1px solid #B23E0C;color:#B23E0C;font-size:9.5pt">Расчёт на примерных ценах прототипа. Не передавайте клиенту до загрузки своих цен.</div>' : ''}
+    ${img ? `<div style="margin-top:6mm"><img class="kp-img" src="${img}" alt="Вид кухни"></div>` : ''}
+    <h2>Состав кухни</h2>
+    <dl class="kp-spec">${spec.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl>
+    <h2>Смета</h2>
+    <table><thead><tr><th style="width:8mm">№</th><th>Позиция</th><th class="r">Размер, мм</th><th class="r">Цена</th></tr></thead><tbody>${rows}</tbody></table>
+    <div class="kp-sums">
+      ${sum('Стоимость комплекта', rub(A.sub))}
+      ${A.disc ? sum(`Скидка ${nf2.format(S.disc)}%`, '−' + rub(A.disc)) : ''}
+      ${A.exFree ? sum('Позиции без скидки', rub(A.exFree)) : ''}
+      ${sum('Монтаж', rub(A.install))}${sum('Доставка', rub(A.delivery))}
+      <div class="t"><span>Итого</span><span>${rub(A.total)}</span></div>
+    </div>
+    <div class="kp-foot">Предложение действует ${kp.valid} дн. с ${date}. Срок изготовления: ${esc(kp.lead || '—')}.
+      ${kp.manager || kp.contacts ? `<br>Ваш менеджер: ${esc(kp.manager || '')}${kp.manager && kp.contacts ? ', ' : ''}${esc(kp.contacts || '')}` : ''}</div>
+  </div>`;
+}
+async function printKP(){
+  if (!A.mods.length && !A.extras.length){ toast('Сначала соберите кухню'); return; }
+  const pa = $('printArea'); pa.innerHTML = kpHtml(snapshot3D());
+  const im = pa.querySelector('img'); if (im && im.decode){ try { await im.decode(); } catch(e){} }
+  const t = document.title; document.title = 'КП ' + (S.order || '') + (S.client ? ' ' + S.client : '');
+  window.print(); document.title = t;
 }
 
 /* ---------------- update ---------------- */
@@ -989,8 +1190,14 @@ function confirmClick(btn, label, fn){
   btn.dataset.orig = btn.textContent; btn.dataset.armed = '1'; btn.textContent = label;
   confirmTimers[btn.id] = setTimeout(() => { btn.dataset.armed = ''; btn.textContent = btn.dataset.orig; }, 4000);
 }
+function setDrawer(open){
+  S.drawer = !!open; $('docs').dataset.open = String(S.drawer);
+  $('btnDrawer').setAttribute('aria-expanded', String(S.drawer)); $('drawerLbl').textContent = S.drawer ? 'Скрыть' : 'Показать смету';
+  store(KS, S);
+}
 function setTab(v){ S.tab = v; ['smeta','bom','prices'].forEach(t => { $('tab-' + t).hidden = t !== v; $('tb-' + t).setAttribute('aria-selected', String(t === v)); }); }
 function ensureRefs(){
+  S.kp = Object.assign({}, KP_DEFAULT, S.kp || {}); if (!Array.isArray(S.extra)) S.extra = [];
   ['corpus','facade','milling','top'].forEach(k => { if (!C[k].some(r => r.id === S.mat[k])) S.mat[k] = C[k][0].id; });
   if (!C.fcolor.some(r => r.id === S.mat.fLow)) S.mat.fLow = C.fcolor[0].id;
   if (!C.fcolor.some(r => r.id === S.mat.fUp)) S.mat.fUp = C.fcolor[0].id;
@@ -1006,12 +1213,13 @@ document.addEventListener('click', e => {
     case 'layout': S.layout = v; update({resetCam:true}); break;
     case 'room-wall': S.room.wall = v; update(); break;
     case 'room-floor': S.room.floor = v; update(); break;
-    case 'place': S.place = v; renderLeft(); break;
     case 'cat': S.cat = v; renderLeft(); store(KS, S); break;
-    case 'add': {
-      const wall = wallsOf(S).includes(S.place) ? S.place : 'A', nm = newModule(v, wall), row = TYPES[v].row;
-      if (m && m.wall === wall && TYPES[m.type].row === row) S.modules.splice(S.modules.indexOf(m) + 1, 0, nm); else S.modules.push(nm);
-      S.selected = nm.id; update(); toast(`Добавлен: ${TYPES[v].name}, стена ${WN[wall]}`); break; }
+    case 'pick': if (!dragJustEnded) startPlacing(v); break;
+    case 'place-cancel': stopPlacing(); break;
+    case 'drawer': setDrawer(!S.drawer); break;
+    case 'print-kp': printKP(); break;
+    case 'ex-add': { const id = 'x' + Date.now().toString(36); S.extra.push({id, name:'', q:1, u:'шт', price:0, cost:'', nd:false}); renderExtras(); update({left:false, rebuild:false}); const f = $('ex_' + id + '_name'); if (f) f.focus(); break; }
+    case 'ex-del': S.extra = S.extra.filter(x => x.id !== v); renderExtras(); update({left:false, rebuild:false}); break;
     case 'select-mod': selectMod(b.dataset.id); break;
     case 'ed-wall': if (m){ m.wall = v; S.place = v; update(); } break;
     case 'w-chip': if (m){ m.w = +v; update(); } break;
@@ -1034,12 +1242,12 @@ document.addEventListener('click', e => {
     case 'all-light': activeModules(S).forEach(o => { if (TYPES[o.type].row === 'up' && !TYPES[o.type].gap) o.light = v === '1'; }); update(); break;
     case 'toggle-dims': S.showDims = !S.showDims; b.setAttribute('aria-pressed', String(S.showDims)); build3D(false); store(KS, S); break;
     case 'reset-view': fitCamera(); break;
-    case 'tab': setTab(v); store(KS, S); break;
+    case 'tab': setTab(v); setDrawer(true); break;
     case 'client-view': S.clientView = v === '1'; renderSmeta(); store(KS, S); break;
     case 'copy-text': copy(smetaText()); break;
     case 'copy-tsv': copy(smetaTSV()); break;
     case 'reset-prices': confirmClick(b, 'Нажмите ещё раз для сброса', () => { P = deepMerge(DEFAULT_PRICES, {}); C = JSON.parse(JSON.stringify(DEFAULT_CAT)); store(KP, P); store(KC, C); ensureRefs(); renderPrices(); update(); toast('Цены и каталоги сброшены к примерным'); }); break;
-    case 'load-sample': confirmClick(b, 'Заменить текущий проект?', () => { S = sampleState(); openSet.clear(); ensureRefs(); update({resetCam:true}); toast('Загружен пример'); }); break;
+    case 'load-sample': confirmClick(b, 'Заменить текущий проект?', () => { S = sampleState(); openSet.clear(); ensureRefs(); renderExtras(); update({resetCam:true}); toast('Загружен пример'); }); break;
     case 'clear-mods': confirmClick(b, 'Удалить все модули?', () => { S.modules = []; S.selected = null; update({resetCam:true}); toast('Модули удалены'); }); break;
     case 'cat-add': {
       const sp = CAT_SPEC[k], row = {id:k[0] + Date.now().toString(36)};
@@ -1071,6 +1279,14 @@ document.addEventListener('change', e => {
     if (type === 'num'){ const n = parseNum(t.value); row[t.dataset.col] = isFinite(n) ? Math.max(0, n) : 0; } else row[t.dataset.col] = t.value;
     store(KC, C); update(); return;
   }
+  if (t.dataset.ex){
+    const x = S.extra.find(r => r.id === t.dataset.ex); if (!x) return; const c = t.dataset.col;
+    if (c === 'nd') x.nd = t.checked;
+    else if (c === 'name' || c === 'u') x[c] = t.value;
+    else if (c === 'cost' && t.value.trim() === '') x.cost = '';
+    else { const n = parseNum(t.value); x[c] = isFinite(n) ? Math.max(0, n) : 0; }
+    update({left:false, rebuild:false}); return;
+  }
   if (id && id.startsWith('inWall') && id !== 'inWallHex'){ const w = id.slice(6); S.walls[w] = clampNum(t.value, 600, 9000, S.walls[w]); t.value = S.walls[w]; update({resetCam:true}); return; }
   switch (id){
     case 'inWallHex': S.room.wall = t.value; update(); break;
@@ -1098,14 +1314,20 @@ document.addEventListener('change', e => {
 document.addEventListener('input', e => {
   if (e.target.id === 'inClient'){ S.client = e.target.value; renderHeader(); renderSmeta(); store(KS, S); }
   if (e.target.id === 'inOrder'){ S.order = e.target.value; renderHeader(); renderSmeta(); store(KS, S); }
+  const kpField = {inBrand:'brand', inManager:'manager', inContacts:'contacts', inLead:'lead'}[e.target.id];
+  if (kpField){ S.kp[kpField] = e.target.value; store(KS, S); }
+  if (e.target.id === 'inValid'){ const n = parseNum(e.target.value); S.kp.valid = isFinite(n) ? Math.min(365, Math.max(1, Math.round(n))) : 14; store(KS, S); }
 });
 
 /* ---------------- 3D ---------------- */
 let renderer, scene, camera, controls, root = null, helper = null, disposables = [], has3D = false, anims = [];
+let placing = null, dragging = null, pend = null, mv = null, ghost = null, dropAt = null, dragJustEnded = false;
 const matCache = {};
 function cssVar(n){ return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
 function rng(seed){ return () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; }; }
-function canvasTex(size, draw){ const c = document.createElement('canvas'); c.width = c.height = size; draw(c.getContext('2d'), size); const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; return t; }
+// Цвета из каталога заданы в sRGB: переводим в линейное пространство, а на выходе рендерер возвращает sRGB. Так цвет на экране ближе к образцу.
+function col(hex){ return new THREE.Color(hex).convertSRGBToLinear(); }
+function canvasTex(size, draw){ const c = document.createElement('canvas'); c.width = c.height = size; draw(c.getContext('2d'), size); const t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding; t.wrapS = t.wrapT = THREE.RepeatWrapping; return t; }
 function woodTex(hex){ return canvasTex(256, (g, n) => { const r = rng(7); g.fillStyle = hex; g.fillRect(0, 0, n, n);
   for (let i = 0; i < 150; i++){ const x = r() * n; g.strokeStyle = r() < .55 ? `rgba(70,40,15,${.05 + r() * .1})` : `rgba(255,240,215,${.04 + r() * .08})`; g.lineWidth = .5 + r() * 2.4; g.beginPath(); g.moveTo(x, 0); for (let y = 0; y <= n; y += 16) g.lineTo(x + Math.sin(y / 37 + i) * 2.5, y); g.stroke(); } }); }
 function marbleTex(hex){ return canvasTex(512, (g, n) => { const r = rng(11); g.fillStyle = hex; g.fillRect(0, 0, n, n);
@@ -1120,12 +1342,12 @@ function surf(kind, row, rough){
   const p = {roughness:rough, metalness:0};
   if (row.pattern === 'wood'){ p.map = woodTex(row.hex); p.color = 0xffffff; }
   else if (row.pattern === 'marble'){ p.map = marbleTex(row.hex); p.color = 0xffffff; }
-  else p.color = new THREE.Color(row.hex);
+  else p.color = col(row.hex);
   return matCache[key] = new THREE.MeshStandardMaterial(p);
 }
 function plainMat(key, hex, rough = .6, metal = 0, extra = {}){
   const k = key + hex + rough + metal; if (matCache[k]) return matCache[k];
-  return matCache[k] = new THREE.MeshStandardMaterial(Object.assign({color:new THREE.Color(hex), roughness:rough, metalness:metal}, extra));
+  return matCache[k] = new THREE.MeshStandardMaterial(Object.assign({color:col(hex), roughness:rough, metalness:metal}, extra));
 }
 function box(parent, w, h, d, x, y, z, material, cast = true){
   const me = new THREE.Mesh(new THREE.BoxGeometry(Math.max(w, 1) / 1000, Math.max(h, 1) / 1000, Math.max(d, 1) / 1000), material);
@@ -1134,14 +1356,24 @@ function box(parent, w, h, d, x, y, z, material, cast = true){
 }
 function label(text, x, y, z, accent){
   const c = document.createElement('canvas'); c.width = 256; c.height = 88; const g = c.getContext('2d');
-  g.fillStyle = accent ? 'rgba(44,82,196,.92)' : 'rgba(255,255,255,.93)';
-  const r = 18; g.beginPath(); g.moveTo(r, 4); g.arcTo(252, 4, 252, 84, r); g.arcTo(252, 84, 4, 84, r); g.arcTo(4, 84, 4, 4, r); g.arcTo(4, 4, 252, 4, r); g.fill();
-  g.fillStyle = accent ? '#fff' : '#1A211F'; g.textAlign = 'center'; g.textBaseline = 'middle';
-  let fs = 46; do { g.font = `600 ${fs}px "IBM Plex Mono", ui-monospace, monospace`; fs -= 2; } while (g.measureText(text).width > 230 && fs > 18);
+  g.fillStyle = accent ? 'rgba(169,83,42,.95)' : 'rgba(28,27,25,.86)';
+  const r = 22; g.beginPath(); g.moveTo(r, 8); g.arcTo(248, 8, 248, 80, r); g.arcTo(248, 80, 8, 80, r); g.arcTo(8, 80, 8, 8, r); g.arcTo(8, 8, 248, 8, r); g.fill();
+  g.fillStyle = '#fff'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  let fs = 44; do { g.font = `600 ${fs}px "IBM Plex Mono", ui-monospace, monospace`; fs -= 2; } while (g.measureText(text).width > 220 && fs > 18);
   g.fillText(text, 128, 46);
-  const tex = new THREE.CanvasTexture(c), sm = new THREE.SpriteMaterial({map:tex, depthTest:false, transparent:true});
-  const s = new THREE.Sprite(sm); s.scale.set(.3, .103, 1); s.position.set(x / 1000, y / 1000, z / 1000); s.renderOrder = 10;
-  disposables.push(tex, sm); return s;
+  const tex = new THREE.CanvasTexture(c); tex.encoding = THREE.sRGBEncoding; const sm = new THREE.SpriteMaterial({map:tex, depthTest:false, transparent:true});
+  const sp = new THREE.Sprite(sm); sp.scale.set(.21, .072, 1); sp.position.set(x / 1000, y / 1000, z / 1000); sp.renderOrder = 10;
+  disposables.push(tex, sm); return sp;
+}
+// размерная линия модуля: в нижнем ряду — по полу перед цоколем, в верхнем — на стене под шкафом, у антресолей — над ними
+function addDim(g, t, W, H, D, baseY){
+  let y, z;
+  if (t.row === 'low'){ y = 14; z = D + 150; } else if (t.row === 'up'){ y = baseY - 150; z = 8; } else { y = baseY + H + 90; z = D; }
+  const P = (x, yy) => new THREE.Vector3(x / 1000, yy / 1000, z / 1000);
+  const geo = new THREE.BufferGeometry().setFromPoints([P(2, y), P(W - 2, y), P(2, y - 35), P(2, y + 35), P(W - 2, y - 35), P(W - 2, y + 35)]);
+  const lm = matCache.dimLine || (matCache.dimLine = new THREE.LineBasicMaterial({color:col('#4A463F'), transparent:true, opacity:.75, depthTest:false}));
+  const ln = new THREE.LineSegments(geo, lm); ln.renderOrder = 9; g.add(ln);
+  g.add(label(String(W), W / 2, y, z));
 }
 let glowTex = null;
 function glow(){ if (glowTex) return glowTex; glowTex = canvasTex(128, (g, n) => { const gr = g.createRadialGradient(n / 2, n / 2, 0, n / 2, n / 2, n / 2); gr.addColorStop(0, 'rgba(255,214,150,.55)'); gr.addColorStop(1, 'rgba(255,214,150,0)'); g.fillStyle = gr; g.fillRect(0, 0, n, n); }); return glowTex; }
@@ -1150,7 +1382,8 @@ function init3D(){
   try {
     if (!window.THREE || !THREE.OrbitControls) throw new Error('three');
     const el = $('stage');
-    renderer = new THREE.WebGLRenderer({antialias:true});
+    renderer = new THREE.WebGLRenderer({antialias:true, alpha:true});
+    renderer.setClearColor(0x000000, 0); renderer.outputEncoding = THREE.sRGBEncoding;
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     el.appendChild(renderer.domElement);
@@ -1158,18 +1391,20 @@ function init3D(){
     camera = new THREE.PerspectiveCamera(38, 1, .05, 100);
     controls = new THREE.OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true; controls.dampingFactor = .09; controls.maxPolarAngle = Math.PI * .495; controls.minDistance = .6; controls.maxDistance = 14;
-    scene.add(new THREE.HemisphereLight(0xffffff, 0xb9b3a8, .78));
-    const dl = new THREE.DirectionalLight(0xffffff, .6);
-    dl.position.set(4.5, 6, 5.5); dl.castShadow = true; dl.shadow.mapSize.set(2048, 2048);
-    Object.assign(dl.shadow.camera, {left:-6, right:6, top:6, bottom:-6, near:.5, far:25}); dl.shadow.bias = -.0004;
+    try { if (THREE.RoomEnvironment && THREE.PMREMGenerator){ const pm = new THREE.PMREMGenerator(renderer); scene.environment = pm.fromScene(new THREE.RoomEnvironment(), .04).texture; pm.dispose(); } } catch(e){}
+    scene.add(new THREE.HemisphereLight(0xffffff, col('#cfc6b8'), .38));
+    const dl = new THREE.DirectionalLight(0xfff4e6, .8);
+    dl.position.set(4.5, 6.5, 5.5); dl.castShadow = true; dl.shadow.mapSize.set(2048, 2048);
+    Object.assign(dl.shadow.camera, {left:-6, right:6, top:6, bottom:-6, near:.5, far:25}); dl.shadow.bias = -.0004; dl.shadow.normalBias = .02;
     dl.target.position.set(1.5, 0, 1.2); scene.add(dl, dl.target);
-    const fl = new THREE.DirectionalLight(0xffffff, .22); fl.position.set(-2, 3, 6); scene.add(fl);
+    const fl = new THREE.DirectionalLight(0xe8eefc, .12); fl.position.set(-3, 3, 6); scene.add(fl);
     applyStageBg();
     new ResizeObserver(resize).observe(el); resize();
     let down = null, lastClick = {id:null, t:0};
     renderer.domElement.addEventListener('pointerdown', e => down = {x:e.clientX, y:e.clientY});
     renderer.domElement.addEventListener('pointerup', e => {
       if (!down || Math.hypot(e.clientX - down.x, e.clientY - down.y) > 5) return;
+      if (placing){ hoverAt(e.clientX, e.clientY, placing.type); if (dropAt) finishPlace(placing.type, null); return; }
       const rect = renderer.domElement.getBoundingClientRect();
       const v = new THREE.Vector2((e.clientX - rect.left) / rect.width * 2 - 1, -(e.clientY - rect.top) / rect.height * 2 + 1);
       const rc = new THREE.Raycaster(); rc.setFromCamera(v, camera);
@@ -1188,15 +1423,27 @@ function init3D(){
     has3D = true;
   } catch (err){ $('stage').innerHTML = '<div class="stage-err">3D-вид не запустился в этом браузере. Смета и материалы работают.</div>'; }
 }
-function applyStageBg(){ if (scene) scene.background = new THREE.Color(cssVar('--stage') || '#E5E8E3'); }
-function resize(){ const el = $('stage'), w = el.clientWidth, h = el.clientHeight; if (!w || !h) return; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); }
+function applyStageBg(){ /* фон сцены рисует CSS-градиент под прозрачным холстом */ }
+function resize(){
+  const el = $('stage'), w = el.clientWidth, h = el.clientHeight; if (!w || !h) return;
+  renderer.setSize(w, h, false); camera.aspect = w / h;
+  // на широком экране снизу лежит полоса со сметой: поднимаем кухню в кадре
+  camera.setViewOffset(w, h, 0, window.innerWidth > 1080 ? 36 : 0, w, h); camera.updateProjectionMatrix();
+}
 function fitCamera(){
   if (!has3D) return;
-  const La = S.walls.A / 1000, Lb = S.walls.B / 1000, Lc = S.walls.C / 1000;
-  if (S.layout === 'L'){ controls.target.set(La * .42, 1.1, Lb * .42); camera.position.set(La * .5 + 2.9, 2.1, Lb * .5 + 3.4); }
-  else if (S.layout === 'U'){ const D = Math.max(Lb, Lc); controls.target.set(La / 2, 1.1, D * .38); camera.position.set(La / 2 + .3, 2.2, D + La * .55 + 1.6); }
-  else { controls.target.set(La / 2, 1.2, .35); camera.position.set(La / 2 + .4, 1.85, La * .95 + 1.9); }
-  controls.update();
+  const ws = wallsOf(S), La = S.walls.A, Lb = S.walls.B, Lc = S.walls.C;
+  const depth = Math.max(ws.includes('B') ? Lb : 0, ws.includes('C') ? Lc : 0, 700);
+  const lo = new THREE.Vector3((ws.includes('B') ? -20 : 0) / 1000, 0, -20 / 1000), hi = new THREE.Vector3((La + (ws.includes('C') ? 20 : 0)) / 1000, Math.min(S.room.height, 2650) / 1000, (depth + 250) / 1000);
+  const c = lo.clone().add(hi).multiplyScalar(.5), dir = (S.layout === 'L' ? new THREE.Vector3(.62, .32, 1) : S.layout === 'U' ? new THREE.Vector3(.12, .32, 1) : new THREE.Vector3(.22, .22, 1)).normalize();
+  const corners = []; [lo.x, hi.x].forEach(x => [lo.y, hi.y].forEach(y => [lo.z, hi.z].forEach(z => corners.push(new THREE.Vector3(x, y, z)))));
+  let dist = 12; const tgt = new THREE.Vector3(c.x, Math.min(c.y, 1.15), c.z);
+  for (let i = 0; i < 12; i++){
+    camera.position.copy(tgt).addScaledVector(dir, dist); camera.lookAt(tgt); camera.updateMatrixWorld(); camera.updateProjectionMatrix();
+    let m = 0; corners.forEach(p => { const q = p.clone().project(camera); m = Math.max(m, Math.abs(q.x) / .9, Math.abs(q.y) / .86); });
+    if (Math.abs(m - 1) < .01) break; dist *= Math.max(.5, Math.min(2, m));
+  }
+  controls.target.copy(tgt); controls.update();
 }
 function addAnim(id, obj, prop, open){
   const get = prop === 'z' ? () => obj.position.z : prop === 'rx' ? () => obj.rotation.x : () => obj.rotation.y;
@@ -1209,7 +1456,7 @@ function facadePanel(parent, w, h, x0, y0, mat, mill, glass){
   if (glass){
     const fw = 60; box(parent, w, fw, FT, x0, y0, z0, mat); box(parent, w, fw, FT, x0, y0 + h - fw, z0, mat);
     box(parent, fw, h - 2*fw, FT, x0, y0 + fw, z0, mat); box(parent, fw, h - 2*fw, FT, x0 + w - fw, y0 + fw, z0, mat);
-    const gm = matCache.glassPane || (matCache.glassPane = new THREE.MeshStandardMaterial({color:0xdfe8ea, roughness:.05, metalness:.1, transparent:true, opacity:.28}));
+    const gm = matCache.glassPane || (matCache.glassPane = new THREE.MeshStandardMaterial({color:col('#dfe8ea'), roughness:.05, metalness:.1, transparent:true, opacity:.28, envMapIntensity:1.4}));
     box(parent, w - 2*fw, h - 2*fw, 4, x0 + fw, y0 + fw, z0 + 7, gm, false); return;
   }
   const style = mill.style;
@@ -1227,13 +1474,23 @@ function facadePanel(parent, w, h, x0, y0, mat, mill, glass){
   if (style === 'classic' && w - 2*fw > 80 && h - 2*fw > 80) box(parent, w - 2*fw - 50, h - 2*fw - 50, FT - 2, x0 + fw + 25, y0 + fw + 25, z0, mat);
 }
 
+function placeGroup(g, wall, x, w){
+  if (wall === 'B'){ g.rotation.y = Math.PI / 2; g.position.set(0, 0, (x + w) / 1000); }
+  else if (wall === 'C'){ g.rotation.y = -Math.PI / 2; g.position.set(S.walls.A / 1000, 0, x / 1000); }
+  else g.position.set(x / 1000, 0, 0);
+}
+// мягкие «контактные» тени вместо трассировки: тёмный градиент, прозрачный к краю
+function aoMat(a){
+  const k = 'ao' + a; if (matCache[k]) return matCache[k];
+  const tex = canvasTex(64, (g, n) => { const gr = g.createLinearGradient(0, 0, 0, n); gr.addColorStop(0, `rgba(20,16,12,${a})`); gr.addColorStop(1, 'rgba(20,16,12,0)'); g.fillStyle = gr; g.fillRect(0, 0, n, n); });
+  tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping; tex.encoding = THREE.LinearEncoding;
+  return matCache[k] = new THREE.MeshBasicMaterial({map:tex, transparent:true, depthWrite:false});
+}
 function buildModule(m, pos){
   const t = TYPES[m.type], g = new THREE.Group(); g.userData.modId = m.id;
-  if (m.wall === 'B'){ g.rotation.y = Math.PI / 2; g.position.set(0, 0, (pos.x + m.w) / 1000); }
-  else if (m.wall === 'C'){ g.rotation.y = -Math.PI / 2; g.position.set(S.walls.A / 1000, 0, pos.x / 1000); }
-  else g.position.set(pos.x / 1000, 0, 0);
+  placeGroup(g, m.wall, pos.x, m.w);
   if (t.gap){
-    const gm = matCache.ghost || (matCache.ghost = new THREE.MeshBasicMaterial({color:0x2C52C4, transparent:true, opacity:.07, depthWrite:false}));
+    const gm = matCache.ghost || (matCache.ghost = new THREE.MeshBasicMaterial({color:col(cssVar('--accent') || '#A9532A'), transparent:true, opacity:.10, depthWrite:false}));
     const y0 = t.row === 'up' ? 1450 : t.row === 'mezz' ? UP_TOP : 0, hh = t.row === 'up' ? 720 : t.row === 'mezz' ? 360 : 2000, dd = t.row === 'low' ? 600 : 300;
     box(g, m.w - 10, hh, dd, 5, y0, 0, gm, false);
     if (S.showDims) g.add(label(`проём ${m.w}`, m.w / 2, y0 + hh / 2, dd + 40, true));
@@ -1320,6 +1577,8 @@ function buildModule(m, pos){
   });
 
   if (t.row === 'low') box(g, W, 96, 16, 0, 2, D - 70, surf('fac', catFind(C.fcolor, S.mat.fLow), .6), false);
+  if (t.row === 'low'){ const ao = new THREE.Mesh(new THREE.PlaneGeometry(W / 1000, .24), aoMat(.5)); ao.rotation.x = -Math.PI / 2; ao.position.set(W / 2000, .001, (D - 60 + 120) / 1000); ao.renderOrder = 1; g.add(ao); }
+  if (t.row === 'up'){ const ao = new THREE.Mesh(new THREE.PlaneGeometry(W / 1000, .34), aoMat(.32)); ao.position.set(W / 2000, (baseY - 170) / 1000, .002); ao.renderOrder = 1; g.add(ao); }
   if (t.row === 'low' && !t.tall && m.cut){
     const top = catFind(C.top, S.mat.top), ty = BASE_Y + H + top.t;
     if (m.cut.hob){ const hw = Math.min(W - 60, 590); box(g, hw, 6, 510, (W - hw) / 2, ty, 45, dark); }
@@ -1328,7 +1587,7 @@ function buildModule(m, pos){
       box(g, 28, 300, 28, W / 2 - 14, ty, 32, steel); box(g, 24, 24, 200, W / 2 - 12, ty + 276, 40, steel); }
   }
   if (m.light && t.row === 'up'){
-    const ledM = matCache.led || (matCache.led = new THREE.MeshBasicMaterial({color:0xFFE2B0}));
+    const ledM = matCache.led || (matCache.led = new THREE.MeshBasicMaterial({color:col('#FFE2B0')}));
     box(g, W - 40, 6, 12, 20, baseY - 6, D - 70, ledM, false);
     const gm = new THREE.MeshBasicMaterial({map:glow(), transparent:true, depthWrite:false, blending:THREE.AdditiveBlending});
     disposables.push(gm);
@@ -1336,7 +1595,7 @@ function buildModule(m, pos){
     const p1 = new THREE.Mesh(new THREE.PlaneGeometry(W * 1.3 / 1000, .62), gm); p1.rotation.x = -Math.PI / 2; p1.position.set(W / 2000, (topY + 2) / 1000, .26); g.add(p1);
     const p2 = new THREE.Mesh(new THREE.PlaneGeometry(W * 1.3 / 1000, Math.max(.1, (baseY - topY) / 1000 * 1.4)), gm); p2.position.set(W / 2000, (topY + (baseY - topY) * .25) / 1000, .009); g.add(p2);
   }
-  if (S.showDims) g.add(label(String(W), W / 2, baseY + Math.min(H, 720) / 2 + (t.tall ? 600 : 0), D + 70));
+  if (S.showDims) addDim(g, t, W, H, D, baseY);
   return g;
 }
 
@@ -1354,7 +1613,7 @@ function build3D(resetCam){
   const fl = FLOORS.find(f => f.id === S.room.floor) || FLOORS[0];
   const fw = La + 2600, fd = Math.max(ws.includes('B') ? Lb : 0, ws.includes('C') ? Lc : 0, 1200) + 2600;
   const fkey = 'floor:' + fl.id;
-  if (!matCache[fkey]){ const p = {roughness:.85}; if (fl.pattern === 'planks'){ p.map = planksTex(fl.hex); p.color = 0xffffff; } else if (fl.pattern === 'tiles'){ p.map = tilesTex(fl.hex); p.color = 0xffffff; } else p.color = new THREE.Color(fl.hex); matCache[fkey] = new THREE.MeshStandardMaterial(p); }
+  if (!matCache[fkey]){ const p = {roughness:.85}; if (fl.pattern === 'planks'){ p.map = planksTex(fl.hex); p.color = 0xffffff; } else if (fl.pattern === 'tiles'){ p.map = tilesTex(fl.hex); p.color = 0xffffff; } else p.color = col(fl.hex); matCache[fkey] = new THREE.MeshStandardMaterial(p); }
   const fm = matCache[fkey]; if (fm.map) fm.map.repeat.set(fw / (fl.pattern === 'tiles' ? 600 : 1600), fd / (fl.pattern === 'tiles' ? 600 : 1100));
   box(root, fw, 10, fd, -1300, -10, -20, fm, false);
   if (S.showDims){
@@ -1371,13 +1630,133 @@ function build3D(resetCam){
     else { box(root, 600, top.t, len, La - 600, y, s.x0, topM); if (S.mat.splash) box(root, 6, sh, len, La - 6, y + top.t, s.x0, splashM, false); }
   });
   const sel = root.children.find(o => o.userData && o.userData.modId === S.selected);
-  if (sel){ helper = new THREE.BoxHelper(sel, new THREE.Color(cssVar('--accent') || '#2C52C4')); scene.add(helper); }
+  if (sel){ helper = new THREE.BoxHelper(sel, col(cssVar('--accent') || '#A9532A')); scene.add(helper); }
+  // отражения окружения слабые, чтобы не пересвечивать цвета образцов
+  root.traverse(o => { if (o.material) [].concat(o.material).forEach(m => { if (m.isMeshStandardMaterial) m.envMapIntensity = m === matCache.glassPane ? 1 : .15; }); });
   if (resetCam) fitCamera();
 }
 
+/* ---------------- расстановка: перетаскивание из каталога, «нажми и поставь», перенос выбранного шкафа ---------------- */
+function rayAt(cx, cy){
+  const rect = renderer.domElement.getBoundingClientRect();
+  const rc = new THREE.Raycaster(); rc.setFromCamera(new THREE.Vector2((cx - rect.left) / rect.width * 2 - 1, -(cy - rect.top) / rect.height * 2 + 1), camera); return rc;
+}
+function pickModId(cx, cy){
+  if (!root) return null;
+  for (const h of rayAt(cx, cy).intersectObjects(root.children, true)){ let o = h.object; while (o && !o.userData.modId) o = o.parent; if (o) return o.userData.modId; }
+  return null;
+}
+function overStage(e){ const r = $('stage').getBoundingClientRect(); return has3D && e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom; }
+// стена и позиция вдоль неё под курсором: луч пересекается с плоскостью на половине глубины модуля
+function dropTarget(cx, cy, type, m){
+  const t = TYPES[type], D = (t.gap ? (t.row === 'low' ? 600 : 300) : (m ? m.d : t.d)) / 1000, ray = rayAt(cx, cy).ray; let best = null;
+  wallsOf(S).forEach(wl => {
+    const n = wl === 'A' ? new THREE.Vector3(0, 0, 1) : new THREE.Vector3(1, 0, 0), c = wl === 'C' ? S.walls.A / 1000 - D / 2 : D / 2;
+    const den = ray.direction.dot(n); if (Math.abs(den) < 1e-6) return;
+    const tt = (c - ray.origin.dot(n)) / den; if (tt <= 0) return;
+    const pt = ray.origin.clone().addScaledVector(ray.direction, tt), u = (wl === 'A' ? pt.x : pt.z) * 1000;
+    if (u < -300 || u > S.walls[wl] + 300 || pt.y < -.05 || pt.y > S.room.height / 1000 + .3) return;
+    if (!best || tt < best.t) best = {wall:wl, u, t:tt};
+  });
+  return best;
+}
+function slotFor(type, wall, u, ignoreId){
+  const row = TYPES[type].row, W = A.R.walls[wall];
+  const list = S.modules.filter(m => m.wall === wall && TYPES[m.type].row === row && m.id !== ignoreId);
+  let ref = null;
+  for (const m of list){ const p = A.R.pos[m.id]; if (p && p.x + m.w / 2 > u){ ref = m; break; } }
+  let x;
+  if (ref) x = A.R.pos[ref.id].x; else if (list.length){ const l = list[list.length - 1]; x = A.R.pos[l.id].x + l.w; } else x = row === 'low' ? W.offL : W.offU;
+  return {ref, list, x};
+}
+function ghostDims(type, m){
+  const t = TYPES[type], W = m ? m.w : t.w; let H = m ? m.h : t.h, D = m ? m.d : t.d, y0;
+  if (t.gap){ y0 = t.row === 'up' ? 1450 : t.row === 'mezz' ? UP_TOP : 0; H = t.row === 'up' ? 720 : t.row === 'mezz' ? 360 : 2000; D = t.row === 'low' ? 600 : 300; }
+  else y0 = t.row === 'up' ? UP_TOP - H : t.row === 'mezz' ? UP_TOP : BASE_Y;
+  return {W, H, D, y0};
+}
+function hideGhost(){ if (ghost){ scene.remove(ghost); ghost.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); }); ghost = null; } }
+function showGhost(type, wall, x, m){
+  const key = `${type}|${wall}|${x}`; if (ghost && ghost.userData.key === key) return;
+  hideGhost(); const d = ghostDims(type, m), g = new THREE.Group(), c = col(cssVar('--accent') || '#A9532A');
+  const geo = new THREE.BoxGeometry(d.W / 1000, d.H / 1000, d.D / 1000), pos = new THREE.Vector3(d.W / 2000, (d.y0 + d.H / 2) / 1000, d.D / 2000);
+  const me = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({color:c, transparent:true, opacity:.3, depthWrite:false})); me.position.copy(pos); me.renderOrder = 5;
+  const ed = new THREE.LineSegments(new THREE.EdgesGeometry(geo), new THREE.LineBasicMaterial({color:c})); ed.position.copy(pos); ed.renderOrder = 6;
+  g.add(me, ed); g.userData.key = key; placeGroup(g, wall, x, d.W); scene.add(g); ghost = g;
+}
+function hoverAt(cx, cy, type, m){
+  const hit = has3D ? dropTarget(cx, cy, type, m) : null;
+  if (!hit){ dropAt = null; hideGhost(); return; }
+  dropAt = {wall:hit.wall, u:hit.u}; showGhost(type, hit.wall, slotFor(type, hit.wall, hit.u, m && m.id).x, m);
+}
+function finishPlace(type, moveId){
+  const {wall, u} = dropAt, slot = slotFor(type, wall, u, moveId); let nm;
+  if (moveId){ nm = S.modules.find(o => o.id === moveId); S.modules = S.modules.filter(o => o !== nm); if (nm.wall !== wall){ nm.wall = wall; nm.blind = wall === 'B' ? 'right' : 'left'; } }
+  else nm = newModule(type, wall);
+  if (slot.ref) S.modules.splice(S.modules.indexOf(slot.ref), 0, nm);
+  else if (slot.list.length) S.modules.splice(S.modules.indexOf(slot.list[slot.list.length - 1]) + 1, 0, nm);
+  else S.modules.push(nm);
+  S.selected = nm.id; S.place = wall; dropAt = null; hideGhost(); stopPlacing(true);
+  update(); toast(moveId ? `Перенесён: ${modLabel(nm)}` : `Добавлен: ${TYPES[type].name}, стена ${WN[wall]}`);
+}
+function updateBanner(){ $('placeBanner').hidden = !placing; $('placeText').textContent = placing ? 'Нажмите на стену, куда поставить: ' + TYPES[placing.type].name : ''; }
+function startPlacing(type){
+  if (placing && placing.type === type){ stopPlacing(); return; }
+  placing = {type}; if (S.drawer && window.innerWidth > 1080) setDrawer(false); updateBanner(); renderLeft();
+}
+function stopPlacing(silent){ placing = null; dropAt = null; hideGhost(); updateBanner(); if (!silent) renderLeft(); }
+function cancelDrags(){
+  if (dragging){ const c = document.querySelector('.dragchip'); if (c) c.remove(); dragging = null; document.body.style.userSelect = ''; }
+  if (mv){ mv = null; if (controls) controls.enabled = true; }
+  pend = null; dropAt = null; hideGhost();
+}
+function beginCatalogDrag(){
+  if (!pend || pend.started) return; pend.started = true; dragging = {type:pend.type};
+  if (placing) stopPlacing(); if (S.drawer && window.innerWidth > 1080) setDrawer(false);
+  const chip = document.createElement('div'); chip.className = 'dragchip'; chip.textContent = TYPES[dragging.type].name; document.body.appendChild(chip);
+  document.body.style.userSelect = 'none';
+}
+document.addEventListener('pointerdown', e => {
+  const card = e.target.closest && e.target.closest('.card[data-type]'); if (!card || (e.pointerType === 'mouse' && e.button !== 0)) return;
+  pend = {type:card.dataset.type, x:e.clientX, y:e.clientY, touch:e.pointerType === 'touch', started:false, timer:null};
+  if (pend.touch) pend.timer = setTimeout(() => { if (pend) beginCatalogDrag(); }, 260);
+});
+document.addEventListener('pointermove', e => {
+  if (pend && !pend.started){
+    const d = Math.hypot(e.clientX - pend.x, e.clientY - pend.y);
+    if (!pend.touch && d > 6) beginCatalogDrag(); else if (pend.touch && d > 10){ clearTimeout(pend.timer); pend = null; }
+  }
+  if (dragging){
+    const chip = document.querySelector('.dragchip'); if (chip){ chip.style.left = e.clientX + 'px'; chip.style.top = e.clientY + 'px'; }
+    if (overStage(e)) hoverAt(e.clientX, e.clientY, dragging.type); else { dropAt = null; hideGhost(); }
+  } else if (mv){
+    if (!mv.active && Math.hypot(e.clientX - mv.x, e.clientY - mv.y) > 6) mv.active = true;
+    const m = S.modules.find(o => o.id === mv.id);
+    if (mv.active && m){ if (overStage(e)) hoverAt(e.clientX, e.clientY, m.type, m); else { dropAt = null; hideGhost(); } }
+  } else if (placing && overStage(e) && e.pointerType === 'mouse') hoverAt(e.clientX, e.clientY, placing.type);
+});
+document.addEventListener('pointerup', e => {
+  if (dragging){
+    const type = dragging.type; if (overStage(e)) hoverAt(e.clientX, e.clientY, type);
+    const at = dropAt ? Object.assign({}, dropAt) : null; cancelDrags(); dragJustEnded = true; setTimeout(() => dragJustEnded = false, 60);
+    if (at){ dropAt = at; finishPlace(type, null); }
+    return;
+  }
+  if (mv){ const m = S.modules.find(o => o.id === mv.id), moved = mv.active && dropAt && m; controls.enabled = true; const id = mv.id; mv = null; if (moved) finishPlace(m.type, id); else { dropAt = null; hideGhost(); } }
+  if (pend){ clearTimeout(pend.timer); pend = null; }
+});
+document.addEventListener('pointercancel', cancelDrags);
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && (placing || dragging || mv)){ cancelDrags(); stopPlacing(); } });
+document.addEventListener('touchmove', e => { if (dragging && e.cancelable) e.preventDefault(); }, {passive:false});
+document.getElementById('stage').addEventListener('pointerdown', e => {
+  if (placing || dragging || (e.pointerType === 'mouse' && e.button !== 0) || !controls) return;
+  const id = pickModId(e.clientX, e.clientY);
+  if (id && id === S.selected){ mv = {id, x:e.clientX, y:e.clientY, active:false}; controls.enabled = false; }
+}, true);
+
 /* ---------------- boot ---------------- */
 ensureRefs(); recalc();
-renderPrices(); setTab(S.tab || 'smeta');
+renderPrices(); setTab(S.tab || 'smeta'); setDrawer(!!S.drawer); renderExtras();
 $('btnDims').setAttribute('aria-pressed', String(S.showDims));
 init3D();
 update({resetCam:true});
