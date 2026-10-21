@@ -36,7 +36,7 @@ services:
       - key: RELAY_TOKEN
         generateValue: true
       # Общая база проектов для тестирования. DATABASE_URL — строка подключения PostgreSQL (Render → New → PostgreSQL → Internal Database URL).
-      # PROJECTS_TOKEN — код доступа, который тестировщики вводят в программе («Проекты»); Render создаёт его сам.
+      # PROJECTS_TOKEN — главный код администратора (Render создаёт сам): им в программе («Проекты → Люди») заводят тестировщиков и выдают личные коды. Не раздавать.
       - key: DATABASE_URL
         sync: false
       - key: PROJECTS_TOKEN
