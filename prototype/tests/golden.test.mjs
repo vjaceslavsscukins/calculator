@@ -371,3 +371,12 @@ test('торец в алюминиевой рамке: боковина заме
   const low = shopState(); low.modules[0].frL = true;
   assert.equal(cur.panelsOf(low.modules[0], low).filter((p) => p.mat === 'frame').length, 0);
 });
+
+test('сверка с моделями Базиса: верхний цеха с Gola H-4, без Gola H-3; пенал под холодильник 716 / остальное / 346', () => {
+  const mk = (type, h, handle) => { const S = shopState({ modules: [{ id: 'm1', type, wall: 'A', w: 600, h, d: 340, blind: 'left', corpus: null, facade: null, light: false, cut: { sink: false, hob: false, pipe: false } }] }); S.mat.handle = handle; return cur.facadesOf(S.modules[0], S); };
+  assert.equal(mk('s_up_door', 1022, 'gola')[0].h, 1018);
+  assert.equal(mk('s_up_door', 720, 'bar')[0].h, 717);
+  const t = mk('s_tall_3', 2620, 'bar').map((f) => f.h);
+  assert.equal(JSON.stringify(t), JSON.stringify([716, 2620 - 1074, 346]));
+  assert.equal(t.reduce((a, b) => a + b, 0), 2620 - 12);
+});
