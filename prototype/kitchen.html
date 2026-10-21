@@ -282,6 +282,8 @@ details.paste textarea{min-height:90px;font-family:var(--f-mono);font-size:12px;
 .pickfield .pf-t small{font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sw.big{width:34px;height:34px;flex:none;border-radius:8px}
 .top-proj{white-space:nowrap}
+.top-proj[hidden]{display:none}
+.role-sel{font:inherit;padding:4px 6px}
 .sdot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-left:8px;background:#B8B4AA;vertical-align:1px}
 #btnProj[data-s="ok"] .sdot{background:#4C9A5F}
 #btnProj[data-s="warn"] .sdot{background:#D08A2E}
@@ -394,6 +396,7 @@ dialog.dlg::backdrop{background:rgba(20,18,15,.5)}
         <div class="brand-sub" id="hdrProject"></div>
       </div>
     </div>
+    <button class="btn top-proj" data-act="open-prices" id="btnPrices" title="Прайсы и каталоги: цены, материалы, фурнитура (только администратор)" hidden>Прайсы</button>
     <button class="btn top-proj" data-act="proj-open" id="btnProj" data-s="off" title="Проекты: создать, открыть, сохранить в общую базу">Проекты<span class="sdot" aria-hidden="true"></span><span class="sr-only" id="projStatus" aria-live="polite"></span></button>
     <details class="menu top-print" id="printMenu"><summary class="btn pri" aria-haspopup="true">Печать</summary>
       <div class="menu-pop">
@@ -432,6 +435,7 @@ dialog.dlg::backdrop{background:rgba(20,18,15,.5)}
         <div class="stage-tools">
           <button class="gbtn" id="btnUndo" data-act="undo" disabled title="Отменить (Ctrl+Z)">Отменить</button>
           <button class="gbtn" id="btnRedo" data-act="redo" disabled title="Повторить (Ctrl+Shift+Z)">Повторить</button>
+          <button class="gbtn" id="btnXray" data-act="xray" aria-pressed="false" title="Прозрачные панели: видны полки, ящики и фурнитура">Прозрачный</button>
           <details class="menu viewmenu" id="viewMenu"><summary class="gbtn" aria-haspopup="true">Вид</summary>
             <div class="menu-pop">
               <div class="mrow"><span class="mlbl">Режим</span><div class="seg viewseg" id="viewSeg" role="group" aria-label="Вид модулей">
@@ -455,7 +459,7 @@ dialog.dlg::backdrop{background:rgba(20,18,15,.5)}
             <button class="tab" role="tab" id="tb-smeta" data-act="tab" data-v="smeta">Смета</button>
             <button class="tab" role="tab" id="tb-bom" data-act="tab" data-v="bom" title="Что и сколько заказать: листы, фасады, фурнитура">Закупка</button>
             <button class="tab" role="tab" id="tb-tech" data-act="tab" data-v="tech">Технологу</button>
-            <button class="tab" role="tab" id="tb-prices" data-act="tab" data-v="prices">Прайс и каталоги</button>
+            <button class="tab" role="tab" id="tb-prices" data-act="tab" data-v="prices" hidden>Прайс и каталоги</button>
           </div>
           <div class="dockinfo"><span class="lbl">Итого</span><b id="dockTotal">0 ₽</b></div>
           <button class="gbtn dockbtn" id="btnDrawer" data-act="drawer" aria-expanded="false" aria-controls="docbody">
@@ -1053,9 +1057,9 @@ function deepMerge(base, over){
   return out;
 }
 function load(key){ try { const s = localStorage.getItem(key); return s ? JSON.parse(s) : null; } catch(e){ return null; } }
-function store(key, v){ try { localStorage.setItem(key, JSON.stringify(v)); } catch(e){} if (key === KS) projectChanged(); }
+function store(key, v){ try { localStorage.setItem(key, JSON.stringify(v)); } catch(e){} if (key === KS) projectChanged(); else if (key === KP) settingsChanged('prices'); else if (key === KC) settingsChanged('catalogs'); }
 // Проекты: общая база для тестирования. Настройки подключения лежат в браузере, данные проектов на сервере (kitchen-api, PostgreSQL).
-const BUILD = '21.10.2026, сборка 7'; // меняется при каждом выпуске: по ней видно, какая версия открыта
+const BUILD = '21.10.2026, сборка 8'; // меняется при каждом выпуске: по ней видно, какая версия открыта
 const KSRV = 'kitchen.server.v1', API_DEFAULT = 'https://kitchen-api-c112.onrender.com';
 const PKEYS = ['client', 'order', 'layout', 'walls', 'room', 'mat', 'disc', 'modules', 'nextId', 'extra', 'kp'];
 let srv = Object.assign({url:API_DEFAULT, code:'', name:'', role:''}, load(KSRV) || {});
@@ -1066,7 +1070,8 @@ setTemplates(load(KTPL) || []);
 let S = (() => { const s = load(KS); if (s && Array.isArray(s.modules) && s.mat && s.walls) return Object.assign(sampleState(), s); return sampleState(); })();
 proj.saved = S.projectHash || '';
 let P = deepMerge(DEFAULT_PRICES, load(KP));
-let C = (() => { const c = load(KC); const d = JSON.parse(JSON.stringify(DEFAULT_CAT)); if (c) for (const k in d) if (Array.isArray(c[k]) && c[k].length) d[k] = c[k]; return d; })();
+const catFrom = c => { const d = JSON.parse(JSON.stringify(DEFAULT_CAT)); if (c) for (const k in d) if (Array.isArray(c[k]) && c[k].length) d[k] = c[k]; return d; };
+let C = catFrom(load(KC));
 let A = null;
 let openAll = false; const openSet = new Set();
 
@@ -1118,7 +1123,9 @@ function modNotes(m){
 /* ---------------- module schematic (drawn from the same facade data) ---------------- */
 /* ---------------- картинки модулей для каталога: настоящий рендер из 3D ---------------- */
 const thumbs = {}; let thumbTimer = null;
-const thumbSig = () => [S.mat.corpus, S.mat.facade, S.mat.milling, S.mat.fLow, S.mat.fUp, S.mat.handle, S.mat.hwColor, S.mat.drawers, S.mat.drawerColor, Object.keys(TYPES).length].join('|');
+// картинки каталога рисуются в выбранной «папке» (ручка / Gola / push), а не в стиле открытого проекта
+const catStyle = () => HANDLES[S.catStyle] ? S.catStyle : 'bar';
+const thumbSig = () => [S.mat.corpus, S.mat.facade, S.mat.milling, S.mat.fLow, S.mat.fUp, catStyle(), S.mat.hwColor, S.mat.drawers, S.mat.drawerColor, Object.keys(TYPES).length].join('|');
 function thumbGet(type){ const t = thumbs[thumbSig()]; return t && t[type] || ''; }
 // Рисует один модуль на нейтральном фоне с выдвинутыми ящиками. Возвращает адрес картинки или пустую строку.
 function renderThumb(type, o = {}){
@@ -1129,8 +1136,9 @@ function renderThumb(type, o = {}){
   const m = {id:'th_' + type, type, wall:'A', w:t.w, h:t.h, d:t.d, blind:'left', corpus:null, facade:null, light:false, cut:defCut(type)};
   const nAnim = anims.length, nDisp = disposables.length, opened = [];
   if (o.open) facadesOf(m, S).forEach((f, i) => { if (f.k === 'drawer'){ const id = m.id + ':' + i; if (!openSet.has(id)){ openSet.add(id); opened.push(id); } } });
-  let url = '', g = null; const old = renderer.getSize(new THREE.Vector2()), rootWas = root.visible, helperWas = helper && helper.visible;
+  let url = '', g = null; const old = renderer.getSize(new THREE.Vector2()), rootWas = root.visible, helperWas = helper && helper.visible, handleWas = S.mat.handle;
   try {
+    S.mat.handle = catStyle();
     g = buildModule(m, {x:0, wall:'A'});
     g.position.set(0, 0, 0); g.rotation.set(0, 0, 0); root.visible = false; if (helper) helper.visible = false; scene.add(g);
     const w = o.w || 360, h = o.h || 300, box3 = new THREE.Box3().setFromObject(g), size = box3.getSize(new THREE.Vector3()), c = box3.getCenter(new THREE.Vector3());
@@ -1139,6 +1147,7 @@ function renderThumb(type, o = {}){
     cam.position.copy(c).addScaledVector(dir, r / Math.tan(fov / 2) * 1.02 + size.z / 2); cam.lookAt(c); cam.updateProjectionMatrix();
     renderer.setSize(w, h, false); renderer.render(scene, cam); url = renderer.domElement.toDataURL('image/png');
   } catch(e){ url = ''; }
+  S.mat.handle = handleWas;
   if (g){ scene.remove(g); g.traverse(o => { if (o.geometry) o.geometry.dispose(); }); }
   root.visible = rootWas; if (helper) helper.visible = helperWas; renderer.setSize(old.x, old.y, false);
   opened.forEach(id => openSet.delete(id)); anims.length = nAnim; disposables.length = nDisp;
@@ -1259,6 +1268,8 @@ function leftCatalog(){
   const ws = wallsOf(S), num = numberMap();
   let h = `<div class="sec"><h3>Добавить модуль</h3>
     <div class="cats">${CATS.map(([k, n]) => `<button class="cat" data-act="cat" data-v="${k}" aria-pressed="${S.cat === k}">${n}</button>`).join('')}</div>
+    <div class="field" style="margin-top:8px"><span class="flabel">Как показывать модули</span><div class="seg">${Object.entries(HANDLES).map(([k, v]) => `<button data-act="cat-style" data-v="${k}" aria-pressed="${catStyle() === k}">${k === 'bar' ? 'С ручкой' : k === 'gola' ? 'Gola' : 'Push'}</button>`).join('')}</div>
+    ${catStyle() === S.mat.handle ? '' : `<div class="small muted" style="margin-top:6px">В проекте сейчас «${esc(HANDLES[S.mat.handle])}». <button class="btn sm" data-act="mat" data-k="handle" data-v="${catStyle()}">Сделать так во всей кухне</button></div>`}</div>
     <div class="cards">${Object.entries(TYPES).filter(([, t]) => t.cat === S.cat && !t.legacy).map(([k, t]) => `<button class="card" data-act="pick" data-v="${k}" data-type="${k}" aria-pressed="${!!placing && placing.type === k}" aria-label="Поставить на стену: ${esc(t.name)}">${thumbGet(k) ? `<img class="cthumb" alt="" src="${thumbGet(k)}">` : moduleSvg(k)}${t.todo ? '<span class="cwarn" title="Правило требует проверки технолога">!</span>' : ''}<span class="cn">${esc(t.name)}</span><span class="cs">${t.gap ? t.w : t.w + '×' + t.h}</span></button>`).join('')}</div>
     <button class="btn sm" data-act="lib-open">Библиотека модулей…</button>
     <div class="dnd-note"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex:none;margin-top:2px"><path d="M8 1.5v13M1.5 8h13M8 1.5L6 3.5M8 1.5l2 2M8 14.5l-2-2M8 14.5l2-2M1.5 8l2-2M1.5 8l2 2M14.5 8l-2-2M14.5 8l-2 2"/></svg><span>Перетащите модуль на стену в 3D-виде. На планшете: нажмите на модуль, затем на нужное место на стене.</span></div>
@@ -1708,6 +1719,7 @@ function applyImport(){
   });
   if (!list.length){ toast('Каталог не может остаться пустым'); return; }
   C[key] = list; ensureRefs();
+  settingsChanged('catalogs');
   if (!storeChecked(KC, C)) toast('Каталог не поместился в память браузера: после перезагрузки он пропадёт. Большие каталоги будут храниться на сервере.');
   store(KBACKUP, {key, items:before, at:today});
   const meta = load(KMETA) || {}; meta[key] = {at:today, source:imp.source, rows:plan.items.length}; store(KMETA, meta);
@@ -1929,7 +1941,56 @@ async function printKP(){
 
 
 /* ---------------- проекты: общая база для тестирования ---------------- */
-const srvOn = () => !!srv.code && srv.role !== 'admin';
+// Роли: owner — главный код (людей и прайсы, проектов нет), admin — то же + свои проекты, manager — проекты, прайсы только читает.
+const srvOn = () => !!srv.code && srv.role !== 'owner';
+const isAdminRole = () => srv.role === 'admin' || srv.role === 'owner';
+// без входа в общую базу прайсы правятся локально (режим прототипа); вошедший менеджер их не правит
+const canPrices = () => !srv.code || isAdminRole();
+function applyRole(){
+  const b = $('btnPrices'); if (b) b.hidden = !canPrices();
+  if (!canPrices() && S.tab === 'prices') setTab('smeta');
+}
+/* прайсы и каталоги: общие на сервере, правит администратор, остальные получают при входе */
+const sett = {rev:{prices:0, catalogs:0}, dirty:{}, timer:null, pulling:false, by:{}, at:{}};
+function settingsApply(st){
+  sett.pulling = true;
+  try {
+    if (st.prices){ P = deepMerge(DEFAULT_PRICES, st.prices.value); store(KP, P); }
+    if (st.catalogs){ C = catFrom(st.catalogs.value); store(KC, C); }
+  } finally { sett.pulling = false; }
+  for (const k of ['prices', 'catalogs']) if (st[k]){ sett.rev[k] = st[k].rev; sett.by[k] = st[k].updatedBy; sett.at[k] = st[k].updatedAt; sett.dirty[k] = false; }
+  ensureRefs(); renderPrices(); update();
+}
+async function settingsPull(){
+  const st = (await api('GET', '/settings')).settings;
+  settingsApply(st);
+  // на сервере ещё нет прайсов: первый вошедший администратор отдаёт свои
+  if (isAdminRole()) for (const k of ['prices', 'catalogs']) if (!st[k]) settingsChanged(k);
+}
+function settingsChanged(key){
+  if (sett.pulling || !srv.code || !isAdminRole()) return;
+  sett.dirty[key] = true; clearTimeout(sett.timer); sett.timer = setTimeout(settingsPush, 1500);
+}
+async function settingsPush(){
+  for (const k of ['prices', 'catalogs']){
+    if (!sett.dirty[k]) continue;
+    try {
+      const r = await api('PUT', '/settings/' + k, {rev:sett.rev[k], value:k === 'prices' ? P : C});
+      sett.rev[k] = r.rev; sett.by[k] = r.updatedBy; sett.at[k] = r.updatedAt; sett.dirty[k] = false;
+    } catch(e){
+      sett.dirty[k] = false;
+      if (e.status === 409){ toast('Прайсы изменил ' + ((e.body && e.body.updatedBy) || 'другой администратор') + ': загружаем его версию, ваша последняя правка не сохранена.'); try { await settingsPull(); } catch(e2){} }
+      else toast('Прайсы не сохранены на сервере: ' + apiMsg(e));
+    }
+  }
+}
+// роль в браузере могла устареть (например, после смены прав): уточняем у сервера
+async function projWhoAmI(){
+  if (!srv.code) { applyRole(); return; }
+  try { const me = await api('GET', '/me'); srv.name = me.name; srv.role = me.role; store(KSRV, srv); applyRole(); await settingsPull(); }
+  catch(e){ if (e.status === 401){ srv.code = ''; srv.name = ''; srv.role = ''; store(KSRV, srv); } applyRole(); }
+  renderProjStatus();
+}
 const projJson = () => JSON.stringify(PKEYS.map(k => S[k]));
 // Отпечаток сохранённого состояния лежит в S (и переживает перезагрузку страницы), чтобы не перезаписывать проект без правок.
 function projHash(){ const j = projJson(); let h = 5381; for (let i = 0; i < j.length; i++) h = ((h << 5) + h + j.charCodeAt(i)) | 0; return j.length + ':' + (h >>> 0).toString(36); }
@@ -1949,7 +2010,9 @@ async function api(method, path, body){
 }
 function apiMsg(e){
   if (e.status === 401) return 'Код доступа не подошёл. Проверьте код или попросите новый.';
-  if (e.status === 403) return 'У администратора нет проектов: войдите личным кодом.';
+  if (e.body && e.body.error === 'cannot_change_self') return 'Себя изменить нельзя: это сделает другой администратор.';
+  if (e.body && e.body.error === 'owner_has_no_projects') return 'У главного кода нет проектов: войдите личным кодом.';
+  if (e.status === 403) return 'Это действие только для администратора.';
   if (e.status === 503) return 'На сервере не настроена база проектов.';
   if (e.status === 413) return 'Проект слишком большой для сервера.';
   if (e.status === 429) return 'Слишком много запросов, повторите через секунду.';
@@ -1957,7 +2020,7 @@ function apiMsg(e){
   return 'Ошибка сервера: ' + e.message;
 }
 function projStatus(){
-  if (srv.role === 'admin') return ['Вход администратора: проекты недоступны', true];
+  if (srv.role === 'owner') return ['Вход владельца: проекты недоступны, только люди и прайсы', true];
   if (!srvOn()) return ['Общая база не подключена: проект только в этом браузере', true];
   if (!S.projectId) return ['Кухня не сохранена в общую базу', true];
   if (proj.conflict) return ['Конфликт: проект изменён другим человеком', true];
@@ -2013,17 +2076,26 @@ function projConnect(){
   proj.list = null; proj.users = null; proj.issued = null;
   projGuard('Входим (сервис может просыпаться до минуты)…', async () => {
     const me = await api('GET', '/me'); srv.name = me.name; srv.role = me.role; store(KSRV, srv);
-    if (me.role === 'admin') await projUsers(); else await projRefresh();
+    applyRole();
+    if (isAdminRole()) await projUsers();
+    if (srvOn()) await projRefresh();
+    await settingsPull();
   }).then(() => { if (!srv.role){ srv.code = ''; store(KSRV, srv); renderProj(); } });
 }
-function projLogout(){ srv.code = ''; srv.name = ''; srv.role = ''; store(KSRV, srv); proj.list = null; proj.users = null; proj.issued = null; proj.err = ''; renderProj(); renderProjStatus(); }
+function projLogout(){ srv.code = ''; srv.name = ''; srv.role = ''; applyRole(); store(KSRV, srv); proj.list = null; proj.users = null; proj.issued = null; proj.err = ''; renderProj(); renderProjStatus(); }
 async function projUsers(){ proj.users = (await api('GET', '/users')).users; }
 function userAdd(){
   const name = ($('prUserName').value || '').trim(); if (!name){ toast('Введите имя человека'); $('prUserName').focus(); return; }
-  projGuard('Заводим человека…', async () => { const u = await api('POST', '/users', {name}); proj.issued = {name:u.name, code:u.code}; await projUsers(); });
+  const role = ($('prUserRole') || {}).value === 'admin' ? 'admin' : 'manager';
+  projGuard('Заводим человека…', async () => { const u = await api('POST', '/users', {name, role}); proj.issued = {name:u.name, code:u.code}; await projUsers(); });
 }
 function userCode(id){ if (!confirm('Выдать новый код? Старый перестанет работать.')) return;
   projGuard('Выдаём новый код…', async () => { const u = await api('POST', '/users/' + id + '/code'); proj.issued = {name:u.name, code:u.code}; await projUsers(); }); }
+function userRole(v){
+  const [id, role] = String(v).split(':'), it = (proj.users || []).find(x => x.id === id);
+  if (!confirm(role === 'admin' ? 'Дать «' + (it ? it.name : '') + '» доступ администратора? Он сможет менять прайсы и заводить людей.' : 'Сделать «' + (it ? it.name : '') + '» менеджером? Прайсы он больше менять не сможет.')) return;
+  projGuard('Меняем доступ…', async () => { await api('PATCH', '/users/' + id, {role}); await projUsers(); });
+}
 function userOff(id){ if (!confirm('Отключить человека? Его код перестанет работать, проекты сохранятся.')) return;
   projGuard('Отключаем…', async () => { await api('DELETE', '/users/' + id); proj.issued = null; await projUsers(); }); }
 function copyIssued(){ if (!proj.issued) return; const t = proj.issued.code; (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => toast('Код скопирован'), () => { const r = document.createRange(); r.selectNodeContents($('issuedCode')); const sl = getSelection(); sl.removeAllRanges(); sl.addRange(r); toast('Выделено, нажмите Ctrl+C'); }); }
@@ -2062,9 +2134,24 @@ function projDel(id){
 function projTakeTheirs(){ const id = S.projectId; proj.conflict = null; projGuard('Загружаем версию с сервера…', async () => adoptProject(await api('GET', '/projects/' + id))); }
 function projKeepMine(){ const c = proj.conflict; if (!c) return; S.projectRev = c.rev; proj.conflict = null; renderProj(); saveProject(); }
 function projSaveNow(){ if (!S.projectId){ projSaveAs(); return; } saveProject(true); }
+function peopleHtml(){
+  let h = '';
+  if (proj.issued) h += `<div class="proj-warn"><b>Код для ${esc(proj.issued.name)}</b>: <code id="issuedCode" style="font-size:15px;user-select:all">${esc(proj.issued.code)}</code>
+    <div class="btns" style="margin-top:8px"><button class="btn sm" data-act="proj-copycode">Скопировать код</button></div>
+    <p class="proj-note">Покажем один раз, потом его не восстановить: на сервере хранится только отпечаток. Передайте человеку лично.</p></div>`;
+  h += `<div class="sec"><h3>Люди и доступы</h3><div class="row3"><div class="field"><label for="prUserName">Новый человек</label><input type="text" id="prUserName" placeholder="Имя и фамилия"></div>
+    <div class="field"><label for="prUserRole">Доступ</label><select id="prUserRole" class="role-sel"><option value="manager">Менеджер: проекты, прайсы только смотрит</option><option value="admin">Администратор: ещё прайсы и люди</option></select></div>
+    <div class="field"><label>&nbsp;</label><button class="btn pri" data-act="user-add">Создать и выдать код</button></div></div>`;
+  if (!proj.users) h += `<div class="empty"><button class="btn sm" data-act="user-refresh">Загрузить список</button></div>`;
+  else if (!proj.users.length) h += `<div class="empty">Пока никого. Создайте первого.</div>`;
+  else h += `<table class="proj-list" aria-label="Люди">${proj.users.map(u => `<tr><td><b>${esc(u.name)}</b> <span class="muted">· ${u.role === 'admin' ? 'администратор' : 'менеджер'}</span>${u.disabled ? ' <span class="muted">(отключён)</span>' : ''}<div class="small muted">с ${esc(fmtDT(u.createdAt))}</div></td>
+    <td class="acts">${u.disabled ? '' : `<button class="btn sm" data-act="user-role" data-v="${u.id}:${u.role === 'admin' ? 'manager' : 'admin'}">${u.role === 'admin' ? 'Сделать менеджером' : 'Сделать администратором'}</button>`}<button class="btn sm" data-act="user-code" data-v="${u.id}">Новый код</button>${u.disabled ? '' : `<button class="btn sm danger" data-act="user-off" data-v="${u.id}">Отключить</button>`}</td></tr>`).join('')}</table>`;
+  h += `<p class="proj-note">Прайсы и каталоги общие: меняет только администратор (кнопка «Прайсы» вверху), у менеджеров они обновляются при входе. Главный код владельца проектов не имеет: чтобы работать с проектами, заведите себя отдельным человеком.</p></div>`;
+  return h;
+}
 function renderProj(){
   const body = $('projBody'); if (!body) return; $('projVer').textContent = 'версия ' + BUILD;
-  const logged = !!srv.code && !!srv.role, admin = srv.role === 'admin', on = srvOn(), cur = S.projectId, c = proj.conflict;
+  const logged = !!srv.code && !!srv.role, admin = srv.role === 'owner', on = srvOn(), cur = S.projectId, c = proj.conflict;
   let h = '';
   if (c) h += `<div class="proj-warn"><b>Проект изменили без вас.</b> ${c.updatedBy ? esc(c.updatedBy) + ', ' : ''}${esc(fmtDT(c.updatedAt))}. Так бывает, если проект открыт на двух компьютерах. Если загрузить версию с сервера, ваши последние правки пропадут. Если перезаписать, пропадут те.
     <div class="btns" style="margin-top:8px"><button class="btn" data-act="proj-theirs">Загрузить версию с сервера</button><button class="btn danger" data-act="proj-mine">Перезаписать моей версией</button></div></div>`;
@@ -2078,20 +2165,8 @@ function renderProj(){
       <p class="proj-note">Проекты видны только тому, чей это код. Код хранится только в этом браузере. Для проверки используйте вымышленных клиентов: сервер стоит не в России.</p></div>`;
     body.innerHTML = h; return;
   }
-  h += `<div class="sec"><div class="edhead"><span class="ttl">Вы вошли как ${esc(srv.name)}${admin ? ' (администратор)' : ''}</span><span class="pr"><button class="btn sm" data-act="proj-logout">Выйти</button></span></div></div>`;
-  if (admin){
-    if (proj.issued) h += `<div class="proj-warn"><b>Код для ${esc(proj.issued.name)}</b>: <code id="issuedCode" style="font-size:15px;user-select:all">${esc(proj.issued.code)}</code>
-      <div class="btns" style="margin-top:8px"><button class="btn sm" data-act="proj-copycode">Скопировать код</button></div>
-      <p class="proj-note">Покажем один раз, потом его не восстановить: на сервере хранится только отпечаток. Передайте человеку лично.</p></div>`;
-    h += `<div class="sec"><h3>Люди</h3><div class="row3"><div class="field"><label for="prUserName">Новый человек</label><input type="text" id="prUserName" placeholder="Имя и фамилия"></div>
-      <div class="field"><label>&nbsp;</label><button class="btn pri" data-act="user-add">Создать и выдать код</button></div></div>`;
-    if (!proj.users) h += `<div class="empty"><button class="btn sm" data-act="user-refresh">Загрузить список</button></div>`;
-    else if (!proj.users.length) h += `<div class="empty">Пока никого. Создайте первого.</div>`;
-    else h += `<table class="proj-list" aria-label="Люди">${proj.users.map(u => `<tr><td><b>${esc(u.name)}</b>${u.disabled ? ' <span class="muted">(отключён)</span>' : ''}<div class="small muted">с ${esc(fmtDT(u.createdAt))}</div></td>
-      <td class="acts"><button class="btn sm" data-act="user-code" data-v="${u.id}">Новый код</button>${u.disabled ? '' : `<button class="btn sm danger" data-act="user-off" data-v="${u.id}">Отключить</button>`}</td></tr>`).join('')}</table>`;
-    h += `<p class="proj-note">Администратор заводит людей и выдаёт коды, но чужих проектов не видит и своих не имеет. Чтобы тоже проверять программу, заведите себя как обычного человека и входите его кодом.</p></div>`;
-    body.innerHTML = h; return;
-  }
+  h += `<div class="sec"><div class="edhead"><span class="ttl">Вы вошли как ${esc(srv.name)} (${srv.role === 'owner' ? 'владелец' : srv.role === 'admin' ? 'администратор' : 'менеджер'})</span><span class="pr"><button class="btn sm" data-act="proj-logout">Выйти</button></span></div></div>`;
+  if (srv.role === 'owner'){ body.innerHTML = h + peopleHtml(); return; }
   h += `<div class="sec"><h3>Текущая кухня</h3><div class="edhead"><span class="ttl">${esc(projName())}</span><span class="pr">${esc(projStatus()[0])}</span></div>
     <div class="btns"><button class="btn" data-act="proj-save">Сохранить сейчас</button>${cur ? '' : '<button class="btn pri" data-act="proj-saveas">Сохранить как проект</button>'}</div>
     <p class="proj-note">${cur ? 'Изменения сохраняются сами через пару секунд.' : 'Эта кухня пока только в вашем браузере. Нажмите «Сохранить как проект», чтобы она сохранилась в вашей базе.'}</p></div>
@@ -2105,9 +2180,10 @@ function renderProj(){
     <td class="acts"><button class="btn sm" data-act="proj-load" data-v="${x.id}">${x.id === cur ? 'Перезагрузить' : 'Открыть'}</button><button class="btn sm" data-act="proj-copy" data-v="${x.id}">Копия</button><button class="btn sm danger" data-act="proj-del" data-v="${x.id}">Удалить</button></td></tr>`).join('')}</table>
     <div class="btns" style="margin-top:8px"><button class="btn sm" data-act="proj-refresh">Обновить список</button></div>`;
   h += '</div>';
+  if (isAdminRole()) h += peopleHtml();
   body.innerHTML = h;
 }
-function openProj(){ renderProj(); $('projDlg').showModal(); if (proj.busy) return; if (srvOn() && !proj.list) projGuard('Загружаем список…', projRefresh); else if (srv.role === 'admin' && !proj.users) projGuard('Загружаем список…', projUsers); }
+function openProj(){ renderProj(); $('projDlg').showModal(); if (proj.busy) return; if (srvOn() && !proj.list) projGuard('Загружаем список…', projRefresh); else if (isAdminRole() && !proj.users) projGuard('Загружаем список…', projUsers); }
 
 /* ---------------- update ---------------- */
 function recalc(){ A = calcAll(S, P, C); }
@@ -2209,13 +2285,13 @@ function setSide(hidden){
   S.sideHidden = !!hidden; $('work').dataset.side = S.sideHidden ? 'hidden' : 'shown';
   $('btnSide').textContent = S.sideHidden ? 'Меню ›' : '‹ Меню'; $('btnSide').title = S.sideHidden ? 'Показать меню' : 'Скрыть меню: больше места для картинки'; store(KS, S);
 }
-function syncViewSeg(){ document.querySelectorAll('#viewSeg [data-act="view"]').forEach(b => b.setAttribute('aria-pressed', String((S.view || 'color') === b.dataset.v))); }
+function syncViewSeg(){ const x = $('btnXray'); if (x) x.setAttribute('aria-pressed', String(S.view === 'xray')); document.querySelectorAll('#viewSeg [data-act="view"]').forEach(b => b.setAttribute('aria-pressed', String((S.view || 'color') === b.dataset.v))); }
 function setDrawer(open){
   S.drawer = !!open; $('docs').dataset.open = String(S.drawer);
   $('btnDrawer').setAttribute('aria-expanded', String(S.drawer)); $('drawerLbl').textContent = S.drawer ? 'Скрыть' : 'Показать смету';
   store(KS, S);
 }
-function setTab(v){ S.tab = v; if (v === 'tech') renderTech(); ['smeta','bom','tech','prices'].forEach(t => { $('tab-' + t).hidden = t !== v; $('tb-' + t).setAttribute('aria-selected', String(t === v)); }); }
+function setTab(v){ if (v === 'prices' && !canPrices()) v = 'smeta'; S.tab = v; if (v === 'tech') renderTech(); ['smeta','bom','tech','prices'].forEach(t => { $('tab-' + t).hidden = t !== v; $('tb-' + t).setAttribute('aria-selected', String(t === v)); }); }
 function ensureRefs(){
   S.kp = Object.assign({}, KP_DEFAULT, S.kp || {}); if (!Array.isArray(S.extra)) S.extra = [];
   ['corpus','facade','milling','top'].forEach(k => { if (!C[k].some(r => r.id === S.mat[k])) S.mat[k] = C[k][0].id; });
@@ -2234,6 +2310,7 @@ document.addEventListener('click', e => { document.querySelectorAll('details.men
     case 'layout': S.layout = v; update({resetCam:true}); break;
     case 'room-wall': S.room.wall = v; update(); break;
     case 'room-floor': S.room.floor = v; update(); break;
+    case 'cat-style': S.catStyle = v; renderLeft(); store(KS, S); break;
     case 'cat': S.cat = v; renderLeft(); store(KS, S); break;
     case 'pick': if (!dragJustEnded) startPlacing(v); break;
     case 'place-cancel': stopPlacing(); break;
@@ -2244,6 +2321,7 @@ document.addEventListener('click', e => { document.querySelectorAll('details.men
     case 'tech-print': techPrint(); break;
     case 'tech-copy': copy(techTSV(techData())); break;
     case 'toggle-side': setSide(!S.sideHidden); setTimeout(fitCamera, 120); break;
+    case 'xray': S.view = S.view === 'xray' ? 'color' : 'xray'; syncViewSeg(); build3D(false); store(KS, S); break;
     case 'view': S.view = v; syncViewSeg(); build3D(false); store(KS, S); break;
     case 'print-sketch': printSketch(); break;
     case 'print-kp': printKP(); break;
@@ -2280,6 +2358,8 @@ document.addEventListener('click', e => { document.querySelectorAll('details.men
     case 'user-add': userAdd(); break;
     case 'user-code': userCode(v); break;
     case 'user-off': userOff(v); break;
+    case 'user-role': userRole(v); break;
+    case 'open-prices': setTab('prices'); setDrawer(true); break;
     case 'user-refresh': projGuard('Загружаем список…', projUsers); break;
     case 'proj-copycode': copyIssued(); break;
     case 'proj-refresh': projGuard('Загружаем список…', projRefresh); break;
@@ -2975,11 +3055,12 @@ document.getElementById('stage').addEventListener('pointerdown', e => {
 
 /* ---------------- boot ---------------- */
 ensureRefs(); recalc();
-renderPrices(); setTab(S.tab || 'smeta'); setDrawer(!!S.drawer); setSide(!!S.sideHidden); syncViewSeg(); renderExtras(); $('bright').value = Math.round((S.bright || 1) * 100);
+applyRole(); renderPrices(); setTab(S.tab || 'smeta'); setDrawer(!!S.drawer); setSide(!!S.sideHidden); syncViewSeg(); renderExtras(); $('bright').value = Math.round((S.bright || 1) * 100);
 $('btnDims').setAttribute('aria-pressed', String(S.showDims));
 init3D();
 renderCamSeg(); if (S.cam !== 'persp' && has3D) setCamMode(S.cam);
 update({resetCam:true});
+projWhoAmI();
 const mq = window.matchMedia('(prefers-color-scheme: dark)');
 const onTheme = () => { applyStageBg(); build3D(false); };
 mq.addEventListener ? mq.addEventListener('change', onTheme) : mq.addListener(onTheme);
