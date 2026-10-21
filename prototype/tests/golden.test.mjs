@@ -350,3 +350,24 @@ test('шкаф в алюминиевой рамке: фасад считаетс
   const b = cur.calcAll(S, P2, cur.DEFAULT_CAT).mods[0];
   assert.ok(b.c.facade > a.c.facade, 'цена рамки 40×40 из прайса');
 });
+
+test('торец в алюминиевой рамке: боковина заменяется рамкой со стеклом, цена и стекло растут, у нижних не действует', () => {
+  const S = shopState({ modules: [{ id: 'm1', type: 's_up_door', wall: 'A', w: 450, h: 720, d: 340, blind: 'left', corpus: null, facade: null, light: false, cut: { sink: false, hob: false, pipe: false } }] });
+  const m = S.modules[0], total = () => cur.calcAll(S, cur.DEFAULT_PRICES, cur.DEFAULT_CAT);
+  const base = total();
+  assert.equal(cur.panelsOf(m, S).filter((p) => p.n === 'Боковина').reduce((a, p) => a + p.q, 0), 2);
+  m.frL = true;
+  const pn = cur.panelsOf(m, S);
+  assert.equal(pn.find((p) => p.n === 'Боковина').q, 1);
+  const fr = pn.find((p) => p.mat === 'frame');
+  assert.ok(fr && fr.q === 1 && fr.a === 720 && fr.b === 340);
+  const one = total();
+  assert.ok(one.total > base.total, 'торец с рамкой дороже ЛДСП-боковины');
+  m.frR = true; m.endR = true;   // справа рамка важнее фасадного бока
+  const pn2 = cur.panelsOf(m, S);
+  assert.equal(pn2.filter((p) => p.mat === 'frame').reduce((a, p) => a + p.q, 0), 2);
+  assert.equal(pn2.filter((p) => p.n === 'Фасадный бок').length, 0);
+  assert.ok(total().total > one.total);
+  const low = shopState(); low.modules[0].frL = true;
+  assert.equal(cur.panelsOf(low.modules[0], low).filter((p) => p.mat === 'frame').length, 0);
+});
