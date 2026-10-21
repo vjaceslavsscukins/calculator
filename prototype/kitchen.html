@@ -62,7 +62,8 @@ button{cursor:pointer}
 .gbtn:hover{border-color:var(--muted)}
 .gbtn:disabled{opacity:.4;cursor:default}
 .gbtn:disabled:hover{border-color:var(--line)}
-.top-kp{margin-left:auto;margin-right:4px}
+.top-sketch{margin-left:auto}
+.top-kp{margin-right:4px}
 .modbar{position:absolute;z-index:3;display:flex;align-items:center;gap:2px;background:var(--glass);backdrop-filter:blur(10px);border:1px solid var(--line);border-radius:12px;padding:3px;box-shadow:var(--shadow);transform:translateX(-50%);white-space:nowrap}
 .modbar[hidden]{display:none}
 .modbar .nm{font-size:12px;color:var(--muted);padding:0 8px 0 6px;max-width:160px;overflow:hidden;text-overflow:ellipsis}
@@ -70,12 +71,17 @@ button{cursor:pointer}
 .modbar .mb:hover{background:var(--sunk)}
 .modbar .mb.danger{color:var(--warn)}
 .modbar .sep{width:1px;height:18px;background:var(--line);margin:0 3px}
-.modbar input{width:62px;text-align:center;padding:5px 4px;border-radius:8px;font-size:13px}
+.modbar input[type=number]{width:62px;text-align:center;padding:5px 4px;border-radius:8px;font-size:13px}
 .presets{display:flex;flex-direction:column;gap:6px}
 .preset{display:flex;gap:6px}
 .preset .btn:first-child{flex:1;text-align:left;overflow:hidden;text-overflow:ellipsis}
 .presave{display:flex;gap:6px}
 .gbtn[aria-pressed="true"]{background:var(--pri);color:var(--pri-ink);border-color:var(--pri)}
+.stage-views{position:absolute;top:12px;left:12px;display:flex;gap:6px;align-items:center;z-index:2;flex-wrap:wrap;max-width:calc(100% - 330px)}
+.viewseg{background:var(--glass);backdrop-filter:blur(8px);border:1px solid var(--line);box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.viewseg button{padding:5px 10px;font-size:12.5px}
+.work[data-side="hidden"]{grid-template-columns:minmax(0,1fr)}
+.work[data-side="hidden"] .side{display:none}
 .stage-hint{position:absolute;left:16px;bottom:78px;right:16px;font-size:12px;color:var(--muted);pointer-events:none}
 .stage-err{position:absolute;inset:0;display:grid;place-items:center;padding:24px;text-align:center;color:var(--muted)}
 .place-banner{position:absolute;left:50%;top:12px;transform:translateX(-50%);display:flex;align-items:center;gap:10px;background:var(--pri);color:var(--pri-ink);padding:8px 8px 8px 14px;border-radius:999px;font-size:13px;font-weight:500;box-shadow:var(--shadow);z-index:4;max-width:calc(100% - 330px)}
@@ -254,7 +260,7 @@ details.paste textarea{min-height:90px;font-family:var(--f-mono);font-size:12px;
 @media (max-width: 560px){
   .hdr-total{text-align:left}
   .top-flag{display:none}
-  .top-kp{display:none}
+  .top-kp,.top-sketch{display:none}
   .cards{grid-template-columns:repeat(2,minmax(0,1fr))}
   .row3{grid-template-columns:1fr 1fr}
 }
@@ -291,6 +297,7 @@ details.paste textarea{min-height:90px;font-family:var(--f-mono);font-size:12px;
 .kp-sums{break-inside:avoid;margin:5mm 0 0 auto;width:90mm;font-size:10.5pt;font-variant-numeric:tabular-nums}
 .kp-sums div{display:flex;justify-content:space-between;padding:1mm 0}
 .kp-sums .t{border-top:2px solid #1C1B19;margin-top:2mm;padding-top:3mm;font-size:15pt;font-weight:600}
+.sketch .kp-img{max-height:150mm;object-fit:contain;border:0;margin-top:4mm}
 .kp-foot{margin-top:8mm;font-size:9.5pt;color:#4a463f;border-top:1px solid #DCD8CF;padding-top:3mm;break-inside:avoid}
 </style>
 
@@ -306,6 +313,7 @@ details.paste textarea{min-height:90px;font-family:var(--f-mono);font-size:12px;
       </div>
     </div>
     <span class="top-flag">Цены примерные. Свои загружаются во вкладке «Прайс и каталоги»</span>
+    <button class="btn top-sketch" data-act="print-sketch" title="Печать картинки для показа клиенту">Печать эскиза</button>
     <button class="btn pri top-kp" data-act="print-kp">Печать КП</button>
     <div class="hdr-total">
       <div class="lbl">Итого для клиента</div>
@@ -314,7 +322,7 @@ details.paste textarea{min-height:90px;font-family:var(--f-mono);font-size:12px;
     </div>
   </header>
 
-  <main class="work">
+  <main class="work" id="work" data-side="shown">
     <aside class="side" aria-label="Меню проекта">
       <div class="ltabs" role="tablist">
         <button class="ltab" role="tab" id="lt-room" data-act="ltab" data-v="room">Помещение</button>
@@ -329,6 +337,15 @@ details.paste textarea{min-height:90px;font-family:var(--f-mono);font-size:12px;
       <div class="stage-wrap" id="stageWrap">
         <div id="stage" aria-label="3D-вид кухни"></div>
         <div class="place-banner" id="placeBanner" hidden><span id="placeText"></span><button data-act="place-cancel">Отмена</button></div>
+        <div class="stage-views">
+          <button class="gbtn" id="btnSide" data-act="toggle-side" title="Скрыть меню: больше места для картинки">‹ Меню</button>
+          <div class="seg viewseg" id="viewSeg" role="group" aria-label="Вид модулей">
+            <button data-act="view" data-v="color" title="Обычный цветной вид">Цвет</button>
+            <button data-act="view" data-v="xray" title="Прозрачные панели: видны полки, ящики и фурнитура">Прозрачный</button>
+            <button data-act="view" data-v="lines" title="Только контуры деталей">Контуры</button>
+            <button data-act="view" data-v="carcass" title="Корпуса без фасадов">Без фасадов</button>
+          </div>
+        </div>
         <div class="modbar" id="modbar" hidden></div>
         <div class="stage-tools">
           <button class="gbtn" id="btnUndo" data-act="undo" disabled title="Отменить (Ctrl+Z)">Отменить</button>
@@ -405,6 +422,9 @@ const DRAWERS = {
   tandembox:{n:'TANDEMBOX', colors:[{id:'silk',name:'Шёлковый белый',hex:'#E9E8E3'},{id:'grey',name:'Серый',hex:'#9A9C9E'},{id:'terra',name:'Терра чёрный',hex:'#333230'}]},
 };
 const HANDLES = {bar:'Ручка-скоба', gola:'Профиль Gola', push:'Push, TIP-ON'};
+// цвет ручек-скоб и профиля Gola; на цену пока не влияет // TODO(технолог): есть ли доплата за золото и серебро
+const HWCOLORS = [{id:'black', name:'Чёрный', hex:'#1E1E20', pattern:'metal', rough:.45, metal:.55}, {id:'gold', name:'Золото', hex:'#C9A24E', pattern:'metal', rough:.28, metal:.95}, {id:'silver', name:'Серебро', hex:'#C9CCCF', pattern:'metal', rough:.25, metal:.95}];
+const hwColorOf = () => HWCOLORS.find(c => c.id === S.mat.hwColor) || HWCOLORS[0];
 
 const DEFAULT_CAT = {
   corpus:[
@@ -703,8 +723,8 @@ function sampleState(){
     mk('gap_mezz','B', {w:1330}), mk('mezz_door','B', {d:560})];
   return {client:'Анна И. (пример)', order:'К-0142', layout:'L', walls:{A:3200, B:2400, C:2400},
     room:{height:2700, wall:'#E7E4DD', floor:'oakL'},
-    mat:{corpus:'c1', facade:'f2', milling:'n1', fLow:'k4', fUp:'k1', handle:'bar', drawers:'legrabox', drawerColor:'orion', top:'t4', splash:true},
-    disc:0, modules, selected:'m3', showDims:false, clientView:false, nextId:id + 1, tab:'smeta', ltab:'catalog', cat:'low', place:'A', drawer:false, extra:[], kp:Object.assign({}, KP_DEFAULT)};
+    mat:{corpus:'c1', facade:'f2', milling:'n1', fLow:'k4', fUp:'k1', handle:'bar', hwColor:'black', drawers:'legrabox', drawerColor:'orion', top:'t4', splash:true},
+    disc:0, modules, selected:'m3', showDims:false, clientView:false, nextId:id + 1, tab:'smeta', ltab:'catalog', cat:'low', place:'A', drawer:false, sideHidden:false, view:'color', extra:[], kp:Object.assign({}, KP_DEFAULT)};
 }
 function deepMerge(base, over){
   const out = JSON.parse(JSON.stringify(base));
@@ -737,7 +757,7 @@ function resultOf(id){ return A.mods.find(r => r.m.id === id); }
 function selMod(){ const m = S.modules.find(x => x.id === S.selected); return m && wallsOf(S).includes(m.wall) ? m : null; }
 function sizeStr(m){ return TYPES[m.type].gap ? `${m.w}` : `${m.w}×${m.h}×${m.d}`; }
 function shade(hex, pct){ const n = parseInt(hex.slice(1), 16); const f = c => Math.max(0, Math.min(255, Math.round(c + c * pct / 100))); return '#' + [f(n >> 16), f((n >> 8) & 255), f(n & 255)].map(v => v.toString(16).padStart(2, '0')).join(''); }
-function swBg(c){ return c.pattern === 'wood' || c.pattern === 'planks' ? `repeating-linear-gradient(95deg, ${c.hex} 0 3px, ${shade(c.hex, -12)} 3px 4px)` : c.pattern === 'marble' ? `linear-gradient(135deg, ${c.hex} 40%, #C9C8C3 48%, ${c.hex} 56%)` : c.pattern === 'tiles' ? `linear-gradient(90deg, ${shade(c.hex, -15)} 1px, transparent 1px) 0 0/9px 9px, linear-gradient(${shade(c.hex, -15)} 1px, ${c.hex} 1px) 0 0/9px 9px` : c.hex; }
+function swBg(c){ return c.pattern === 'wood' || c.pattern === 'planks' ? `repeating-linear-gradient(95deg, ${c.hex} 0 3px, ${shade(c.hex, -12)} 3px 4px)` : c.pattern === 'metal' ? `linear-gradient(135deg, ${shade(c.hex, -18)} 0%, ${shade(c.hex, 40)} 42%, ${c.hex} 58%, ${shade(c.hex, -28)} 100%)` : c.pattern === 'marble' ? `linear-gradient(135deg, ${c.hex} 40%, #C9C8C3 48%, ${c.hex} 56%)` : c.pattern === 'tiles' ? `linear-gradient(90deg, ${shade(c.hex, -15)} 1px, transparent 1px) 0 0/9px 9px, linear-gradient(${shade(c.hex, -15)} 1px, ${c.hex} 1px) 0 0/9px 9px` : c.hex; }
 function newModule(type, wall, o = {}){
   const t = TYPES[type];
   return Object.assign({id:'m' + (S.nextId++), type, wall, w:t.w, h:t.h, d:t.d, blind:wall === 'B' ? 'right' : 'left', corpus:null, facade:null,
@@ -940,6 +960,7 @@ function leftMat(){
     <div class="field"><span class="flabel">Низ и пеналы: <span class="swname">${esc(catFind(C.fcolor, S.mat.fLow).name)}</span></span>${swatchRow(C.fcolor, S.mat.fLow, 'mat', 'fLow')}</div>
     <div class="field"><span class="flabel">Верх и антресоли: <span class="swname">${esc(catFind(C.fcolor, S.mat.fUp).name)}</span></span>${swatchRow(C.fcolor, S.mat.fUp, 'mat', 'fUp')}</div>
     <div class="field"><span class="flabel">Открывание</span><div class="seg">${Object.entries(HANDLES).map(([k, v]) => `<button data-act="mat" data-k="handle" data-v="${k}" aria-pressed="${S.mat.handle === k}">${v}</button>`).join('')}</div></div>
+    ${S.mat.handle === 'push' ? '' : `<div class="field"><span class="flabel">Цвет ${S.mat.handle === 'gola' ? 'профиля' : 'ручек'}: <span class="swname">${esc(hwColorOf().name)}</span></span>${swatchRow(HWCOLORS, hwColorOf().id, 'mat', 'hwColor')}</div>`}
   </div>
   <div class="sec"><h3>Фурнитура Blum</h3>
     <div class="small muted">Петли CLIP top BLUMOTION, подъёмники AVENTOS HK top.</div>
@@ -964,7 +985,7 @@ function renderHeader(){
 /* ---------------- documents ---------------- */
 function matLine(){
   const dr = DRAWERS[S.mat.drawers], dc = dr.colors.find(c => c.id === S.mat.drawerColor) || dr.colors[0];
-  return `Корпус ЛДСП ${catFind(C.corpus, S.mat.corpus).name.toLowerCase()} · фасады ${catFind(C.facade, S.mat.facade).name}, ${catFind(C.milling, S.mat.milling).name.toLowerCase()}: низ ${catFind(C.fcolor, S.mat.fLow).name.toLowerCase()}, верх ${catFind(C.fcolor, S.mat.fUp).name.toLowerCase()} · ${HANDLES[S.mat.handle].toLowerCase()} · Blum, ящики ${dr.n} ${dc.name.toLowerCase()}`;
+  return `Корпус ЛДСП ${catFind(C.corpus, S.mat.corpus).name.toLowerCase()} · фасады ${catFind(C.facade, S.mat.facade).name}, ${catFind(C.milling, S.mat.milling).name.toLowerCase()}: низ ${catFind(C.fcolor, S.mat.fLow).name.toLowerCase()}, верх ${catFind(C.fcolor, S.mat.fUp).name.toLowerCase()} · ${HANDLES[S.mat.handle].toLowerCase()}${S.mat.handle === 'push' ? '' : ', ' + hwColorOf().name.toLowerCase()} · Blum, ящики ${dr.n} ${dc.name.toLowerCase()}`;
 }
 function renderSmeta(){
   const cv = S.clientView, num = numberMap(), cols = cv ? 4 : 9;
@@ -1135,11 +1156,11 @@ function copy(text){
 }
 
 /* ---------------- КП на печать ---------------- */
-function snapshot3D(){
+function snapshot3D({labels = false} = {}){
   if (!has3D || !root) return '';
   const hid = [];
   try {
-    root.traverse(o => { if (o.isSprite && o.visible){ o.visible = false; hid.push(o); } });
+    if (!labels) root.traverse(o => { if (o.isSprite && o.visible){ o.visible = false; hid.push(o); } });
     const hv = helper ? helper.visible : true; if (helper) helper.visible = false;
     if (ghost) ghost.visible = false;
     renderer.render(scene, camera);
@@ -1159,7 +1180,7 @@ function kpHtml(img){
     ['Корпус', 'ЛДСП 16 мм, ' + catFind(C.corpus, S.mat.corpus).name.toLowerCase()],
     ['Фасады', catFind(C.facade, S.mat.facade).name + ', ' + catFind(C.milling, S.mat.milling).name.toLowerCase()],
     ['Цвет фасадов', `низ — ${catFind(C.fcolor, S.mat.fLow).name.toLowerCase()}, верх — ${catFind(C.fcolor, S.mat.fUp).name.toLowerCase()}`],
-    ['Открывание', HANDLES[S.mat.handle].toLowerCase()],
+    ['Открывание', HANDLES[S.mat.handle].toLowerCase() + (S.mat.handle === 'push' ? '' : ', ' + hwColorOf().name.toLowerCase())],
     ['Фурнитура', `Blum: петли CLIP top BLUMOTION, ящики ${dr.n} (${dc.name.toLowerCase()})`],
     ['Столешница', top.name + (S.mat.splash ? ', стеновая панель (фартук)' : '')]];
   const grp = n => `<tr class="g"><td colspan="4">${esc(n)}</td></tr>`;
@@ -1194,6 +1215,19 @@ function kpHtml(img){
     <div class="kp-foot">Предложение действует ${kp.valid} дн. с ${date}. Срок изготовления: ${esc(kp.lead || '—')}.
       ${kp.manager || kp.contacts ? `<br>Ваш менеджер: ${esc(kp.manager || '')}${kp.manager && kp.contacts ? ', ' : ''}${esc(kp.contacts || '')}` : ''}</div>
   </div>`;
+}
+function printLandscape(){
+  const st = document.createElement('style'); st.textContent = '@page{size:A4 landscape;margin:10mm}'; document.head.appendChild(st);
+  const done = () => { st.remove(); window.removeEventListener('afterprint', done); }; window.addEventListener('afterprint', done); window.print();
+}
+async function printSketch(){
+  if (!A.mods.length){ toast('Сначала соберите кухню'); return; }
+  const img = snapshot3D({labels:S.showDims}), date = new Date().toLocaleDateString('ru-RU');
+  $('printArea').innerHTML = `<div class="kp sketch"><div class="kp-head"><div><div class="kp-brand">${esc(S.kp.brand || '')}</div><div class="kp-title">Эскиз кухни</div></div>
+    <div class="kp-meta">Заказ ${esc(S.order || '—')} · ${date}<br>${esc(S.client || '')}</div></div>
+    ${img ? `<img class="kp-img" src="${img}" alt="Эскиз кухни">` : ''}<div class="kp-foot">${esc(matLine())}</div></div>`;
+  const im = $('printArea').querySelector('img'); if (im && im.decode){ try { await im.decode(); } catch(e){} }
+  const t = document.title; document.title = 'Эскиз ' + (S.order || '') + (S.client ? ' ' + S.client : ''); printLandscape(); document.title = t;
 }
 async function printKP(){
   if (!A.mods.length && !A.extras.length){ toast('Сначала соберите кухню'); return; }
@@ -1293,6 +1327,11 @@ function confirmClick(btn, label, fn){
   btn.dataset.orig = btn.textContent; btn.dataset.armed = '1'; btn.textContent = label;
   confirmTimers[btn.id] = setTimeout(() => { btn.dataset.armed = ''; btn.textContent = btn.dataset.orig; }, 4000);
 }
+function setSide(hidden){
+  S.sideHidden = !!hidden; $('work').dataset.side = S.sideHidden ? 'hidden' : 'shown';
+  $('btnSide').textContent = S.sideHidden ? 'Меню ›' : '‹ Меню'; $('btnSide').title = S.sideHidden ? 'Показать меню' : 'Скрыть меню: больше места для картинки'; store(KS, S);
+}
+function syncViewSeg(){ document.querySelectorAll('#viewSeg [data-act="view"]').forEach(b => b.setAttribute('aria-pressed', String((S.view || 'color') === b.dataset.v))); }
 function setDrawer(open){
   S.drawer = !!open; $('docs').dataset.open = String(S.drawer);
   $('btnDrawer').setAttribute('aria-expanded', String(S.drawer)); $('drawerLbl').textContent = S.drawer ? 'Скрыть' : 'Показать смету';
@@ -1320,6 +1359,9 @@ document.addEventListener('click', e => {
     case 'pick': if (!dragJustEnded) startPlacing(v); break;
     case 'place-cancel': stopPlacing(); break;
     case 'drawer': setDrawer(!S.drawer); break;
+    case 'toggle-side': setSide(!S.sideHidden); setTimeout(fitCamera, 120); break;
+    case 'view': S.view = v; syncViewSeg(); build3D(false); store(KS, S); break;
+    case 'print-sketch': printSketch(); break;
     case 'print-kp': printKP(); break;
     case 'ex-add': { const id = 'x' + Date.now().toString(36); S.extra.push({id, name:'', q:1, u:'шт', price:0, cost:'', nd:false}); renderExtras(); update({left:false, rebuild:false}); const f = $('ex_' + id + '_name'); if (f) f.focus(); break; }
     case 'ex-del': S.extra = S.extra.filter(x => x.id !== v); renderExtras(); update({left:false, rebuild:false}); break;
@@ -1452,11 +1494,11 @@ function surf(kind, row, rough){
   if (row.pattern === 'wood'){ p.map = woodTex(row.hex); p.color = 0xffffff; }
   else if (row.pattern === 'marble'){ p.map = marbleTex(row.hex); p.color = 0xffffff; }
   else p.color = col(row.hex);
-  return matCache[key] = new THREE.MeshStandardMaterial(p);
+  return matCache[key] = Object.assign(new THREE.MeshStandardMaterial(p), {userData:{kind}});
 }
 function plainMat(key, hex, rough = .6, metal = 0, extra = {}){
   const k = key + hex + rough + metal; if (matCache[k]) return matCache[k];
-  return matCache[k] = new THREE.MeshStandardMaterial(Object.assign({color:col(hex), roughness:rough, metalness:metal}, extra));
+  return matCache[k] = Object.assign(new THREE.MeshStandardMaterial(Object.assign({color:col(hex), roughness:rough, metalness:metal}, extra)), {userData:{kind:key}});
 }
 function box(parent, w, h, d, x, y, z, material, cast = true){
   const me = new THREE.Mesh(new THREE.BoxGeometry(Math.max(w, 1) / 1000, Math.max(h, 1) / 1000, Math.max(d, 1) / 1000), material);
@@ -1565,7 +1607,7 @@ function facadePanel(parent, w, h, x0, y0, mat, mill, glass){
   if (glass){
     const fw = 60; box(parent, w, fw, FT, x0, y0, z0, mat); box(parent, w, fw, FT, x0, y0 + h - fw, z0, mat);
     box(parent, fw, h - 2*fw, FT, x0, y0 + fw, z0, mat); box(parent, fw, h - 2*fw, FT, x0 + w - fw, y0 + fw, z0, mat);
-    const gm = matCache.glassPane || (matCache.glassPane = new THREE.MeshStandardMaterial({color:col('#dfe8ea'), roughness:.05, metalness:.1, transparent:true, opacity:.28, envMapIntensity:1.4}));
+    const gm = matCache.glassPane || (matCache.glassPane = Object.assign(new THREE.MeshStandardMaterial({color:col('#dfe8ea'), roughness:.05, metalness:.1, transparent:true, opacity:.28, envMapIntensity:1.4}), {userData:{kind:'glass'}}));
     box(parent, w - 2*fw, h - 2*fw, 4, x0 + fw, y0 + fw, z0 + 7, gm, false); return;
   }
   const style = mill.style;
@@ -1583,6 +1625,26 @@ function facadePanel(parent, w, h, x0, y0, mat, mill, glass){
   if (style === 'classic' && w - 2*fw > 80 && h - 2*fw > 80) box(parent, w - 2*fw - 50, h - 2*fw - 50, FT - 2, x0 + fw + 25, y0 + fw + 25, z0, mat);
 }
 
+const FACADE_T = 18;
+// Профиль Gola в разрезе (мм, f — вперёд от задней плоскости фасада, y — вверх): тыльная пластина, полка сверху
+// и лицевая губа вровень с фасадами, под губой зазор для пальцев
+function golaShape(){
+  const P = [[-6, 0], [-6, 30], [14, 30], [17, 28.5], [18, 25], [18, 10], [16, 10], [16, 24], [15, 26], [13, 28], [-4, 28], [-4, 0]];
+  const sh = new THREE.Shape(); P.forEach(([f, y], i) => { const x = -f / 1000, yy = y / 1000; i ? sh.lineTo(x, yy) : sh.moveTo(x, yy); }); sh.closePath(); return sh;
+}
+function golaGeo(len){ const g = new THREE.ExtrudeGeometry(golaShape(), {depth:len / 1000, bevelEnabled:false}); g.rotateY(Math.PI / 2); return g; }
+function golaH(parent, x, y, z, len, mat){ const me = new THREE.Mesh(golaGeo(len), mat); me.position.set(x / 1000, y / 1000, z / 1000); me.castShadow = true; me.receiveShadow = true; parent.add(me); return me; }
+function golaV(parent, x, y, z, len, towardsPlus, mat){
+  const g = golaGeo(len); g.rotateZ(towardsPlus ? -Math.PI / 2 : Math.PI / 2); g.computeBoundingBox(); const b = g.boundingBox; g.translate(-b.min.x, -b.min.y, -b.min.z);
+  const me = new THREE.Mesh(g, mat); me.position.set(x / 1000, y / 1000, (z - 6) / 1000); me.castShadow = true; me.receiveShadow = true; parent.add(me); return me;
+}
+// Ручка-скоба: две стойки и круглая перекладина. x, y, w, h — прежний габарит ручки на фасаде.
+function handleBar(parent, x, y, w, h, mat){
+  const vertical = h >= w, L = vertical ? h : w, stand = 24, cx = x + w / 2, cy = y + h / 2;
+  const rail = new THREE.Mesh(new THREE.CylinderGeometry(5 / 1000, 5 / 1000, L / 1000, 14), mat);
+  rail.position.set(cx / 1000, cy / 1000, (FACADE_T + stand) / 1000); if (!vertical) rail.rotation.z = Math.PI / 2; rail.castShadow = true; parent.add(rail);
+  [-1, 1].forEach(k => { const px = vertical ? cx : cx + k * (L / 2 - 8), py = vertical ? cy + k * (L / 2 - 8) : cy; box(parent, 8, 8, stand + 4, px - 4, py - 4, FACADE_T, mat); });
+}
 function placeGroup(g, wall, x, w){
   if (wall === 'B'){ g.rotation.y = Math.PI / 2; g.position.set(0, 0, (x + w) / 1000); }
   else if (wall === 'C'){ g.rotation.y = -Math.PI / 2; g.position.set(S.walls.A / 1000, 0, x / 1000); }
@@ -1611,8 +1673,8 @@ function buildModule(m, pos){
   const finish = catFind(C.facade, S.mat.facade).finish;
   const fac = surf('fac', catFind(C.fcolor, facadeColorId(m, S)), {matte:.8, satin:.5, gloss:.16}[finish] || .6);
   const mill = catFind(C.milling, S.mat.milling);
-  const steel = plainMat('steel', '#A7ABAE', .35, .75), dark = plainMat('dark', '#1C1E20', .25, .2), handleM = plainMat('handle', '#2A2C2E', .4, .6);
-  const alu = plainMat('alu', '#4B4F52', .45, .6);
+  const steel = plainMat('steel', '#A7ABAE', .35, .75), dark = plainMat('dark', '#1C1E20', .25, .2), handleM = plainMat('handle', hwColorOf().hex, hwColorOf().rough, hwColorOf().metal);
+  const alu = plainMat('gola', hwColorOf().hex, hwColorOf().rough, hwColorOf().metal);
   const dr = DRAWERS[S.mat.drawers], dcol = dr.colors.find(c => c.id === S.mat.drawerColor) || dr.colors[0];
   const dmat = plainMat('drawer', dcol.hex, dcol.metal ? .3 : .45, dcol.metal ? .7 : .25), white = plainMat('dbottom', '#EDEDE8', .7);
 
@@ -1638,8 +1700,8 @@ function buildModule(m, pos){
     box(cg, 10, H - 80, 10, W / 2 - 5, baseY + 40, D - 30, steel);
     const fp = new THREE.Group(); fp.position.set(0, baseY / 1000, D / 1000); cg.add(fp);
     facadePanel(fp, W - 4, H - 4 - (S.mat.handle === 'gola' ? GOLA : 0), 2, 2, fac, mill, false);
-    if (S.mat.handle === 'bar') box(fp, 10, 128, 14, W / 2 - 5, H - 200, FT, handleM);
-    if (S.mat.handle === 'gola') box(g, W, GOLA, 20, 0, baseY + H - GOLA, D - 22, alu, false);
+    if (S.mat.handle === 'bar') handleBar(fp, W / 2 - 5, H - 200, 10, 128, handleM);
+    if (S.mat.handle === 'gola') golaH(g, 0, baseY + H - GOLA, D, W, alu);
     cg.userData.fid = m.id + ':' + facadesOf(m, S).findIndex(x => x.k === 'cargo'); addAnim(cg.userData.fid, cg, 'z', (D - 60) / 1000);
   }
 
@@ -1674,15 +1736,15 @@ function buildModule(m, pos){
         if (t.row === 'up' || t.row === 'mezz') hy = 40;
         else if (t.tall) hy = f.part === 'bottom' ? f.h - 60 - 160 : 60;
         else hy = f.h - 60 - 128;
-        box(piv, 10, t.tall ? 160 : 128, 14, hx, hy, FT, handleM);
+        handleBar(piv, hx, hy, 10, t.tall ? 160 : 128, handleM);
       } else {
         const L = Math.min(f.w - 80, f.w > 500 ? 192 : 128);
         const hy = f.k === 'lift' ? hy0 + 26 : (f.h > 160 ? f.h - 48 : f.h / 2 - 5);
-        box(piv, L, 10, 14, f.w / 2 - L / 2, hy, FT, handleM);
+        handleBar(piv, f.w / 2 - L / 2, hy, L, 10, handleM);
       }
     }
-    if (f.channel) box(g, f.w + 4, GOLA, 20, f.x - 2, baseY + f.y + f.h + 2, D - 22, alu, false);
-    if (f.vch !== undefined) box(g, GOLA, f.h, 20, f.vch, baseY + f.y, D - 22, alu, false);
+    if (f.channel) golaH(g, f.x - 2, baseY + f.y + f.h + 2, D, f.w + 4, alu);
+    if (f.vch !== undefined) golaV(g, f.vch, baseY + f.y, D, f.h, f.hinge === 'left', alu);
   });
 
   if (t.row === 'low') box(g, W, 96, 16, 0, 2, D - 70, surf('fac', catFind(C.fcolor, S.mat.fLow), .6), false);
@@ -1708,6 +1770,28 @@ function buildModule(m, pos){
   return g;
 }
 
+// режимы показа как в Базис-Мебельщике: прозрачный, контуры, корпуса без фасадов
+function applyViewMode(){
+  const mode = S.view || 'color'; if (mode === 'color') return;
+  const room = new Set(['wall', 'floor']), ink = cssVar('--ink') || '#1C1B19';
+  const edgeMat = new THREE.LineBasicMaterial({color:col(ink), transparent:true, opacity:mode === 'lines' ? .9 : .5}); disposables.push(edgeMat);
+  const hidden = new THREE.MeshBasicMaterial({visible:false}); disposables.push(hidden);
+  const clones = new Map(), alpha = {corp:.22, fac:.16, top:.3, handle:.85, glass:.2};
+  const glassy = orig => { if (!clones.has(orig)){ const c = orig.clone(); c.transparent = true; c.opacity = alpha[orig.userData && orig.userData.kind] ?? .35; c.depthWrite = false; clones.set(orig, c); disposables.push(c); } return clones.get(orig); };
+  const boxes = [], planes = [];
+  root.traverse(o => { if (!o.isMesh || !o.geometry) return; if (o.geometry.type === 'BoxGeometry') boxes.push(o); else if (o.geometry.type === 'PlaneGeometry') planes.push(o); });
+  planes.forEach(o => { o.visible = false; });
+  if (mode === 'carcass') root.traverse(o => { if (o.isMesh && o.geometry && o.geometry.type === 'CylinderGeometry') o.visible = false; });
+  boxes.forEach(me => {
+    const kind = (me.material.userData && me.material.userData.kind) || '';
+    if (room.has(kind)) return;
+    if (mode === 'carcass' && (kind === 'fac' || kind === 'handle' || kind === 'glass')){ me.visible = false; return; }
+    if (mode === 'carcass') return;
+    const ed = new THREE.LineSegments(new THREE.EdgesGeometry(me.geometry), edgeMat);
+    ed.position.copy(me.position); ed.quaternion.copy(me.quaternion); ed.renderOrder = 4; me.parent.add(ed);
+    if (mode === 'lines'){ me.material = hidden; me.castShadow = false; me.receiveShadow = false; } else { me.material = glassy(me.material); me.castShadow = false; }
+  });
+}
 function build3D(resetCam){
   if (!has3D) return;
   if (root){ scene.remove(root); root.traverse(o => { if (o.geometry) o.geometry.dispose(); }); disposables.forEach(d => d.dispose()); disposables = []; }
@@ -1722,7 +1806,7 @@ function build3D(resetCam){
   const fl = FLOORS.find(f => f.id === S.room.floor) || FLOORS[0];
   const fw = La + 2600, fd = Math.max(ws.includes('B') ? Lb : 0, ws.includes('C') ? Lc : 0, 1200) + 2600;
   const fkey = 'floor:' + fl.id;
-  if (!matCache[fkey]){ const p = {roughness:.85}; if (fl.pattern === 'planks'){ p.map = planksTex(fl.hex); p.color = 0xffffff; } else if (fl.pattern === 'tiles'){ p.map = tilesTex(fl.hex); p.color = 0xffffff; } else p.color = col(fl.hex); matCache[fkey] = new THREE.MeshStandardMaterial(p); }
+  if (!matCache[fkey]){ const p = {roughness:.85}; if (fl.pattern === 'planks'){ p.map = planksTex(fl.hex); p.color = 0xffffff; } else if (fl.pattern === 'tiles'){ p.map = tilesTex(fl.hex); p.color = 0xffffff; } else p.color = col(fl.hex); matCache[fkey] = Object.assign(new THREE.MeshStandardMaterial(p), {userData:{kind:'floor'}}); }
   const fm = matCache[fkey]; if (fm.map) fm.map.repeat.set(fw / (fl.pattern === 'tiles' ? 600 : 1600), fd / (fl.pattern === 'tiles' ? 600 : 1100));
   box(root, fw, 10, fd, -1300, -10, -20, fm, false);
   if (S.showDims){
@@ -1741,8 +1825,9 @@ function build3D(resetCam){
   const sel = root.children.find(o => o.userData && o.userData.modId === S.selected);
   if (sel){ helper = new THREE.BoxHelper(sel, col(cssVar('--accent') || '#A9532A')); scene.add(helper); }
   selBox = sel ? new THREE.Box3().setFromObject(sel) : null;
+  applyViewMode();
   // отражения окружения слабые, чтобы не пересвечивать цвета образцов
-  root.traverse(o => { if (o.material) [].concat(o.material).forEach(m => { if (m.isMeshStandardMaterial) m.envMapIntensity = m === matCache.glassPane ? 1 : .15; }); });
+  root.traverse(o => { if (o.material) [].concat(o.material).forEach(m => { if (m.isMeshStandardMaterial) m.envMapIntensity = m === matCache.glassPane ? 1 : m.metalness > .5 ? 1.1 : .15; }); });
   if (resetCam) fitCamera();
 }
 
@@ -1877,7 +1962,7 @@ document.getElementById('stage').addEventListener('pointerdown', e => {
 
 /* ---------------- boot ---------------- */
 ensureRefs(); recalc();
-renderPrices(); setTab(S.tab || 'smeta'); setDrawer(!!S.drawer); renderExtras();
+renderPrices(); setTab(S.tab || 'smeta'); setDrawer(!!S.drawer); setSide(!!S.sideHidden); syncViewSeg(); renderExtras();
 $('btnDims').setAttribute('aria-pressed', String(S.showDims));
 init3D();
 update({resetCam:true});
