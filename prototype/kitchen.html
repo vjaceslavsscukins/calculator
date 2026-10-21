@@ -72,6 +72,11 @@ button{cursor:pointer}
 .modbar .mb.danger{color:var(--warn)}
 .modbar .sep{width:1px;height:18px;background:var(--line);margin:0 3px}
 .modbar input[type=number]{width:62px;text-align:center;padding:5px 4px;border-radius:8px;font-size:13px}
+.fold>summary{cursor:pointer;font-size:11.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:600;list-style:none;display:flex;justify-content:space-between}
+.fold>summary::after{content:'+';font-size:15px}
+.fold[open]>summary::after{content:'−'}
+.fold[open]>summary{margin-bottom:10px}
+.fold>summary::-webkit-details-marker{display:none}
 .presets{display:flex;flex-direction:column;gap:6px}
 .preset{display:flex;gap:6px}
 .preset .btn:first-child{flex:1;text-align:left;overflow:hidden;text-overflow:ellipsis}
@@ -242,6 +247,36 @@ details.paste textarea{min-height:90px;font-family:var(--f-mono);font-size:12px;
 .toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--pri);color:var(--pri-ink);padding:9px 16px;border-radius:999px;font-size:13px;z-index:60;box-shadow:var(--shadow)}
 .copybox{width:100%;min-height:160px;margin-top:10px;font-family:var(--f-mono);font-size:12px}
 
+.pickfield{display:flex;align-items:center;gap:10px;border:1px solid var(--line);background:var(--input);border-radius:12px;padding:6px 6px 6px 8px}
+.pickfield .pf-t{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.25}
+.pickfield .pf-t b{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pickfield .pf-t small{font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sw.big{width:34px;height:34px;flex:none;border-radius:8px}
+dialog.dlg{border:1px solid var(--line);border-radius:18px;background:var(--surface);color:var(--ink);padding:0;box-shadow:0 24px 70px rgba(0,0,0,.35);width:min(900px,94vw);max-height:88vh;flex-direction:column;overflow:hidden}
+dialog.dlg[open]{display:flex}
+dialog.dlg::backdrop{background:rgba(20,18,15,.5)}
+.dlg-h{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--line);font-size:15px}
+.dlg-tools{display:flex;gap:8px;padding:12px 18px 0;flex-wrap:wrap}
+.dlg-tools input{flex:2 1 240px}.dlg-tools select{flex:1 1 150px;width:auto}
+.dlg-b{padding:14px 18px;overflow:auto;min-height:0;flex:1}
+.dlg-f{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 18px;border-top:1px solid var(--line);flex-wrap:wrap}
+.pgrid2{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.pcard{display:flex;flex-direction:column;gap:3px;text-align:left;border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:8px;min-width:0}
+.pcard:hover{border-color:var(--accent);box-shadow:0 4px 14px rgba(28,27,25,.1)}
+.pcard[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.pcard .psw{height:54px;border-radius:8px;border:1px solid rgba(0,0,0,.12);display:grid;place-items:center;font-size:18px;color:rgba(0,0,0,.35)}
+.pcard b{font-size:12.5px;font-weight:500;line-height:1.25;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.pcard small{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pcard em{font-style:normal;font-size:11.5px;font-variant-numeric:tabular-nums}
+.pgrid2 h4,.dlg-b h4{grid-column:1/-1;margin:6px 0 0;font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.imp-sec{display:flex;flex-direction:column;gap:8px;margin-bottom:16px}
+.imp-sec h3{margin:0;font-size:11.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:600}
+.imp-map{display:grid;grid-template-columns:minmax(120px,200px) 1fr;gap:6px 12px;align-items:center;font-size:13px}
+.imp-sum{display:flex;gap:14px;flex-wrap:wrap;font-size:13px}.imp-sum b{font-variant-numeric:tabular-nums}
+.imp-sum .bad{color:var(--warn)}
+.catctl{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.catctl input[type=search]{max-width:260px}
+.pager{display:flex;gap:8px;align-items:center;justify-content:flex-end;font-size:12.5px;color:var(--muted)}
 @media (max-width: 1080px){
   .app{height:auto;min-height:100vh}
   .top{height:auto;padding-block:12px;flex-wrap:wrap}
@@ -380,6 +415,17 @@ details.paste textarea{min-height:90px;font-family:var(--f-mono);font-size:12px;
   </main>
 </div>
 
+<dialog id="picker" class="dlg" aria-label="Выбор материала">
+  <div class="dlg-h"><b id="pickTitle">Выбор</b><button class="btn sm" data-act="dlg-close" data-v="picker" aria-label="Закрыть">×</button></div>
+  <div class="dlg-tools"><input type="search" id="pickQ" placeholder="Поиск: название, артикул, коллекция" aria-label="Поиск"><select id="pickSup" aria-label="Поставщик"></select><select id="pickCol" aria-label="Коллекция"></select></div>
+  <div class="dlg-b" id="pickBody"></div>
+  <div class="dlg-f"><span class="small muted" id="pickCount"></span><button class="btn sm" data-act="pick-more" id="pickMore">Показать ещё</button></div>
+</dialog>
+<dialog id="importDlg" class="dlg" aria-label="Загрузка прайса">
+  <div class="dlg-h"><b id="impTitle">Загрузка прайса</b><button class="btn sm" data-act="dlg-close" data-v="importDlg" aria-label="Закрыть">×</button></div>
+  <div class="dlg-b" id="impBody"></div>
+  <div class="dlg-f" id="impFoot"></div>
+</dialog>
 <div class="toast" id="toast" hidden></div>
 <div id="printArea" aria-hidden="true"></div>
 
@@ -912,9 +958,9 @@ function leftModule(){
   if (t.gap) return h + `<div class="sec"><div class="small muted">Свободное место: окно, отдельностоящий холодильник, плита. В смету не входит.</div></div>`;
   h += `<div class="sec"><h3>Цвета этого модуля</h3>
     <div class="field"><span class="flabel">Корпус: <span class="swname">${esc(m.corpus ? catFind(C.corpus, m.corpus).name : 'как у кухни')}</span></span>
-      ${swatchRow(C.corpus, m.corpus, 'ov', 'corpus', `<button class="sw none" data-act="ov" data-k="corpus" data-v="" aria-pressed="${!m.corpus}">как у кухни</button>`)}</div>
+      ${catField('corpus', m.corpus, 'ov', 'corpus', {none:'как у кухни'})}</div>
     ${r.facs.length ? `<div class="field"><span class="flabel">Фасад: <span class="swname">${esc(m.facade ? catFind(C.fcolor, m.facade).name : 'как у кухни')}</span></span>
-      ${swatchRow(C.fcolor, m.facade, 'ov', 'facade', `<button class="sw none" data-act="ov" data-k="facade" data-v="" aria-pressed="${!m.facade}">как у кухни</button>`)}</div>` : ''}
+      ${catField('fcolor', m.facade, 'ov', 'facade', {none:'как у кухни'})}</div>` : ''}
   </div><div class="sec"><h3>Опции</h3>`;
   if (t.row === 'up') h += `<label class="chk"><input type="checkbox" id="edLight" ${m.light ? 'checked' : ''}> Подсветка снизу, ${nf0.format(P.led)} ₽/м</label>`;
   if (t.row === 'low' && !t.tall && m.type !== 'base_dw'){
@@ -947,18 +993,18 @@ function leftMat(){
   const dr = DRAWERS[S.mat.drawers];
   const ups = activeModules(S).filter(m => TYPES[m.type].row === 'up' && !TYPES[m.type].gap), lit = ups.filter(m => m.light).length;
   return `
-  <div class="sec"><h3>Комплекты отделки</h3>
+  <details class="sec fold"><summary>Комплекты отделки</summary>
     <div class="presets">${[...BUILTIN_PRESETS, ...userPresets()].map(p => `<div class="preset"><button class="btn" data-act="preset-apply" data-v="${p.id}">${esc(p.name)}</button>${p.builtin ? '' : `<button class="btn sm danger" data-act="preset-del" data-v="${p.id}" aria-label="Удалить комплект ${esc(p.name)}">×</button>`}</div>`).join('')}</div>
     <div class="presave"><input type="text" id="inPresetName" placeholder="Название комплекта" aria-label="Название комплекта"><button class="btn" data-act="preset-save">Сохранить текущий</button></div>
     <div class="small muted">Комплект запоминает корпус, фасады, цвета, открывание, ящики и столешницу.</div>
-  </div>
+  </details>
   <div class="sec"><h3>Корпус</h3>
-    <div class="field"><span class="flabel">ЛДСП: <span class="swname">${esc(catFind(C.corpus, S.mat.corpus).name)}</span></span>${swatchRow(C.corpus, S.mat.corpus, 'mat', 'corpus')}</div></div>
+    <div class="field"><span class="flabel">ЛДСП: <span class="swname">${esc(catFind(C.corpus, S.mat.corpus).name)}</span></span>${catField('corpus', S.mat.corpus, 'mat', 'corpus')}</div></div>
   <div class="sec"><h3>Фасады</h3>
-    <div class="field"><label for="selFacade">Материал</label><select id="selFacade">${C.facade.map(f => `<option value="${f.id}" ${f.id === S.mat.facade ? 'selected' : ''}>${esc(f.name)} · ${nf0.format(f.price)} ₽/м²</option>`).join('')}</select></div>
-    <div class="field"><label for="selMilling">Фрезеровка</label><select id="selMilling">${C.milling.map(f => `<option value="${f.id}" ${f.id === S.mat.milling ? 'selected' : ''}>${esc(f.name)}${f.add ? ' · +' + nf0.format(f.add) + ' ₽/м²' : ''}</option>`).join('')}</select></div>
-    <div class="field"><span class="flabel">Низ и пеналы: <span class="swname">${esc(catFind(C.fcolor, S.mat.fLow).name)}</span></span>${swatchRow(C.fcolor, S.mat.fLow, 'mat', 'fLow')}</div>
-    <div class="field"><span class="flabel">Верх и антресоли: <span class="swname">${esc(catFind(C.fcolor, S.mat.fUp).name)}</span></span>${swatchRow(C.fcolor, S.mat.fUp, 'mat', 'fUp')}</div>
+    <div class="field"><label for="selFacade">Материал</label>${selField('facade', S.mat.facade, 'selFacade', f => `${f.name} · ${nf0.format(f.price)} ₽/м²`)}</div>
+    <div class="field"><label for="selMilling">Фрезеровка</label>${selField('milling', S.mat.milling, 'selMilling', f => `${f.name}${f.add ? ' · +' + nf0.format(f.add) + ' ₽/м²' : ''}`)}</div>
+    <div class="field"><span class="flabel">Низ и пеналы: <span class="swname">${esc(catFind(C.fcolor, S.mat.fLow).name)}</span></span>${catField('fcolor', S.mat.fLow, 'mat', 'fLow')}</div>
+    <div class="field"><span class="flabel">Верх и антресоли: <span class="swname">${esc(catFind(C.fcolor, S.mat.fUp).name)}</span></span>${catField('fcolor', S.mat.fUp, 'mat', 'fUp')}</div>
     <div class="field"><span class="flabel">Открывание</span><div class="seg">${Object.entries(HANDLES).map(([k, v]) => `<button data-act="mat" data-k="handle" data-v="${k}" aria-pressed="${S.mat.handle === k}">${v}</button>`).join('')}</div></div>
     ${S.mat.handle === 'push' ? '' : `<div class="field"><span class="flabel">Цвет ${S.mat.handle === 'gola' ? 'профиля' : 'ручек'}: <span class="swname">${esc(hwColorOf().name)}</span></span>${swatchRow(HWCOLORS, hwColorOf().id, 'mat', 'hwColor')}</div>`}
   </div>
@@ -969,7 +1015,7 @@ function leftMat(){
     <div class="small muted">Чтобы увидеть ящики, нажмите «Открыть всё» над 3D-видом.</div>
   </div>
   <div class="sec"><h3>Столешница и подсветка</h3>
-    <div class="field"><label for="selTop">Столешница</label><select id="selTop">${C.top.map(f => `<option value="${f.id}" ${f.id === S.mat.top ? 'selected' : ''}>${esc(f.name)} · ${nf0.format(f.price)} ₽/м.п.</option>`).join('')}</select></div>
+    <div class="field"><label for="selTop">Столешница</label>${selField('top', S.mat.top, 'selTop', f => `${f.name} · ${nf0.format(f.price)} ₽/м.п.`)}</div>
     <label class="chk"><input type="checkbox" id="chkSplash" ${S.mat.splash ? 'checked' : ''}> Стеновая панель (фартук) в цвет столешницы</label>
     <div class="btns"><button class="btn" data-act="all-light" data-v="1">Подсветка под всеми верхними</button><button class="btn" data-act="all-light" data-v="0">Убрать подсветку</button></div>
     <div class="small muted">Подсветка сейчас: ${lit} из ${ups.length} верхних модулей.</div>
@@ -1069,61 +1115,252 @@ const PRICE_FIELDS = [
   {g:'Наценка и услуги', f:[['markup','Наценка на себестоимость','%'],['install','Монтаж','% суммы'],['delivery','Доставка','₽'],['waste.ldsp','Коэфф. отхода ЛДСП','×'],['waste.hdf','Коэфф. отхода ХДФ','×'],['waste.edge','Запас кромки','×']]},
 ];
 const PAT = 'sel:plain=Однотон,wood=Древесина';
+const ID_COLS = [['article', 'Артикул', 'text'], ['collection', 'Коллекция', 'text'], ['supplier', 'Поставщик', 'text']];
+// cols — столбцы таблицы каталога; imp — поля, которые можно сопоставить при загрузке прайса (req — обязательные)
 const CAT_SPEC = {
-  corpus:{t:'Корпуса (декоры ЛДСП)', cols:[['name','Название','text'],['hex','Цвет','color'],['pattern','Текстура',PAT],['price','₽/м²','num']], paste:['name','price','hex'], hint:'название, цена за м², цвет #RRGGBB (необязательно)'},
-  facade:{t:'Фасады: материалы', cols:[['name','Название','text'],['finish','Поверхность','sel:matte=Матовая,satin=Шелковистая,gloss=Глянец'],['price','₽/м²','num']], paste:['name','price'], hint:'название, цена за м²'},
-  milling:{t:'Фрезеровки', cols:[['name','Название','text'],['style','Вид в 3D','sel:flat=Гладкий,frame=Рамка,classic=Классика,grooves=Пазы'],['add','Доплата, ₽/м²','num']], paste:['name','add'], hint:'название, доплата за м²'},
-  fcolor:{t:'Цвета фасадов', cols:[['name','Название','text'],['hex','Цвет','color'],['pattern','Текстура',PAT]], paste:['name','hex'], hint:'название, цвет #RRGGBB'},
-  top:{t:'Столешницы', cols:[['name','Название','text'],['hex','Цвет','color'],['pattern','Текстура','sel:plain=Однотон,wood=Древесина,marble=Мрамор'],['t','Толщина, мм','num'],['price','₽/м.п.','num'],['joint','Стык, ₽','num'],['cut','Вырез, ₽','num']], paste:['name','price','t','joint','cut'], hint:'название, цена за м.п., толщина, стык, вырез'},
+  corpus:{t:'Корпуса (декоры ЛДСП)', cols:[['name','Название','text'], ...ID_COLS, ['hex','Цвет','color'],['pattern','Текстура',PAT],['price','₽/м²','num']],
+    imp:[['name','Название',1],['article','Артикул'],['price','Цена, ₽/м²',1],['collection','Коллекция'],['supplier','Поставщик'],['hex','Цвет #RRGGBB']]},
+  facade:{t:'Фасады: материалы', cols:[['name','Название','text'], ...ID_COLS, ['finish','Поверхность','sel:matte=Матовая,satin=Шелковистая,gloss=Глянец'],['price','₽/м²','num']],
+    imp:[['name','Название',1],['article','Артикул'],['price','Цена, ₽/м²',1],['collection','Коллекция'],['supplier','Поставщик']]},
+  milling:{t:'Фрезеровки', cols:[['name','Название','text'],['style','Вид в 3D','sel:flat=Гладкий,frame=Рамка,classic=Классика,grooves=Пазы'],['add','Доплата, ₽/м²','num']],
+    imp:[['name','Название',1],['add','Доплата, ₽/м²',1]]},
+  fcolor:{t:'Цвета фасадов', cols:[['name','Название','text'], ...ID_COLS, ['hex','Цвет','color'],['pattern','Текстура',PAT]],
+    imp:[['name','Название',1],['article','Артикул'],['collection','Коллекция'],['supplier','Поставщик'],['hex','Цвет #RRGGBB']]},
+  top:{t:'Столешницы', cols:[['name','Название','text'], ...ID_COLS, ['hex','Цвет','color'],['pattern','Текстура','sel:plain=Однотон,wood=Древесина,marble=Мрамор'],['t','Толщина, мм','num'],['price','₽/м.п.','num'],['joint','Стык, ₽','num'],['cut','Вырез, ₽','num']],
+    imp:[['name','Название',1],['article','Артикул'],['price','Цена, ₽/м.п.',1],['t','Толщина, мм'],['joint','Стык, ₽'],['cut','Вырез, ₽'],['collection','Коллекция'],['supplier','Поставщик'],['hex','Цвет #RRGGBB']]},
 };
+const norm = x => String(x ?? '').toLowerCase().replace(/ё/g, 'е').trim();
+const metaLine = r => [r.article, r.collection, r.supplier].filter(Boolean).join(' · ');
+function blankRow(key){
+  const row = {id:key[0] + Date.now().toString(36) + Math.random().toString(36).slice(2, 6)};
+  CAT_SPEC[key].cols.forEach(([c, , type]) => row[c] = type === 'num' ? 0 : type === 'color' ? '#CCCCCC' : type === 'text' ? '' : type.slice(4).split(',')[0].split('=')[0]);
+  if (key === 'top') row.t = 38;
+  return row;
+}
+// каталоги большие: таблица со страницами и поиском, строки рисуются только для текущей страницы
+const CAT_PAGE = 40, catView = {};
+function catFiltered(key){
+  const v = catView[key] || (catView[key] = {q:'', page:0}), q = norm(v.q);
+  return {v, all:C[key].filter(r => !q || norm([r.name, r.article, r.collection, r.supplier].join(' ')).includes(q))};
+}
+function catBody(key){
+  const sp = CAT_SPEC[key], {v, all} = catFiltered(key), pages = Math.max(1, Math.ceil(all.length / CAT_PAGE)); v.page = Math.max(0, Math.min(v.page, pages - 1));
+  const rows = all.slice(v.page * CAT_PAGE, (v.page + 1) * CAT_PAGE);
+  const cell = (row, [c, n, type]) => {
+    const id = `cat_${key}_${row.id}_${c}`, val = row[c] ?? (type === 'num' ? 0 : ''), a = `id="${id}" data-cat="${key}" data-row="${row.id}" data-col="${c}" aria-label="${esc(n)}: ${esc(row.name)}"`;
+    if (type === 'text') return `<input type="text" ${a} value="${esc(val)}">`;
+    if (type === 'num') return `<input type="number" ${a} value="${val}" min="0" step="any">`;
+    if (type === 'color') return `<input type="color" ${a} value="${val}">`;
+    const opts = type.slice(4).split(',').map(o => o.split('='));
+    return `<select ${a}>${opts.map(([k, nm]) => `<option value="${k}" ${k === val ? 'selected' : ''}>${nm}</option>`).join('')}</select>`;
+  };
+  return `<div class="tblwrap"><table class="t"><thead><tr>${sp.cols.map(([, n]) => `<th>${n}</th>`).join('')}<th></th></tr></thead>
+    <tbody>${rows.map(row => `<tr>${sp.cols.map(col => `<td>${cell(row, col)}</td>`).join('')}<td><button class="btn sm danger" data-act="cat-del" data-k="${key}" data-v="${row.id}" aria-label="Удалить ${esc(row.name)}">×</button></td></tr>`).join('') || `<tr><td colspan="${sp.cols.length + 1}" class="muted">Ничего не найдено</td></tr>`}</tbody></table></div>
+    ${pages > 1 ? `<div class="pager"><span>${all.length} из ${C[key].length} · страница ${v.page + 1} из ${pages}</span><button class="btn sm" data-act="cat-page" data-k="${key}" data-v="-1" ${v.page === 0 ? 'disabled' : ''}>←</button><button class="btn sm" data-act="cat-page" data-k="${key}" data-v="1" ${v.page >= pages - 1 ? 'disabled' : ''}>→</button></div>` : ''}`;
+}
+function renderCatBody(key){ const el = $('catbody_' + key); if (el) el.innerHTML = catBody(key); const c = $('catcount_' + key); if (c) c.textContent = '· ' + C[key].length; }
+const KMETA = 'kitchen.catmeta.v1', KBACKUP = 'kitchen.catbackup.v1', KSCH = 'kitchen.schemes.v1', KREC = 'kitchen.recent.v1';
+function catMetaLine(key){ const m = (load(KMETA) || {})[key]; return m ? `Последняя загрузка: ${m.at}, ${esc(m.source || 'вставка из буфера')}, позиций: ${m.rows}` : 'Каталог ещё не загружался из файла.'; }
 function catTable(key){
   const sp = CAT_SPEC[key];
-  const cell = (row, [c, n, type]) => {
-    const id = `cat_${key}_${row.id}_${c}`, v = row[c], a = `id="${id}" data-cat="${key}" data-row="${row.id}" data-col="${c}" aria-label="${esc(n)}: ${esc(row.name)}"`;
-    if (type === 'text') return `<input type="text" ${a} value="${esc(v)}">`;
-    if (type === 'num') return `<input type="number" ${a} value="${v}" min="0" step="any">`;
-    if (type === 'color') return `<input type="color" ${a} value="${v}">`;
-    const opts = type.slice(4).split(',').map(o => o.split('='));
-    return `<select ${a}>${opts.map(([k, nm]) => `<option value="${k}" ${k === v ? 'selected' : ''}>${nm}</option>`).join('')}</select>`;
-  };
-  return `<div class="catblock"><h3>${sp.t} <span class="muted small">· ${C[key].length}</span></h3>
-    <div class="tblwrap"><table class="t"><thead><tr>${sp.cols.map(([, n]) => `<th>${n}</th>`).join('')}<th></th></tr></thead>
-    <tbody>${C[key].map(row => `<tr>${sp.cols.map(col => `<td>${cell(row, col)}</td>`).join('')}<td><button class="btn sm danger" data-act="cat-del" data-k="${key}" data-v="${row.id}" aria-label="Удалить ${esc(row.name)}">×</button></td></tr>`).join('')}</tbody></table></div>
-    <div class="btns"><button class="btn sm" data-act="cat-add" data-k="${key}">+ Строка</button></div>
-    <details class="paste"><summary>Загрузить из Excel</summary>
-      <div class="small muted">Скопируйте строки из Excel и вставьте сюда. Порядок столбцов: ${sp.hint}.</div>
-      <textarea id="paste_${key}" aria-label="Строки из Excel"></textarea>
-      <div class="btns"><button class="btn sm pri" data-act="cat-paste" data-k="${key}" data-v="add">Добавить строки</button><button class="btn sm" data-act="cat-paste" data-k="${key}" data-v="replace" id="btnRepl_${key}">Заменить все</button></div>
-    </details></div>`;
+  return `<div class="catblock"><h3>${sp.t} <span class="muted small" id="catcount_${key}">· ${C[key].length}</span></h3>
+    <div class="small muted">${catMetaLine(key)}</div>
+    <div class="catctl"><input type="search" id="catq_${key}" data-catq="${key}" placeholder="Поиск по каталогу" aria-label="Поиск: ${esc(sp.t)}" value="${esc((catView[key] || {}).q || '')}">
+      <button class="btn sm pri" data-act="imp-open" data-k="${key}">Загрузить прайс…</button><button class="btn sm" data-act="cat-add" data-k="${key}">+ Строка</button></div>
+    <div id="catbody_${key}">${catBody(key)}</div></div>`;
 }
 function renderPrices(){
   keepFocus(() => { $('tab-prices').innerHTML = `
-    <div class="dochead"><div><h2>Прайс и каталоги</h2><div class="meta">Цены примерные. Введите свои или вставьте строки из Excel — смета пересчитается сразу. Всё сохраняется в этом браузере.</div></div>
-      <div class="doctools"><button class="btn danger" data-act="reset-prices" id="btnResetPrices">Вернуть примерные цены и каталоги</button></div></div>
+    <div class="dochead"><div><h2>Прайс и каталоги</h2><div class="meta">Цены примерные. Введите свои или загрузите прайс поставщика из Excel: «Загрузить прайс…» у нужного каталога. Смета пересчитается сразу. Всё сохраняется в этом браузере.</div></div>
+      <div class="doctools">${(() => { const bk = load(KBACKUP); return bk ? `<button class="btn" data-act="imp-undo">Отменить последнюю загрузку (${esc(CAT_SPEC[bk.key].t)}, ${bk.at})</button>` : ''; })()}<button class="btn danger" data-act="reset-prices" id="btnResetPrices">Вернуть примерные цены и каталоги</button></div></div>
     <div class="pgrid">${PRICE_FIELDS.map(g => `<div class="pgroup"><h4>${g.g}</h4>${g.f.map(([p, n, u]) => {
       const id = 'p_' + p.replace(/\./g, '_');
       return `<div class="prow"><label for="${id}">${esc(n)}</label><input type="number" id="${id}" data-path="${p}" step="any" min="0" value="${pathGet(P, p)}"><span class="u">${u}</span></div>`; }).join('')}</div>`).join('')}</div>
     ${Object.keys(CAT_SPEC).map(catTable).join('')}`; });
 }
 function parseNum(s){ const v = parseFloat(String(s ?? '').replace(/[\s ₽]/g, '').replace(',', '.')); return isFinite(v) ? v : NaN; }
-function pasteRows(key, text){
-  const sp = CAT_SPEC[key], out = [];
-  text.split(/\r?\n/).forEach((line, li) => {
-    if (!line.trim()) return;
-    const cells = line.includes('\t') ? line.split('\t') : line.split(';');
-    const row = {id:key[0] + Date.now().toString(36) + li + Math.random().toString(36).slice(2, 5)};
-    sp.cols.forEach(([c, , type]) => { row[c] = type === 'num' ? 0 : type === 'color' ? '#CCCCCC' : type === 'text' ? '' : type.slice(4).split(',')[0].split('=')[0]; });
-    sp.paste.forEach((c, i) => {
-      const v = (cells[i] || '').trim(); if (!v) return;
-      const type = sp.cols.find(x => x[0] === c)[2];
-      if (type === 'num'){ const n = parseNum(v); if (isFinite(n)) row[c] = n; }
-      else if (type === 'color'){ if (/^#?[0-9a-f]{6}$/i.test(v)) row[c] = v[0] === '#' ? v : '#' + v; }
-      else row[c] = v;
-    });
-    if (key === 'top' && !row.t) row.t = 38;
-    if (row.name && !(li === 0 && /назв|name/i.test(row.name))) out.push(row);
+function setMatKey(k, v){
+  S.mat[k] = v;
+  if (k === 'drawers' && !DRAWERS[v].colors.some(c => c.id === S.mat.drawerColor)) S.mat.drawerColor = DRAWERS[v].colors[0].id;
+  update();
+}
+function setOverride(k, v){ const m = selMod(); if (m){ m[k] = v || null; update(); } }
+
+/* ---------------- выбор материала из большого каталога ---------------- */
+const INLINE_MAX = 14;
+function catField(key, cur, act, k, {none = ''} = {}){
+  const list = C[key];
+  if (list.length <= INLINE_MAX) return swatchRow(list, cur, act, k, none ? `<button class="sw none" data-act="${act}" data-k="${k}" data-v="" aria-pressed="${!cur}">${esc(none)}</button>` : '');
+  const it = cur ? list.find(r => r.id === cur) : null;
+  return `<div class="pickfield">${it ? `<span class="sw big" style="background:${it.hex || it.pattern ? swBg(it) : 'var(--sunk)'}"></span><span class="pf-t"><b>${esc(it.name)}</b><small>${esc(metaLine(it)) || '&nbsp;'}</small></span>` : `<span class="pf-t"><b>${esc(none || 'Не выбрано')}</b></span>`}
+    <button class="btn sm" data-act="pick-open" data-cat="${key}" data-ta="${act}" data-tk="${k}" data-none="${esc(none)}" data-cur="${esc(cur || '')}">Выбрать…</button></div>`;
+}
+function selField(key, cur, id, label){
+  const list = C[key];
+  if (list.length <= 30) return `<select id="${id}">${list.map(f => `<option value="${f.id}" ${f.id === cur ? 'selected' : ''}>${esc(label(f))}</option>`).join('')}</select>`;
+  return catField(key, cur, 'mat', key);
+}
+const pick = {cat:'', act:'', k:'', none:'', cur:'', limit:60};
+const recentIds = cat => (load(KREC) || {})[cat] || [];
+function pushRecent(cat, id){ const all = load(KREC) || {}; all[cat] = [id, ...(all[cat] || []).filter(x => x !== id)].slice(0, 10); store(KREC, all); }
+function openPicker(o){
+  Object.assign(pick, o, {limit:60}); const list = C[pick.cat];
+  $('pickTitle').textContent = CAT_SPEC[pick.cat].t;
+  const fill = (id, label, f) => { const vals = [...new Set(list.map(r => r[f]).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ru')), el = $(id); el.innerHTML = `<option value="">${label}</option>` + vals.map(v => `<option>${esc(v)}</option>`).join(''); el.hidden = vals.length < 2; el.value = ''; };
+  fill('pickSup', 'Все поставщики', 'supplier'); fill('pickCol', 'Все коллекции', 'collection');
+  $('pickQ').value = ''; renderPickGrid(); $('picker').showModal(); $('pickQ').focus();
+}
+function pickList(){
+  const q = norm($('pickQ').value), sup = $('pickSup').value, col = $('pickCol').value;
+  return C[pick.cat].filter(r => (!sup || r.supplier === sup) && (!col || r.collection === col) && (!q || norm([r.name, r.article, r.collection, r.supplier].join(' ')).includes(q)));
+}
+function pcard(r){
+  const pr = r.price ?? r.add, price = !S.clientView && pr != null ? `<em>${nf0.format(pr)} ₽</em>` : '', vis = r.hex || r.pattern;
+  return `<button class="pcard" data-act="pick-choose" data-v="${esc(r.id)}" aria-pressed="${r.id === pick.cur}"><span class="psw" style="background:${vis ? swBg(r) : 'var(--sunk)'}">${vis ? '' : '▦'}</span><b>${esc(r.name)}</b><small>${esc(metaLine(r)) || '&nbsp;'}</small>${price}</button>`;
+}
+function renderPickGrid(){
+  const list = pickList(), filtering = $('pickQ').value || $('pickSup').value || $('pickCol').value;
+  let h = '';
+  if (pick.none) h += `<h4>Особый вариант</h4><button class="pcard" data-act="pick-choose" data-v="" aria-pressed="${!pick.cur}"><span class="psw">↺</span><b>${esc(pick.none)}</b></button>`;
+  const rec = filtering ? [] : recentIds(pick.cat).map(id => C[pick.cat].find(r => r.id === id)).filter(Boolean);
+  if (rec.length) h += '<h4>Недавние</h4>' + rec.map(pcard).join('');
+  h += `<h4>${filtering ? 'Найдено' : 'Все позиции'}</h4>` + list.slice(0, pick.limit).map(pcard).join('');
+  $('pickBody').innerHTML = `<div class="pgrid2">${h}</div>` + (list.length ? '' : '<div class="empty">Ничего не найдено. Измените запрос или фильтры.</div>');
+  $('pickCount').textContent = `Показано ${Math.min(pick.limit, list.length)} из ${list.length}` + (list.length !== C[pick.cat].length ? ` (всего в каталоге ${C[pick.cat].length})` : '');
+  $('pickMore').hidden = list.length <= pick.limit;
+}
+function applyPick(id){ $('picker').close(); if (id) pushRecent(pick.cat, id); if (pick.act === 'ov') setOverride(pick.k, id); else setMatKey(pick.k, id); }
+
+/* ---------------- загрузка прайсов: файл или вставка → столбцы → проверка → загрузка ---------------- */
+const XLSX_URL = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+let xlsxLoading = null;
+function loadXLSX(){
+  if (window.XLSX) return Promise.resolve();
+  return xlsxLoading || (xlsxLoading = new Promise((res, rej) => { const sc = document.createElement('script'); sc.src = XLSX_URL; sc.onload = res; sc.onerror = () => { xlsxLoading = null; rej(new Error('xlsx')); }; document.head.appendChild(sc); }));
+}
+const imp = {key:'corpus', rows:[], header:0, source:'', supplier:'', map:{}, factor:1, mode:'merge', sheets:[], book:null, sheet:''};
+const GUESS = {article:/^(арт|sku|vendor|код\s*$|код\s+(товара|поз|номенкл))/i, name:/(наимен|назван|декор|товар|номенклатур|name)/i, price:/(цена|стоим|price|руб|₽)/i, add:/(доплат|цена|стоим|price)/i,
+  collection:/(коллекц|серия|линейк|collection)/i, supplier:/(поставщик|производител|бренд|фабрик|brand)/i, hex:/(hex|rgb|код\s*цвета)/i, t:/толщ/i, joint:/стык/i, cut:/вырез/i};
+function storeChecked(key, v){ try { localStorage.setItem(key, JSON.stringify(v)); return true; } catch(e){ return false; } }
+function parseDelimited(text){
+  const first = text.split(/\r?\n/, 1)[0] || '', delim = first.includes('\t') ? '\t' : (first.split(';').length >= first.split(',').length ? ';' : ',');
+  const rows = []; let row = [], cur = '', q = false;
+  for (let i = 0; i < text.length; i++){
+    const ch = text[i];
+    if (q){ if (ch === '"'){ if (text[i + 1] === '"'){ cur += '"'; i++; } else q = false; } else cur += ch; }
+    else if (ch === '"') q = true;
+    else if (ch === delim){ row.push(cur); cur = ''; }
+    else if (ch === '\n'){ row.push(cur); rows.push(row); row = []; cur = ''; }
+    else if (ch !== '\r') cur += ch;
+  }
+  if (cur !== '' || row.length){ row.push(cur); rows.push(row); }
+  return rows.filter(r => r.some(c => String(c).trim() !== ''));
+}
+const impHeaders = () => (imp.rows[imp.header] || []).map(c => String(c).trim());
+const schemeKey = () => imp.key + '|' + norm(imp.supplier);
+function autoHeader(){
+  const words = /(наимен|назван|декор|артикул|код|цена|стоим|price|name|коллекц|серия)/i; imp.header = 0;
+  for (let i = 0; i < Math.min(imp.rows.length, 20); i++) if (imp.rows[i].filter(c => words.test(String(c))).length >= 2){ imp.header = i; break; }
+}
+function autoMap(){
+  imp.map = {}; const saved = imp.supplier ? (load(KSCH) || {})[schemeKey()] : null;
+  if (saved){ imp.header = Math.min(saved.header ?? imp.header, Math.max(0, imp.rows.length - 1)); imp.factor = saved.factor ?? 1; imp.mode = saved.mode || 'merge'; const hs = impHeaders(); CAT_SPEC[imp.key].imp.forEach(([f]) => { const i = hs.findIndex(h => h && h === saved.map[f]); if (i >= 0) imp.map[f] = i; }); return; }
+  const hs = impHeaders();
+  CAT_SPEC[imp.key].imp.forEach(([f]) => { const i = hs.findIndex((h, j) => h && GUESS[f] && GUESS[f].test(h) && !Object.values(imp.map).includes(j)); if (i >= 0) imp.map[f] = i; });
+}
+function sheetRows(){ imp.rows = XLSX.utils.sheet_to_json(imp.book.Sheets[imp.sheet], {header:1, raw:false, defval:''}).filter(r => r.some(c => String(c).trim() !== '')); }
+async function importFile(file){
+  imp.source = file.name; const ext = file.name.split('.').pop().toLowerCase(), buf = await file.arrayBuffer();
+  if (ext === 'csv' || ext === 'txt'){
+    let text; try { text = new TextDecoder('utf-8', {fatal:true}).decode(buf); } catch(e){ text = new TextDecoder('windows-1251').decode(buf); }
+    imp.rows = parseDelimited(text.replace(/^\uFEFF/, '')); imp.sheets = [];
+  } else { await loadXLSX(); imp.book = XLSX.read(new Uint8Array(buf), {type:'array'}); imp.sheets = imp.book.SheetNames; imp.sheet = imp.sheets[0]; sheetRows(); }
+  autoHeader(); autoMap(); renderImport();
+}
+function openImport(key){
+  Object.assign(imp, {key, rows:[], header:0, source:'', supplier:'', map:{}, factor:1, mode:'merge', sheets:[], book:null, sheet:''});
+  renderImport(); $('importDlg').showModal();
+}
+function importPlan(){
+  const sp = CAT_SPEC[imp.key], rows = imp.rows.slice(imp.header + 1), byArt = new Map(), byName = new Map(), pf = imp.key === 'milling' ? 'add' : 'price';
+  C[imp.key].forEach(r => { if (r.article) byArt.set(norm(r.article), r); byName.set(norm(r.name), r); });
+  const out = {items:[], add:0, upd:0, same:0, bad:[]};
+  rows.forEach((r, i) => {
+    const g = f => imp.map[f] == null ? '' : String(r[imp.map[f]] ?? '').trim(), line = imp.header + i + 2;
+    const name = g('name'); if (!name){ if (r.some(c => String(c).trim())) out.bad.push([line, 'нет названия']); return; }
+    const it = {name}; ['article', 'collection', 'supplier'].forEach(f => { if (g(f)) it[f] = g(f); });
+    if (!it.supplier && imp.supplier) it.supplier = imp.supplier;
+    if (sp.imp.some(([f]) => f === pf)){
+      const raw = g(pf), n = parseNum(raw);
+      if (!raw || !isFinite(n) || n < 0){ out.bad.push([line, `${name}: цена «${raw}» не распознана`]); return; }
+      it[pf] = Math.round(n * imp.factor * 100) / 100;
+    }
+    ['t', 'joint', 'cut'].forEach(f => { if (imp.map[f] != null){ const n = parseNum(g(f)); if (isFinite(n)) it[f] = n; } });
+    if (imp.map.hex != null){ const h = g('hex'); if (/^#?[0-9a-f]{6}$/i.test(h)) it.hex = h[0] === '#' ? h : '#' + h; }
+    const ex = (it.article && byArt.get(norm(it.article))) || byName.get(norm(it.name)); it.ex = ex || null; out.items.push(it);
+    if (!ex) out.add++; else if (['name', 'collection', 'hex', 't', 'joint', 'cut', pf].some(f => it[f] != null && ex[f] !== it[f])) out.upd++; else out.same++;
   });
   return out;
+}
+function renderImport(){
+  const sp = CAT_SPEC[imp.key], hs = impHeaders(), has = imp.rows.length > 0, plan = has ? importPlan() : null;
+  $('impTitle').textContent = 'Загрузка прайса: ' + sp.t;
+  const sups = [...new Set(Object.keys(load(KSCH) || {}).filter(k => k.startsWith(imp.key + '|')).map(k => k.split('|')[1]))];
+  const colOpts = sel => '<option value="">— не загружать —</option>' + hs.map((h, i) => `<option value="${i}" ${sel === i ? 'selected' : ''}>${esc(h || 'Столбец ' + (i + 1))}</option>`).join('');
+  let h = `<div class="imp-sec"><h3>1. Откуда</h3>
+    <div class="row2"><div class="field"><label for="impCat">Каталог</label><select id="impCat" data-imp="cat">${Object.entries(CAT_SPEC).map(([k, v]) => `<option value="${k}" ${k === imp.key ? 'selected' : ''}>${esc(v.t)}</option>`).join('')}</select></div>
+    <div class="field"><label for="impSup">Поставщик (запомним схему столбцов)</label><input type="text" id="impSup" data-imp="sup" list="impSupList" value="${esc(imp.supplier)}" placeholder="Например: Egger"><datalist id="impSupList">${sups.map(x => `<option value="${esc(x)}">`).join('')}</datalist></div></div>
+    <div class="field"><label for="impFile">Файл Excel (.xlsx, .xls) или CSV</label><input type="file" id="impFile" accept=".xlsx,.xls,.csv,.txt"></div>
+    <details class="paste"><summary>Или вставить таблицу из Excel</summary><textarea id="impPaste" aria-label="Строки из Excel" placeholder="Скопируйте таблицу вместе с заголовками и вставьте сюда"></textarea><div class="btns"><button class="btn sm" data-act="imp-paste">Разобрать</button></div></details></div>`;
+  if (has){
+    const cols = sp.imp.filter(([f]) => imp.map[f] != null);
+    h += `<div class="imp-sec"><h3>2. Столбцы</h3><div class="small muted">Источник: ${esc(imp.source || 'вставка')} · строк: ${imp.rows.length}</div>
+      <div class="row3">${imp.sheets.length > 1 ? `<div class="field"><label for="impSheet">Лист</label><select id="impSheet" data-imp="sheet">${imp.sheets.map(n => `<option ${n === imp.sheet ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select></div>` : ''}
+        <div class="field"><label for="impHdr">Строка заголовков</label><input type="number" id="impHdr" data-imp="hdr" min="1" max="${Math.min(50, imp.rows.length)}" value="${imp.header + 1}"></div>
+        <div class="field"><label for="impFactor">Умножить цены на</label><input type="number" id="impFactor" data-imp="factor" min="0" step="any" value="${imp.factor}"></div></div>
+      <div class="imp-map">${sp.imp.map(([f, n, req]) => `<label for="impm_${f}">${esc(n)}${req ? ' *' : ''}</label><select id="impm_${f}" data-imp="map" data-f="${f}">${colOpts(imp.map[f])}</select>`).join('')}</div></div>
+    <div class="imp-sec"><h3>3. Что сделать</h3>
+      <div class="seg" role="group" aria-label="Режим загрузки">${[['merge', 'Обновить и добавить'], ['add', 'Только добавить новые'], ['replace', 'Заменить каталог']].map(([v, n]) => `<button data-act="imp-mode" data-v="${v}" aria-pressed="${imp.mode === v}">${n}</button>`).join('')}</div>
+      <div class="small muted">Позиции ищутся по артикулу, а если его нет — по названию. Старая цена остаётся в истории позиции.</div></div>
+    <div class="imp-sec"><h3>4. Проверка</h3>
+      <div class="imp-sum"><span>Новых: <b>${plan.add}</b></span><span>Обновится: <b>${plan.upd}</b></span><span>Без изменений: <b>${plan.same}</b></span><span class="${plan.bad.length ? 'bad' : ''}">Пропущено: <b>${plan.bad.length}</b></span></div>
+      ${plan.bad.length ? `<div class="small muted">${plan.bad.slice(0, 5).map(([r, why]) => `строка ${r}: ${esc(why)}`).join('<br>')}${plan.bad.length > 5 ? '<br>…' : ''}</div>` : ''}
+      <div class="tblwrap"><table class="t"><thead><tr>${cols.map(([, n]) => `<th>${esc(n)}</th>`).join('')}<th>Статус</th></tr></thead><tbody>${plan.items.slice(0, 8).map(it => `<tr>${cols.map(([f]) => `<td>${esc(it[f] ?? '')}</td>`).join('')}<td>${it.ex ? 'есть' : 'новая'}</td></tr>`).join('')}</tbody></table></div></div>`;
+  }
+  $('impBody').innerHTML = h;
+  $('impFoot').innerHTML = `<span class="small muted">${has && plan.items.length ? 'К загрузке: ' + plan.items.length : 'Выберите файл или вставьте таблицу'}</span><span class="btns"><button class="btn" data-act="dlg-close" data-v="importDlg">Отмена</button><button class="btn pri" data-act="imp-apply" ${has && plan.items.length ? '' : 'disabled'}>Загрузить</button></span>`;
+}
+function impChange(t){
+  const w = t.dataset.imp;
+  if (w === 'cat'){ imp.key = t.value; if (imp.rows.length) autoMap(); }
+  else if (w === 'sup'){ imp.supplier = t.value.trim(); if (imp.rows.length) autoMap(); }
+  else if (w === 'sheet'){ imp.sheet = t.value; sheetRows(); autoHeader(); autoMap(); }
+  else if (w === 'hdr'){ imp.header = Math.max(0, Math.min(imp.rows.length - 1, (parseInt(t.value, 10) || 1) - 1)); autoMap(); }
+  else if (w === 'factor'){ const n = parseNum(t.value); imp.factor = isFinite(n) && n > 0 ? n : 1; }
+  else if (w === 'map'){ if (t.value === '') delete imp.map[t.dataset.f]; else imp.map[t.dataset.f] = +t.value; }
+  renderImport();
+}
+function applyImport(){
+  const plan = importPlan(); if (!plan.items.length){ toast('Нет строк для загрузки'); return; }
+  const key = imp.key, pf = key === 'milling' ? 'add' : 'price', today = new Date().toLocaleDateString('ru-RU'), before = JSON.parse(JSON.stringify(C[key]));
+  const list = imp.mode === 'replace' ? [] : C[key].slice(), seen = new Set(); let added = 0, updated = 0;
+  plan.items.forEach(it => {
+    const {ex, ...f} = it;
+    if (ex){
+      if (imp.mode === 'add') return;
+      const tgt = imp.mode === 'replace' ? Object.assign({}, ex) : ex;
+      if (f[pf] != null && tgt[pf] !== f[pf]) tgt.hist = [{d:today, p:tgt[pf]}, ...(tgt.hist || [])].slice(0, 5);
+      Object.assign(tgt, f); tgt.updated = today; updated++;
+      if (imp.mode === 'replace' && !seen.has(tgt.id)){ seen.add(tgt.id); list.push(tgt); }
+    } else { list.push(Object.assign(blankRow(key), f, {updated:today})); added++; }
+  });
+  if (!list.length){ toast('Каталог не может остаться пустым'); return; }
+  C[key] = list; ensureRefs();
+  if (!storeChecked(KC, C)) toast('Каталог не поместился в память браузера: после перезагрузки он пропадёт. Большие каталоги будут храниться на сервере.');
+  store(KBACKUP, {key, items:before, at:today});
+  const meta = load(KMETA) || {}; meta[key] = {at:today, source:imp.source, rows:plan.items.length}; store(KMETA, meta);
+  if (imp.supplier){ const all = load(KSCH) || {}, hs = impHeaders(), map = {}; Object.entries(imp.map).forEach(([f, i]) => { map[f] = hs[i]; }); all[schemeKey()] = {header:imp.header, map, factor:imp.factor, mode:imp.mode}; store(KSCH, all); }
+  $('importDlg').close(); renderPrices(); update(); toast(`Загружено: новых ${added}, обновлено ${updated}`);
 }
 
 /* ---------------- copy ---------------- */
@@ -1369,7 +1606,7 @@ document.addEventListener('click', e => {
     case 'ed-wall': if (m){ m.wall = v; S.place = v; update(); } break;
     case 'w-chip': if (m){ m.w = +v; update(); } break;
     case 'blind': if (m){ m.blind = v; update(); } break;
-    case 'ov': if (m){ m[k] = v || null; update(); } break;
+    case 'ov': setOverride(k, v); break;
     case 'mv': case 'dup': case 'del': case 'w-step': modAct(act, v); break;
     case 'preset-apply': {
       const pr = [...BUILTIN_PRESETS, ...userPresets()].find(x => x.id === v); if (!pr) break;
@@ -1381,14 +1618,20 @@ document.addEventListener('click', e => {
       const nm = ($('inPresetName').value || '').trim(); if (!nm){ toast('Введите название комплекта'); $('inPresetName').focus(); break; }
       const list = userPresets(); list.push({id:'u' + Date.now().toString(36), name:nm, mat:JSON.parse(JSON.stringify(S.mat))}); store(KPR, list); renderLeft(); toast('Комплект сохранён'); break; }
     case 'preset-del': store(KPR, userPresets().filter(x => x.id !== v)); renderLeft(); break;
+    case 'pick-open': openPicker({cat:b.dataset.cat, act:b.dataset.ta, k:b.dataset.tk, none:b.dataset.none || '', cur:b.dataset.cur || ''}); break;
+    case 'pick-choose': applyPick(v); break;
+    case 'pick-more': pick.limit += 60; renderPickGrid(); break;
+    case 'dlg-close': $(v).close(); break;
+    case 'imp-open': openImport(k); break;
+    case 'imp-paste': imp.source = ''; imp.sheets = []; imp.rows = parseDelimited($('impPaste').value); autoHeader(); autoMap(); renderImport(); break;
+    case 'imp-mode': imp.mode = v; renderImport(); break;
+    case 'imp-apply': applyImport(); break;
+    case 'imp-undo': { const bk = load(KBACKUP); if (!bk) break; C[bk.key] = bk.items; ensureRefs(); store(KC, C); try { localStorage.removeItem(KBACKUP); } catch(e){} renderPrices(); update(); toast('Загрузка отменена'); break; }
     case 'undo': undo(); break;
     case 'redo': redo(); break;
     case 'toggle-open': if (m){ toggleModOpen(m); renderLeft(); renderModbar(); } break;
     case 'open-all': openAll = !openAll; if (!openAll) openSet.clear(); b.setAttribute('aria-pressed', String(openAll)); b.textContent = openAll ? 'Закрыть всё' : 'Открыть всё'; if (S.ltab === 'module') renderLeft(); break;
-    case 'mat':
-      S.mat[k] = v;
-      if (k === 'drawers' && !DRAWERS[v].colors.some(c => c.id === S.mat.drawerColor)) S.mat.drawerColor = DRAWERS[v].colors[0].id;
-      update(); break;
+    case 'mat': setMatKey(k, v); break;
     case 'all-light': activeModules(S).forEach(o => { if (TYPES[o.type].row === 'up' && !TYPES[o.type].gap) o.light = v === '1'; }); update(); break;
     case 'toggle-dims': S.showDims = !S.showDims; b.setAttribute('aria-pressed', String(S.showDims)); build3D(false); store(KS, S); break;
     case 'reset-view': fitCamera(); break;
@@ -1399,20 +1642,11 @@ document.addEventListener('click', e => {
     case 'reset-prices': confirmClick(b, 'Нажмите ещё раз для сброса', () => { P = deepMerge(DEFAULT_PRICES, {}); C = JSON.parse(JSON.stringify(DEFAULT_CAT)); store(KP, P); store(KC, C); ensureRefs(); renderPrices(); update(); toast('Цены и каталоги сброшены к примерным'); }); break;
     case 'load-sample': confirmClick(b, 'Заменить текущий проект?', () => { S = sampleState(); openSet.clear(); ensureRefs(); renderExtras(); update({resetCam:true}); toast('Загружен пример'); }); break;
     case 'clear-mods': confirmClick(b, 'Удалить все модули?', () => { S.modules = []; S.selected = null; update({resetCam:true}); toast('Модули удалены'); }); break;
-    case 'cat-add': {
-      const sp = CAT_SPEC[k], row = {id:k[0] + Date.now().toString(36)};
-      sp.cols.forEach(([c, , type]) => row[c] = type === 'num' ? 0 : type === 'color' ? '#CCCCCC' : type === 'text' ? 'Новая позиция' : type.slice(4).split(',')[0].split('=')[0]);
-      if (k === 'top') row.t = 38;
-      C[k].push(row); store(KC, C); renderPrices(); update(); break; }
+    case 'cat-add': { const row = blankRow(k); row.name = 'Новая позиция'; C[k].push(row); catView[k] = {q:'', page:Math.floor((C[k].length - 1) / CAT_PAGE)}; store(KC, C); renderPrices(); update(); break; }
     case 'cat-del':
       if (C[k].length <= 1){ toast('В каталоге должна остаться хотя бы одна строка'); break; }
-      C[k] = C[k].filter(r => r.id !== v); ensureRefs(); store(KC, C); renderPrices(); update(); break;
-    case 'cat-paste': {
-      const rows = pasteRows(k, $('paste_' + k).value);
-      if (!rows.length){ toast('Строк не найдено. Вставьте строки из Excel в поле выше'); break; }
-      const go = () => { if (v === 'replace') C[k] = rows; else C[k].push(...rows); ensureRefs(); store(KC, C); renderPrices(); update(); toast(`Загружено строк: ${rows.length}`); };
-      if (v === 'replace') confirmClick(b, 'Заменить весь каталог?', go); else go();
-      break; }
+      C[k] = C[k].filter(r => r.id !== v); ensureRefs(); store(KC, C); renderCatBody(k); update(); break;
+    case 'cat-page': catView[k].page += +v; renderCatBody(k); break;
   }
 });
 
@@ -1429,6 +1663,9 @@ document.addEventListener('change', e => {
     if (type === 'num'){ const n = parseNum(t.value); row[t.dataset.col] = isFinite(n) ? Math.max(0, n) : 0; } else row[t.dataset.col] = t.value;
     store(KC, C); update(); return;
   }
+  if (t.dataset.imp){ impChange(t); return; }
+  if (id === 'impFile'){ if (t.files[0]) importFile(t.files[0]).catch(() => toast('Не удалось прочитать файл. Сохраните его как .xlsx или .csv')); return; }
+  if (id === 'pickSup' || id === 'pickCol'){ pick.limit = 60; renderPickGrid(); return; }
   if (t.dataset.ex){
     const x = S.extra.find(r => r.id === t.dataset.ex); if (!x) return; const c = t.dataset.col;
     if (c === 'nd') x.nd = t.checked;
@@ -1465,6 +1702,8 @@ document.addEventListener('change', e => {
 document.addEventListener('input', e => {
   if (e.target.id === 'inClient'){ S.client = e.target.value; renderHeader(); renderSmeta(); store(KS, S); }
   if (e.target.id === 'inOrder'){ S.order = e.target.value; renderHeader(); renderSmeta(); store(KS, S); }
+  if (e.target.id === 'pickQ'){ pick.limit = 60; renderPickGrid(); }
+  if (e.target.dataset && e.target.dataset.catq){ const key = e.target.dataset.catq; catView[key] = Object.assign(catView[key] || {}, {q:e.target.value, page:0}); renderCatBody(key); }
   const kpField = {inBrand:'brand', inManager:'manager', inContacts:'contacts', inLead:'lead'}[e.target.id];
   if (kpField){ S.kp[kpField] = e.target.value; store(KS, S); }
   if (e.target.id === 'inValid'){ const n = parseNum(e.target.value); S.kp.valid = isFinite(n) ? Math.min(365, Math.max(1, Math.round(n))) : 14; store(KS, S); }
@@ -1943,6 +2182,7 @@ document.addEventListener('pointerup', e => {
 document.addEventListener('pointercancel', cancelDrags);
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && (placing || dragging || mv)){ cancelDrags(); stopPlacing(); return; }
+  if (document.querySelector('dialog[open]')) return;
   const tg = e.target, typing = tg && (tg.tagName === 'INPUT' || tg.tagName === 'TEXTAREA' || tg.tagName === 'SELECT' || tg.isContentEditable), mod = e.ctrlKey || e.metaKey;
   if (typing || e.altKey) return;
   if (mod && e.code === 'KeyZ'){ e.preventDefault(); e.shiftKey ? redo() : undo(); return; }
