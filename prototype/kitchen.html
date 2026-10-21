@@ -57,11 +57,19 @@ button{cursor:pointer}
 .stage-wrap{position:absolute;inset:0;border-radius:18px;overflow:hidden;background:radial-gradient(120% 95% at 50% 25%,var(--stage-a),var(--stage-b));border:1px solid var(--line);box-shadow:var(--shadow)}
 #stage{position:absolute;inset:0}
 #stage canvas{display:block;width:100%;height:100%;touch-action:none}
-.stage-tools{position:absolute;top:12px;right:12px;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.stage-tools{position:absolute;top:12px;right:12px;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;max-width:calc(100% - 400px)}
 .gbtn{border:1px solid var(--line);background:var(--glass);backdrop-filter:blur(8px);border-radius:10px;padding:7px 12px;font-size:12.5px;font-weight:500;box-shadow:0 1px 2px rgba(0,0,0,.04)}
 .gbtn:hover{border-color:var(--muted)}
 .gbtn:disabled{opacity:.4;cursor:default}
 .gbtn:disabled:hover{border-color:var(--line)}
+.bright{display:inline-flex;align-items:center;gap:7px;padding:6px 10px}
+.bright input{width:84px;accent-color:var(--accent);padding:0}
+.tech-note{font-size:12.5px;color:var(--muted);max-width:90ch}
+.tech-sec{margin-top:20px}.tech-sec h3{margin:0 0 8px;font-size:14px;font-weight:600}
+.tech-imgs{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px}
+.tech-imgs figure{margin:0}.tech-imgs img{width:100%;border-radius:10px;border:1px solid var(--line);display:block}
+.tech-imgs figcaption{font-size:12px;color:var(--muted);margin-top:4px}
+.t .mrow td{background:var(--sunk);font-weight:600;font-size:12px}
 .top-sketch{margin-left:auto}
 .top-kp{margin-right:4px}
 .modbar{position:absolute;z-index:3;display:flex;align-items:center;gap:2px;background:var(--glass);backdrop-filter:blur(10px);border:1px solid var(--line);border-radius:12px;padding:3px;box-shadow:var(--shadow);transform:translateX(-50%);white-space:nowrap}
@@ -90,7 +98,8 @@ button{cursor:pointer}
 .preset .btn:first-child{flex:1;text-align:left;overflow:hidden;text-overflow:ellipsis}
 .presave{display:flex;gap:6px}
 .gbtn[aria-pressed="true"]{background:var(--pri);color:var(--pri-ink);border-color:var(--pri)}
-.stage-views{position:absolute;top:12px;left:12px;display:flex;gap:6px;align-items:center;z-index:2;flex-wrap:wrap;max-width:calc(100% - 330px)}
+.stage-views{position:absolute;top:12px;left:12px;display:flex;flex-direction:column;gap:6px;align-items:flex-start;z-index:2}
+.srow{display:flex;gap:6px;align-items:center}
 .viewseg{background:var(--glass);backdrop-filter:blur(8px);border:1px solid var(--line);box-shadow:0 1px 2px rgba(0,0,0,.04)}
 .viewseg button{padding:5px 10px;font-size:12.5px}
 .work[data-side="hidden"]{grid-template-columns:minmax(0,1fr)}
@@ -341,6 +350,12 @@ dialog.dlg::backdrop{background:rgba(20,18,15,.5)}
 .kp-sums div{display:flex;justify-content:space-between;padding:1mm 0}
 .kp-sums .t{border-top:2px solid #1C1B19;margin-top:2mm;padding-top:3mm;font-size:15pt;font-weight:600}
 .sketch .kp-img{max-height:150mm;object-fit:contain;border:0;margin-top:4mm}
+.kp.tech{font-size:9.5pt}
+.kp.tech h2{margin:5mm 0 1.5mm}
+.kp.tech td,.kp.tech th{padding:1.2mm 1.6mm}
+.kp.tech .mrow td{background:#EEEBE4;font-weight:600;border-bottom:0}
+.kp.tech figure{margin:0 0 4mm;break-inside:avoid}.kp.tech figure img{width:100%;max-height:105mm;object-fit:contain;border:1px solid #DCD8CF;border-radius:4px;display:block}
+.kp.tech figcaption{font-size:8.5pt;color:#6A665E;margin-top:1mm}
 .kp-foot{margin-top:8mm;font-size:9.5pt;color:#4a463f;border-top:1px solid #DCD8CF;padding-top:3mm;break-inside:avoid}
 </style>
 
@@ -381,16 +396,22 @@ dialog.dlg::backdrop{background:rgba(20,18,15,.5)}
         <div id="stage" aria-label="3D-вид кухни"></div>
         <div class="place-banner" id="placeBanner" hidden><span id="placeText"></span><button data-act="place-cancel">Отмена</button></div>
         <div class="stage-views">
-          <button class="gbtn" id="btnSide" data-act="toggle-side" title="Скрыть меню: больше места для картинки">‹ Меню</button>
-          <div class="seg viewseg" id="viewSeg" role="group" aria-label="Вид модулей">
-            <button data-act="view" data-v="color" title="Обычный цветной вид">Цвет</button>
-            <button data-act="view" data-v="xray" title="Прозрачные панели: видны полки, ящики и фурнитура">Прозрачный</button>
-            <button data-act="view" data-v="lines" title="Только контуры деталей">Контуры</button>
-            <button data-act="view" data-v="carcass" title="Корпуса без фасадов">Без фасадов</button>
+          <div class="srow">
+            <button class="gbtn" id="btnSide" data-act="toggle-side" title="Скрыть меню: больше места для картинки">‹ Меню</button>
+            <div class="seg viewseg" id="camSeg" role="group" aria-label="Вид"></div>
+          </div>
+          <div class="srow">
+            <div class="seg viewseg" id="viewSeg" role="group" aria-label="Вид модулей">
+              <button data-act="view" data-v="color" title="Обычный цветной вид">Цвет</button>
+              <button data-act="view" data-v="xray" title="Прозрачные панели: видны полки, ящики и фурнитура">Прозрачный</button>
+              <button data-act="view" data-v="lines" title="Только контуры деталей">Контуры</button>
+              <button data-act="view" data-v="carcass" title="Корпуса без фасадов">Без фасадов</button>
+            </div>
           </div>
         </div>
         <div class="modbar" id="modbar" hidden></div>
         <div class="stage-tools">
+          <label class="gbtn bright" title="Яркость картинки. Влияет и на печать эскиза: уменьшите, если получается слишком светло"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="3"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3 3l1.4 1.4M11.6 11.6L13 13M13 3l-1.4 1.4M4.4 11.6L3 13"/></svg><input type="range" id="bright" min="40" max="140" step="5" value="100" aria-label="Яркость картинки"></label>
           <button class="gbtn" id="btnUndo" data-act="undo" disabled title="Отменить (Ctrl+Z)">Отменить</button>
           <button class="gbtn" id="btnRedo" data-act="redo" disabled title="Повторить (Ctrl+Shift+Z)">Повторить</button>
           <button class="gbtn" id="btnOpen" data-act="open-all" aria-pressed="false">Открыть всё</button>
@@ -405,6 +426,7 @@ dialog.dlg::backdrop{background:rgba(20,18,15,.5)}
           <div class="tabs" role="tablist">
             <button class="tab" role="tab" id="tb-smeta" data-act="tab" data-v="smeta">Смета</button>
             <button class="tab" role="tab" id="tb-bom" data-act="tab" data-v="bom">Материалы</button>
+            <button class="tab" role="tab" id="tb-tech" data-act="tab" data-v="tech">Технологу</button>
             <button class="tab" role="tab" id="tb-prices" data-act="tab" data-v="prices">Прайс и каталоги</button>
           </div>
           <div class="dockinfo"><span class="lbl">Итого</span><b id="dockTotal">0 ₽</b></div>
@@ -416,6 +438,7 @@ dialog.dlg::backdrop{background:rgba(20,18,15,.5)}
         <div class="docbody" id="docbody">
           <div id="tab-smeta" role="tabpanel"><div id="smHead"></div><div id="smTable"></div><div id="smExtras"></div><div id="smSums"></div></div>
           <div id="tab-bom" role="tabpanel" hidden></div>
+          <div id="tab-tech" role="tabpanel" hidden></div>
           <div id="tab-prices" role="tabpanel" hidden></div>
         </div>
       </section>
@@ -869,7 +892,7 @@ function sampleState(){
   return {client:'Анна И. (пример)', order:'К-0142', layout:'L', walls:{A:3200, B:2400, C:2400},
     room:{height:2700, wall:'#E7E4DD', floor:'oakL'},
     mat:{corpus:'c1', facade:'f2', milling:'n1', fLow:'k4', fUp:'k1', handle:'bar', hwColor:'black', drawers:'legrabox', drawerColor:'orion', top:'t4', splash:true},
-    disc:0, modules, selected:'m3', showDims:false, clientView:false, nextId:id + 1, tab:'smeta', ltab:'catalog', cat:'low', place:'A', drawer:false, sideHidden:false, view:'color', extra:[], kp:Object.assign({}, KP_DEFAULT)};
+    disc:0, modules, selected:null, showDims:false, clientView:false, nextId:id + 1, tab:'smeta', ltab:'catalog', cat:'low', place:'A', drawer:false, sideHidden:false, view:'color', cam:'persp', bright:1, extra:[], kp:Object.assign({}, KP_DEFAULT)};
 }
 function deepMerge(base, over){
   const out = JSON.parse(JSON.stringify(base));
@@ -1040,6 +1063,12 @@ function leftCatalog(){
 function typeOptions(sel){
   return CATS.map(([c, n]) => `<optgroup label="${n}">${Object.entries(TYPES).filter(([, t]) => t.cat === c).map(([k, t]) => `<option value="${k}" ${k === sel ? 'selected' : ''}>${t.name}</option>`).join('')}</optgroup>`).join('');
 }
+function hwText(hw){
+  const dr = DRAWERS[S.mat.drawers];
+  return [hw.hinge && `петли CLIP top ${hw.hinge}`, hw.slide && `${dr.n} ${hw.slide}`, hw.lift && `AVENTOS ${hw.lift}`, hw.cargo && `карго ${hw.cargo}`,
+    hw.fridge && `крепления холодильника ${hw.fridge}`, hw.dw && `крепление ПММ ${hw.dw}`, hw.bar && `ручки ${hw.bar}`, hw.push && `TIP-ON ${hw.push}`,
+    hw.gola && `Gola ${nf2.format(hw.gola)} м`, hw.leg && `опоры ${hw.leg}`, hw.hanger && `навесы ${hw.hanger}`, hw.pin && `полкодержатели ${hw.pin}`].filter(Boolean).join(', ');
+}
 function leftModule(){
   const m = selMod();
   if (!m) return `<div class="sec"><h3>Модуль</h3><div class="empty">Выберите модуль кликом по шкафу на 3D-виде или в «Каталоге», раздел «Состав кухни».</div></div>`;
@@ -1077,9 +1106,7 @@ function leftModule(){
   if (t.row === 'mezz') h += `<div class="small muted">Над пеналом ставьте глубину 560, над верхними 300.</div>`;
   if (t.corner) h += `<div class="field"><span class="flabel">Глухая часть (заходит под соседний ряд)</span><div class="seg"><button data-act="blind" data-v="left" aria-pressed="${m.blind !== 'right'}">Слева</button><button data-act="blind" data-v="right" aria-pressed="${m.blind === 'right'}">Справа</button></div></div>`;
   const hw = r.hw, dr = DRAWERS[S.mat.drawers];
-  const hwl = [hw.hinge && `петли CLIP top ${hw.hinge}`, hw.slide && `${dr.n} ${hw.slide}`, hw.lift && `AVENTOS ${hw.lift}`, hw.cargo && `карго ${hw.cargo}`,
-    hw.fridge && `крепления холодильника ${hw.fridge}`, hw.dw && `крепление ПММ ${hw.dw}`, hw.bar && `ручки ${hw.bar}`, hw.push && `TIP-ON ${hw.push}`,
-    hw.gola && `Gola ${nf2.format(hw.gola)} м`, hw.leg && `опоры ${hw.leg}`, hw.hanger && `навесы ${hw.hanger}`].filter(Boolean).join(', ');
+  const hwl = hwText(hw);
   h += `</div><div class="sec"><h3>Детали и цена</h3>
     <table class="mini" aria-label="Детали модуля">
       ${r.panels.map(p => `<tr><td>${p.n}${p.mat === 'hdf' ? ' <span class="muted">(ХДФ)</span>' : ''}</td><td class="sz">${p.a}×${p.b}</td><td>${p.q} шт</td></tr>`).join('')}
@@ -1499,6 +1526,77 @@ function libDel(code){
   store(KTPL, customTpls().filter(t => t.code !== code)); setTemplates(customTpls()); renderLib(); renderLeft();
 }
 
+/* ---------------- режим «Технологу»: детали, фасады, фурнитура, эскизы ---------------- */
+const FACADE_KIND = {door:'Дверца', drawer:'Фасад ящика', lift:'Фасад подъёмника', dw:'Фасад посудомойки', fridge:'Фасад холодильника', cargo:'Фасад бутылочницы', panel:'Планка'};
+function techData(){
+  const num = numberMap(), fm = catFind(C.facade, S.mat.facade), ml = catFind(C.milling, S.mat.milling);
+  const mods = orderedMods().map(m => {
+    const r = resultOf(m.id), t = TYPES[m.type];
+    return {num:num[m.id], gap:!!t.gap, label:modLabel(m), wall:m.wall, row:t.row, size:sizeStr(m), notes:modNotes(m), todo:t.todo,
+      panels:r.panels.map(p => ({name:p.n, a:p.a, b:p.b, q:p.q, mat:p.mat === 'hdf' ? 'ХДФ 3 мм' : r.decor.name, e2:+(p.e2 / 1000).toFixed(3), e04:p.mat === 'ldsp' ? +((2 * (p.a + p.b) - p.e2) / 1000).toFixed(3) : 0})),
+      facs:r.facs.map(f => ({name:(FACADE_KIND[f.k] || f.k) + (f.glass ? ' со стеклом' : ''), w:Math.round(f.w), h:Math.round(f.h), mat:`${fm.name}, ${ml.name.toLowerCase()}, ${catFind(C.fcolor, facadeColorId(m, S)).name.toLowerCase()}`})),
+      hw:hwText(r.hw)};
+  });
+  return {mods, bom:bomOf(A, S, P, C), warnings:[...A.R.warnings], todos:[...new Set(mods.filter(x => x.todo).map(x => `${x.label}: ${x.todo}`))]};
+}
+let techImgs = null, techImgsKey = '';
+const techKey = () => JSON.stringify([S.modules, S.walls, S.layout, S.room, S.mat, S.view, S.bright]);
+function techHtml(d, imgs, print){
+  const cls = print ? '' : ' class="t"', real = d.mods.filter(x => !x.gap), wallName = w => wallsOf(S).length > 1 ? 'Стена ' + WN[w] : '';
+  const rowName = r => ({low:'нижний ряд и пеналы', up:'верхний ряд', mezz:'антресоли'}[r]);
+  const sec = (title, body) => `<div class="${print ? '' : 'tech-sec'}"><${print ? 'h2' : 'h3'}>${title}</${print ? 'h2' : 'h3'}>${body}</div>`;
+  const wrap = h => print ? h : `<div class="tblwrap">${h}</div>`;
+  let h = '';
+  h += sec('Модули', wrap(`<table${cls}><thead><tr><th>№</th><th>Модуль</th><th>Размер, мм</th><th>Где</th><th>Опции и замечания</th></tr></thead><tbody>${d.mods.map(x => `<tr><td>${x.gap ? '' : x.num}</td><td>${esc(x.label)}</td><td>${x.size}</td><td>${[wallName(x.wall), rowName(x.row)].filter(Boolean).join(' · ')}</td><td>${esc([x.notes, x.todo && 'проверить: ' + x.todo].filter(Boolean).join('; '))}</td></tr>`).join('')}</tbody></table>`));
+  const cut = real.filter(x => x.panels.length).map(x => `<tr class="mrow"><td colspan="6">${x.num}. ${esc(x.label)} · ${x.size}</td></tr>` + x.panels.map(p => `<tr><td>${esc(p.name)}</td><td>${p.a} × ${p.b}</td><td>${p.q}</td><td>${esc(p.mat)}</td><td>${p.e2 ? nf2.format(p.e2) : '—'}</td><td>${p.e04 ? nf2.format(p.e04) : '—'}</td></tr>`).join('')).join('');
+  h += sec('Детали корпуса', wrap(`<table${cls}><thead><tr><th>Деталь</th><th>Размер, мм</th><th>Кол-во</th><th>Материал</th><th>Кромка 2 мм, м на деталь</th><th>Кромка 0,4 мм, м на деталь</th></tr></thead><tbody>${cut || '<tr><td colspan="6">Нет деталей</td></tr>'}</tbody></table>`));
+  const fac = real.filter(x => x.facs.length).map(x => `<tr class="mrow"><td colspan="3">${x.num}. ${esc(x.label)} · ${x.size}</td></tr>` + x.facs.map(f => `<tr><td>${esc(f.name)}</td><td>${f.w} × ${f.h}</td><td>${esc(f.mat)}</td></tr>`).join('')).join('');
+  h += sec('Фасады', wrap(`<table${cls}><thead><tr><th>Фасад</th><th>Размер, мм</th><th>Материал, фрезеровка, цвет</th></tr></thead><tbody>${fac || '<tr><td colspan="3">Нет фасадов</td></tr>'}</tbody></table>`));
+  h += sec('Фурнитура Blum и комплектующие по модулям', wrap(`<table${cls}><thead><tr><th>№</th><th>Модуль</th><th>Фурнитура</th></tr></thead><tbody>${real.map(x => `<tr><td>${x.num}</td><td>${esc(x.label)}</td><td>${esc(x.hw || '—')}</td></tr>`).join('')}</tbody></table>`));
+  const bom = d.bom.map(r => r.g ? `<tr class="mrow"><td colspan="3">${esc(r.g)}</td></tr>` : `<tr><td>${esc(r.n)}</td><td>${r.u === 'шт' ? nf0.format(r.q) : nf2.format(r.q)} ${r.u}</td><td></td></tr>`).join('');
+  h += sec('Ведомость материалов (с учётом отхода)', wrap(`<table${cls}><thead><tr><th>Материал</th><th>Количество</th><th></th></tr></thead><tbody>${bom}</tbody></table>`));
+  const q = [...d.warnings, ...d.todos];
+  h += sec('Вопросы к проекту', q.length ? `<ul style="margin:0;padding-left:18px">${q.map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : '<div class="tech-note">Замечаний нет.</div>');
+  if (imgs) h += sec('Эскизы', `<div class="${print ? '' : 'tech-imgs'}">${imgs.map(([n, u]) => u ? `<figure><img src="${u}" alt="${esc(n)}"><figcaption>${esc(n)}</figcaption></figure>` : '').join('')}</div>`);
+  return h;
+}
+function techSketches(){
+  const key = techKey(); if (techImgs && techImgsKey === key) return techImgs;
+  techImgs = [['План сверху (нижний ряд и пеналы)', orthoSnapshot('top', 1400, 900)], ...wallsOf(S).map(w => ['Вид спереди, стена ' + WN[w], orthoSnapshot(w, 1600, 900)])]; techImgsKey = key; return techImgs;
+}
+function renderTech(){
+  const d = techData(), okImgs = techImgs && techImgsKey === techKey();
+  $('tab-tech').innerHTML = `
+    <div class="dochead"><div><h2>Для технолога, заказ ${esc(S.order || '—')}</h2><div class="meta">Детали с размерами и кромкой, фасады, фурнитура, ведомость и эскизы по стенам. Присадка, раскрой листов и выгрузка в Базис пока не готовы.</div></div>
+      <div class="doctools"><button class="btn" data-act="tech-imgs">${okImgs ? 'Обновить эскизы' : 'Показать эскизы'}</button><button class="btn pri" data-act="tech-print">Печать</button><button class="btn" data-act="tech-copy">Скопировать детали в Excel</button></div></div>
+    ${techHtml(d, okImgs ? techImgs : null, false)}`;
+}
+function techTSV(d){
+  const R = [['Модуль №', 'Модуль', 'Размер модуля, мм', 'Деталь', 'A, мм', 'B, мм', 'Кол-во', 'Материал', 'Кромка 2 мм, м на деталь', 'Кромка 0,4 мм, м на деталь']];
+  d.mods.filter(x => !x.gap).forEach(x => x.panels.forEach(p => R.push([x.num, x.label, x.size, p.name, p.a, p.b, p.q, p.mat, String(p.e2).replace('.', ','), String(p.e04).replace('.', ',')])));
+  return R.map(r => r.join('\t')).join('\n');
+}
+async function techPrint(){
+  const d = techData(), imgs = techSketches(), date = new Date().toLocaleDateString('ru-RU');
+  const spec = specRows();
+  $('printArea').innerHTML = `<div class="kp tech"><div class="kp-head"><div><div class="kp-brand">${esc(S.kp.brand || '')}</div><div class="kp-title">Проект для технолога</div></div><div class="kp-meta">Заказ ${esc(S.order || '—')} · ${date}<br>${esc(S.client || '')}</div></div>
+    <dl class="kp-spec" style="margin-top:4mm">${spec.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl>${techHtml(d, imgs, true)}</div>`;
+  await Promise.all([...$('printArea').querySelectorAll('img')].map(im => im.decode ? im.decode().catch(() => {}) : null));
+  const t = document.title; document.title = 'Технологу ' + (S.order || '') + (S.client ? ' ' + S.client : ''); window.print(); document.title = t;
+}
+// строки «Состав кухни» для КП и листа технологу
+function specRows(){
+  const ws = wallsOf(S), dr = DRAWERS[S.mat.drawers], dc = dr.colors.find(c => c.id === S.mat.drawerColor) || dr.colors[0], top = catFind(C.top, S.mat.top);
+  return [
+    ['Планировка', {I:'Прямая', L:'Угловая', U:'П-образная'}[S.layout] + ' · ' + ws.map(w => `стена ${WN[w]} ${S.walls[w]} мм`).join(', ') + ` · потолок ${S.room.height} мм`],
+    ['Корпус', 'ЛДСП 16 мм, ' + catFind(C.corpus, S.mat.corpus).name.toLowerCase()],
+    ['Фасады', catFind(C.facade, S.mat.facade).name + ', ' + catFind(C.milling, S.mat.milling).name.toLowerCase()],
+    ['Цвет фасадов', `низ — ${catFind(C.fcolor, S.mat.fLow).name.toLowerCase()}, верх — ${catFind(C.fcolor, S.mat.fUp).name.toLowerCase()}`],
+    ['Открывание', HANDLES[S.mat.handle].toLowerCase() + (S.mat.handle === 'push' ? '' : ', ' + hwColorOf().name.toLowerCase())],
+    ['Фурнитура', `Blum: петли CLIP top BLUMOTION, ящики ${dr.n} (${dc.name.toLowerCase()})`],
+    ['Столешница', top.name + (S.mat.splash ? ', стеновая панель (фартук)' : '')]];
+}
+
 /* ---------------- copy ---------------- */
 function smetaText(){
   const num = numberMap(), L = [`Смета на кухню, заказ ${S.order || ''}`.trim()];
@@ -1648,6 +1746,11 @@ function modAct(act, v){
     if (nw){ m.w = nw; update(); } else toast('Это крайний стандартный размер');
   }
 }
+function deselect(){
+  if (!S.selected) return;
+  S.selected = null; if (helper){ scene.remove(helper); helper.geometry.dispose(); helper = null; } selBox = null;
+  renderModbar(); renderLeft(); renderSmeta(); store(KS, S);
+}
 function renderModbar(){
   const bar = $('modbar'), m = selMod();
   if (!m || !has3D){ bar.hidden = true; return; }
@@ -1660,7 +1763,8 @@ function renderModbar(){
     <button class="mb" data-act="mv" data-v="1" title="Правее (стрелка →)" aria-label="Правее">→</button><span class="sep"></span>
     ${!canOpen(m) ? '' : `<button class="mb" data-act="toggle-open" title="Открыть или закрыть все дверцы и ящики модуля. Одну дверцу или один ящик открывает двойной клик по ней">${modOpen(m) ? 'Закрыть' : 'Открыть'}</button>`}
     <button class="mb" data-act="dup" title="Копия (Ctrl+D)">Копия</button>
-    <button class="mb danger" data-act="del" title="Удалить (Delete)">Удалить</button>`;
+    <button class="mb danger" data-act="del" title="Удалить (Delete)">Удалить</button><span class="sep"></span>
+    <button class="mb" data-act="deselect" title="Убрать панель (Esc)" aria-label="Снять выбор">×</button>`;
   bar.hidden = false;
 }
 let selBox = null;
@@ -1677,9 +1781,9 @@ function positionModbar(){
 }
 
 function update({left = true, resetCam = false, rebuild = true} = {}){
-  histTrack(); recalc(); renderHeader();
+  histTrack(); recalc(); renderHeader(); if (has3D && $('camSeg')) renderCamSeg();
   if (left) renderLeft();
-  renderSmeta(); renderBom();
+  renderSmeta(); renderBom(); if (S.tab === 'tech') renderTech();
   if (rebuild) build3D(resetCam);
   renderModbar();
   store(KS, S);
@@ -1710,7 +1814,7 @@ function setDrawer(open){
   $('btnDrawer').setAttribute('aria-expanded', String(S.drawer)); $('drawerLbl').textContent = S.drawer ? 'Скрыть' : 'Показать смету';
   store(KS, S);
 }
-function setTab(v){ S.tab = v; ['smeta','bom','prices'].forEach(t => { $('tab-' + t).hidden = t !== v; $('tb-' + t).setAttribute('aria-selected', String(t === v)); }); }
+function setTab(v){ S.tab = v; if (v === 'tech') renderTech(); ['smeta','bom','tech','prices'].forEach(t => { $('tab-' + t).hidden = t !== v; $('tb-' + t).setAttribute('aria-selected', String(t === v)); }); }
 function ensureRefs(){
   S.kp = Object.assign({}, KP_DEFAULT, S.kp || {}); if (!Array.isArray(S.extra)) S.extra = [];
   ['corpus','facade','milling','top'].forEach(k => { if (!C[k].some(r => r.id === S.mat[k])) S.mat[k] = C[k][0].id; });
@@ -1733,6 +1837,11 @@ document.addEventListener('click', e => {
     case 'pick': if (!dragJustEnded) startPlacing(v); break;
     case 'place-cancel': stopPlacing(); break;
     case 'drawer': setDrawer(!S.drawer); break;
+    case 'cam': setCamMode(v); break;
+    case 'deselect': deselect(); break;
+    case 'tech-imgs': techSketches(); renderTech(); break;
+    case 'tech-print': techPrint(); break;
+    case 'tech-copy': copy(techTSV(techData())); break;
     case 'toggle-side': setSide(!S.sideHidden); setTimeout(fitCamera, 120); break;
     case 'view': S.view = v; syncViewSeg(); build3D(false); store(KS, S); break;
     case 'print-sketch': printSketch(); break;
@@ -1844,6 +1953,7 @@ document.addEventListener('change', e => {
 document.addEventListener('input', e => {
   if (e.target.id === 'inClient'){ S.client = e.target.value; renderHeader(); renderSmeta(); store(KS, S); }
   if (e.target.id === 'inOrder'){ S.order = e.target.value; renderHeader(); renderSmeta(); store(KS, S); }
+  if (e.target.id === 'bright'){ S.bright = +e.target.value / 100; if (renderer) renderer.toneMappingExposure = S.bright; store(KS, S); }
   if (e.target.id === 'pickQ'){ pick.limit = 60; renderPickGrid(); }
   if (e.target.dataset && e.target.dataset.catq){ const key = e.target.dataset.catq; catView[key] = Object.assign(catView[key] || {}, {q:e.target.value, page:0}); renderCatBody(key); }
   const kpField = {inBrand:'brand', inManager:'manager', inContacts:'contacts', inLead:'lead'}[e.target.id];
@@ -1853,6 +1963,7 @@ document.addEventListener('input', e => {
 
 /* ---------------- 3D ---------------- */
 let renderer, scene, camera, controls, root = null, helper = null, disposables = [], has3D = false, anims = [];
+let persp = null, ortho = null, orthoExt = {hw:2, hh:1.5};
 let placing = null, dragging = null, pend = null, mv = null, ghost = null, dropAt = null, dragJustEnded = false;
 const matCache = {};
 function cssVar(n){ return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
@@ -1893,7 +2004,7 @@ function label(text, x, y, z, accent){
   g.fillStyle = '#fff'; g.textAlign = 'center'; g.textBaseline = 'middle';
   let fs = 44; do { g.font = `600 ${fs}px "IBM Plex Mono", ui-monospace, monospace`; fs -= 2; } while (g.measureText(text).width > 220 && fs > 18);
   g.fillText(text, 128, 46);
-  const tex = new THREE.CanvasTexture(c); tex.encoding = THREE.sRGBEncoding; const sm = new THREE.SpriteMaterial({map:tex, depthTest:false, transparent:true});
+  const tex = new THREE.CanvasTexture(c); tex.encoding = THREE.sRGBEncoding; const sm = new THREE.SpriteMaterial({map:tex, depthTest:false, transparent:true, toneMapped:false});
   const sp = new THREE.Sprite(sm); sp.scale.set(.21, .072, 1); sp.position.set(x / 1000, y / 1000, z / 1000); sp.renderOrder = 10;
   disposables.push(tex, sm); return sp;
 }
@@ -1903,7 +2014,7 @@ function addDim(g, t, W, H, D, baseY){
   if (t.row === 'low'){ y = 14; z = D + 150; } else if (t.row === 'up'){ y = baseY - 150; z = 8; } else { y = baseY + H + 90; z = D; }
   const P = (x, yy) => new THREE.Vector3(x / 1000, yy / 1000, z / 1000);
   const geo = new THREE.BufferGeometry().setFromPoints([P(2, y), P(W - 2, y), P(2, y - 35), P(2, y + 35), P(W - 2, y - 35), P(W - 2, y + 35)]);
-  const lm = matCache.dimLine || (matCache.dimLine = new THREE.LineBasicMaterial({color:col('#4A463F'), transparent:true, opacity:.75, depthTest:false}));
+  const lm = matCache.dimLine || (matCache.dimLine = new THREE.LineBasicMaterial({color:col('#4A463F'), transparent:true, opacity:.75, depthTest:false, toneMapped:false}));
   const ln = new THREE.LineSegments(geo, lm); ln.renderOrder = 9; g.add(ln);
   g.add(label(String(W), W / 2, y, z));
 }
@@ -1916,11 +2027,13 @@ function init3D(){
     const el = $('stage');
     renderer = new THREE.WebGLRenderer({antialias:true, alpha:true});
     renderer.setClearColor(0x000000, 0); renderer.outputEncoding = THREE.sRGBEncoding;
+    // линейное отображение с выдержкой: при 100% картинка не меняется, ползунок яркости меняет только выдержку
+    renderer.toneMapping = THREE.LinearToneMapping; renderer.toneMappingExposure = S.bright || 1;
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     el.appendChild(renderer.domElement);
     scene = new THREE.Scene();
-    camera = new THREE.PerspectiveCamera(38, 1, .05, 100);
+    camera = persp = new THREE.PerspectiveCamera(38, 1, .05, 100); ortho = new THREE.OrthographicCamera(-1, 1, 1, -1, .05, 80);
     controls = new THREE.OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true; controls.dampingFactor = .09; controls.maxPolarAngle = Math.PI * .495; controls.minDistance = .6; controls.maxDistance = 14;
     try { if (THREE.RoomEnvironment && THREE.PMREMGenerator){ const pm = new THREE.PMREMGenerator(renderer); scene.environment = pm.fromScene(new THREE.RoomEnvironment(), .04).texture; pm.dispose(); } } catch(e){}
@@ -1945,6 +2058,7 @@ function init3D(){
         if (o){ const id = o.userData.modId, now = performance.now();
           if (lastClick.id === id && now - lastClick.t < 380){ const mm = S.modules.find(x => x.id === id); if (fid) toggleFid(fid); else if (mm) toggleModOpen(mm); lastClick = {id:null, t:0}; if (S.ltab === 'module') renderLeft(); renderModbar(); return; }
           lastClick = {id, t:now}; if (S.selected !== id) selectMod(id, true); else if (S.ltab !== 'module'){ S.ltab = 'module'; renderLeft(); } return; } }
+      deselect(); // нажали на пустое место — выбор снимается
     });
     (function loop(){
       requestAnimationFrame(loop); if (document.hidden) return;
@@ -1958,12 +2072,42 @@ function init3D(){
 function applyStageBg(){ /* фон сцены рисует CSS-градиент под прозрачным холстом */ }
 function resize(){
   const el = $('stage'), w = el.clientWidth, h = el.clientHeight; if (!w || !h) return;
-  renderer.setSize(w, h, false); camera.aspect = w / h;
+  renderer.setSize(w, h, false); persp.aspect = w / h;
   // на широком экране снизу лежит полоса со сметой: поднимаем кухню в кадре
-  camera.setViewOffset(w, h, 0, window.innerWidth > 1080 ? 36 : 0, w, h); camera.updateProjectionMatrix();
+  const off = window.innerWidth > 1080 ? 36 : 0;
+  persp.setViewOffset(w, h, 0, off, w, h); persp.updateProjectionMatrix(); applyOrtho(w, h, off);
+}
+// Ортогональные виды: план сверху и вид спереди на каждую стену. Размеры в метрах.
+function orthoSpec(mode){
+  const La = S.walls.A / 1000, Lb = S.walls.B / 1000, Lc = S.walls.C / 1000, Hc = Math.min(S.room.height, 2800) / 1000, ws = wallsOf(S);
+  if (mode === 'top'){ const depth = Math.max(ws.includes('B') ? Lb : 0, ws.includes('C') ? Lc : 0, 1.4); return {pos:[La / 2, 30, depth / 2 - .15], target:[La / 2, 0, depth / 2 - .15], up:[0, 0, -1], hw:La / 2 + .45, hh:depth / 2 + .6}; }
+  if (mode === 'A') return {pos:[La / 2, Hc / 2 - .12, 1.6], target:[La / 2, Hc / 2 - .12, 0], up:[0, 1, 0], hw:La / 2 + .4, hh:Hc / 2 + .45};
+  if (mode === 'B') return {pos:[1.6, Hc / 2 - .12, Lb / 2], target:[0, Hc / 2 - .12, Lb / 2], up:[0, 1, 0], hw:Lb / 2 + .4, hh:Hc / 2 + .45};
+  return {pos:[La - 1.6, Hc / 2 - .12, Lc / 2], target:[La, Hc / 2 - .12, Lc / 2], up:[0, 1, 0], hw:Lc / 2 + .4, hh:Hc / 2 + .45};
+}
+function frustum(spec, aspect){ let hw = spec.hw, hh = spec.hh; if (hw / hh < aspect) hw = hh * aspect; else hh = hw / aspect; return {left:-hw, right:hw, top:hh, bottom:-hh}; }
+function applyOrtho(w, h, off){
+  if (!ortho) return; Object.assign(ortho, frustum(orthoExt, w / h)); ortho.setViewOffset(w, h, 0, off, w, h); ortho.updateProjectionMatrix();
+}
+function setCamMode(mode){
+  S.cam = mode; renderCamSeg(); if (!has3D) return;
+  if (mode === 'persp'){ camera = persp; controls.object = persp; controls.enableRotate = true; controls.maxPolarAngle = Math.PI * .495; }
+  else { camera = ortho; controls.object = ortho; controls.enableRotate = false; controls.screenSpacePanning = true; controls.maxPolarAngle = Math.PI; }
+  fitCamera(); build3D(false); store(KS, S);
+}
+function renderCamSeg(){
+  const ws = wallsOf(S), modes = [['persp', '3D'], ['top', 'План'], ...ws.map(w => [w, 'Стена ' + WN[w]])];
+  if (!modes.some(([k]) => k === S.cam)) S.cam = 'persp';
+  $('camSeg').innerHTML = modes.map(([k, n]) => `<button data-act="cam" data-v="${k}" aria-pressed="${S.cam === k}" title="${k === 'persp' ? 'Объёмный вид' : k === 'top' ? 'План сверху: только нижний ряд и пеналы' : 'Вид спереди на стену'}">${n}</button>`).join('');
 }
 function fitCamera(){
   if (!has3D) return;
+  if (S.cam !== 'persp'){
+    const sp = orthoSpec(S.cam), el = $('stage'); orthoExt = {hw:sp.hw, hh:sp.hh};
+    ortho.up.set(...sp.up); ortho.position.set(...sp.pos); ortho.zoom = 1; controls.target.set(...sp.target); ortho.lookAt(...sp.target);
+    applyOrtho(el.clientWidth, el.clientHeight, window.innerWidth > 1080 ? 36 : 0); controls.update(); return;
+  }
+  persp.up.set(0, 1, 0);
   const ws = wallsOf(S), La = S.walls.A, Lb = S.walls.B, Lc = S.walls.C;
   const depth = Math.max(ws.includes('B') ? Lb : 0, ws.includes('C') ? Lc : 0, 700);
   const lo = new THREE.Vector3((ws.includes('B') ? -20 : 0) / 1000, 0, -20 / 1000), hi = new THREE.Vector3((La + (ws.includes('C') ? 20 : 0)) / 1000, Math.min(S.room.height, 2650) / 1000, (depth + 250) / 1000);
@@ -1971,11 +2115,29 @@ function fitCamera(){
   const corners = []; [lo.x, hi.x].forEach(x => [lo.y, hi.y].forEach(y => [lo.z, hi.z].forEach(z => corners.push(new THREE.Vector3(x, y, z)))));
   let dist = 12; const tgt = new THREE.Vector3(c.x, Math.min(c.y, 1.15), c.z);
   for (let i = 0; i < 12; i++){
-    camera.position.copy(tgt).addScaledVector(dir, dist); camera.lookAt(tgt); camera.updateMatrixWorld(); camera.updateProjectionMatrix();
-    let m = 0; corners.forEach(p => { const q = p.clone().project(camera); m = Math.max(m, Math.abs(q.x) / .9, Math.abs(q.y) / .86); });
+    persp.position.copy(tgt).addScaledVector(dir, dist); persp.lookAt(tgt); persp.updateMatrixWorld(); persp.updateProjectionMatrix();
+    let m = 0; corners.forEach(p => { const q = p.clone().project(persp); m = Math.max(m, Math.abs(q.x) / .9, Math.abs(q.y) / .86); });
     if (Math.abs(m - 1) < .01) break; dist *= Math.max(.5, Math.min(2, m));
   }
   controls.target.copy(tgt); controls.update();
+}
+// Картинка вида без экрана: для эскиза технологу. Рисуем теми же светом и материалами, что и на экране.
+function orthoSnapshot(mode, w = 1600, h = 900, labels = true){
+  if (!has3D || !root) return '';
+  const sp = orthoSpec(mode), cam = new THREE.OrthographicCamera(-1, 1, 1, -1, .05, 80), hidden = [];
+  Object.assign(cam, frustum(sp, w / h)); cam.up.set(...sp.up); cam.position.set(...sp.pos); cam.lookAt(...sp.target); cam.updateProjectionMatrix();
+  const hide = o => { if (o.visible){ o.visible = false; hidden.push(o); } };
+  if (!labels) root.traverse(o => { if (o.isSprite) hide(o); });
+  if (mode === 'top') root.children.forEach(o => { if (o.userData.row && o.userData.row !== 'low') hide(o); });
+  if (helper) hide(helper); if (ghost) hide(ghost);
+  const old = renderer.getSize(new THREE.Vector2()); let url = '';
+  try {
+    renderer.setSize(w, h, false); renderer.render(scene, cam);
+    const c = document.createElement('canvas'); c.width = renderer.domElement.width; c.height = renderer.domElement.height; const g = c.getContext('2d'), gr = g.createLinearGradient(0, 0, 0, c.height);
+    gr.addColorStop(0, '#F8F6F2'); gr.addColorStop(1, '#E2DED5'); g.fillStyle = gr; g.fillRect(0, 0, c.width, c.height); g.drawImage(renderer.domElement, 0, 0); url = c.toDataURL('image/jpeg', .88);
+  } catch(e){ url = ''; }
+  renderer.setSize(old.x, old.y, false); hidden.forEach(o => { o.visible = true; });
+  return url;
 }
 function addAnim(id, obj, prop, open){
   const get = prop === 'z' ? () => obj.position.z : prop === 'rx' ? () => obj.rotation.x : () => obj.rotation.y;
@@ -2038,8 +2200,9 @@ function aoMat(a){
   tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping; tex.encoding = THREE.LinearEncoding;
   return matCache[k] = new THREE.MeshBasicMaterial({map:tex, transparent:true, depthWrite:false});
 }
+let curNum = {};
 function buildModule(m, pos){
-  const t = TYPES[m.type], g = new THREE.Group(); g.userData.modId = m.id;
+  const t = TYPES[m.type], g = new THREE.Group(); g.userData.modId = m.id; g.userData.row = t.row;
   placeGroup(g, m.wall, pos.x, m.w);
   if (t.gap){
     const gm = matCache.ghost || (matCache.ghost = new THREE.MeshBasicMaterial({color:col(cssVar('--accent') || '#A9532A'), transparent:true, opacity:.10, depthWrite:false}));
@@ -2149,6 +2312,12 @@ function buildModule(m, pos){
     const p1 = new THREE.Mesh(new THREE.PlaneGeometry(W * 1.3 / 1000, .62), gm); p1.rotation.x = -Math.PI / 2; p1.position.set(W / 2000, (topY + 2) / 1000, .26); g.add(p1);
     const p2 = new THREE.Mesh(new THREE.PlaneGeometry(W * 1.3 / 1000, Math.max(.1, (baseY - topY) / 1000 * 1.4)), gm); p2.position.set(W / 2000, (topY + (baseY - topY) * .25) / 1000, .009); g.add(p2);
   }
+  if (S.cam === 'top'){
+    // на плане столешница закрывает шкафы: рисуем контур модуля и его номер выше неё
+    const og = new THREE.BoxGeometry(W / 1000, .001, D / 1000), ln = new THREE.LineSegments(new THREE.EdgesGeometry(og), matCache.outline || (matCache.outline = new THREE.LineBasicMaterial({color:col('#2B2926'), toneMapped:false})));
+    ln.position.set(W / 2000, (baseY + H + 70) / 1000, D / 2000); ln.renderOrder = 8; g.add(ln); og.dispose();
+    if (t.row === 'low' && curNum[m.id]) g.add(label(String(curNum[m.id]), W / 2, baseY + H + 90, D / 2));
+  }
   if (S.showDims) addDim(g, t, W, H, D, baseY);
   return g;
 }
@@ -2157,7 +2326,7 @@ function buildModule(m, pos){
 function applyViewMode(){
   const mode = S.view || 'color'; if (mode === 'color') return;
   const room = new Set(['wall', 'floor']), ink = cssVar('--ink') || '#1C1B19';
-  const edgeMat = new THREE.LineBasicMaterial({color:col(ink), transparent:true, opacity:mode === 'lines' ? .9 : .5}); disposables.push(edgeMat);
+  const edgeMat = new THREE.LineBasicMaterial({color:col(ink), transparent:true, opacity:mode === 'lines' ? .9 : .5, toneMapped:false}); disposables.push(edgeMat);
   const hidden = new THREE.MeshBasicMaterial({visible:false}); disposables.push(hidden);
   const clones = new Map(), alpha = {corp:.22, fac:.16, top:.3, handle:.85, glass:.2};
   const glassy = orig => { if (!clones.has(orig)){ const c = orig.clone(); c.transparent = true; c.opacity = alpha[orig.userData && orig.userData.kind] ?? .35; c.depthWrite = false; clones.set(orig, c); disposables.push(c); } return clones.get(orig); };
@@ -2180,7 +2349,7 @@ function build3D(resetCam){
   if (root){ scene.remove(root); root.traverse(o => { if (o.geometry) o.geometry.dispose(); }); disposables.forEach(d => d.dispose()); disposables = []; }
   if (helper){ scene.remove(helper); helper.geometry.dispose(); helper = null; }
   anims = [];
-  root = new THREE.Group(); scene.add(root);
+  root = new THREE.Group(); scene.add(root); curNum = numberMap();
   const ws = wallsOf(S), La = S.walls.A, Lb = S.walls.B, Lc = S.walls.C, Hc = S.room.height;
   const wallM = plainMat('wall', S.room.wall, .95);
   box(root, La + (ws.includes('B') ? 20 : 0) + (ws.includes('C') ? 20 : 0), Hc, 20, ws.includes('B') ? -20 : 0, 0, -20, wallM, false);
@@ -2206,8 +2375,9 @@ function build3D(resetCam){
     else { box(root, 600, top.t, len, La - 600, y, s.x0, topM); if (S.mat.splash) box(root, 6, sh, len, La - 6, y + top.t, s.x0, splashM, false); }
   });
   const sel = root.children.find(o => o.userData && o.userData.modId === S.selected);
-  if (sel){ helper = new THREE.BoxHelper(sel, col(cssVar('--accent') || '#A9532A')); scene.add(helper); }
+  if (sel){ helper = new THREE.BoxHelper(sel, col(cssVar('--accent') || '#A9532A')); helper.material.toneMapped = false; scene.add(helper); }
   selBox = sel ? new THREE.Box3().setFromObject(sel) : null;
+  if (S.cam === 'top') root.children.forEach(o => { if (o.userData.row && o.userData.row !== 'low') o.visible = false; });
   applyViewMode();
   // отражения окружения слабые, чтобы не пересвечивать цвета образцов
   root.traverse(o => { if (o.material) [].concat(o.material).forEach(m => { if (m.isMeshStandardMaterial) m.envMapIntensity = m === matCache.glassPane ? 1 : m.metalness > .5 ? 1.1 : .15; }); });
@@ -2236,6 +2406,13 @@ function dropTarget(cx, cy, type, m){
     if (u < -300 || u > S.walls[wl] + 300 || pt.y < -.05 || pt.y > S.room.height / 1000 + .3) return;
     if (!best || tt < best.t) best = {wall:wl, u, t:tt};
   });
+  if (!best && ray.direction.y < -1e-6){
+    const tt = -ray.origin.y / ray.direction.y, pt = ray.origin.clone().addScaledVector(ray.direction, tt);
+    wallsOf(S).forEach(wl => {
+      const dist = wl === 'A' ? Math.abs(pt.z - D / 2) : wl === 'B' ? Math.abs(pt.x - D / 2) : Math.abs(pt.x - (S.walls.A / 1000 - D / 2)), u = (wl === 'A' ? pt.x : pt.z) * 1000;
+      if (u < -300 || u > S.walls[wl] + 300) return; if (!best || dist < best.dist) best = {wall:wl, u, t:tt, dist};
+    });
+  }
   return best;
 }
 function slotFor(type, wall, u, ignoreId){
@@ -2329,6 +2506,7 @@ document.addEventListener('keydown', e => {
   if (document.querySelector('dialog[open]')) return;
   const tg = e.target, typing = tg && (tg.tagName === 'INPUT' || tg.tagName === 'TEXTAREA' || tg.tagName === 'SELECT' || tg.isContentEditable), mod = e.ctrlKey || e.metaKey;
   if (typing || e.altKey) return;
+  if (e.key === 'Escape' && selMod()){ deselect(); return; }
   if (mod && e.code === 'KeyZ'){ e.preventDefault(); e.shiftKey ? redo() : undo(); return; }
   if (mod && e.code === 'KeyY'){ e.preventDefault(); redo(); return; }
   if (mod && e.code === 'KeyD'){ e.preventDefault(); modAct('dup'); return; }
@@ -2346,9 +2524,10 @@ document.getElementById('stage').addEventListener('pointerdown', e => {
 
 /* ---------------- boot ---------------- */
 ensureRefs(); recalc();
-renderPrices(); setTab(S.tab || 'smeta'); setDrawer(!!S.drawer); setSide(!!S.sideHidden); syncViewSeg(); renderExtras();
+renderPrices(); setTab(S.tab || 'smeta'); setDrawer(!!S.drawer); setSide(!!S.sideHidden); syncViewSeg(); renderExtras(); $('bright').value = Math.round((S.bright || 1) * 100);
 $('btnDims').setAttribute('aria-pressed', String(S.showDims));
 init3D();
+renderCamSeg(); if (S.cam !== 'persp' && has3D) setCamMode(S.cam);
 update({resetCam:true});
 const mq = window.matchMedia('(prefers-color-scheme: dark)');
 const onTheme = () => { applyStageBg(); build3D(false); };
