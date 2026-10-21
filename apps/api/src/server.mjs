@@ -3,10 +3,11 @@ import http from 'node:http';
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { pathToFileURL } from 'node:url';
 import { cleanQuery, isAllowedMethod, normalizeWebhook, scrub } from './policy.mjs';
+import { createPgStore, createProjects, MemoryStore } from './projects.mjs';
 
 class HttpError extends Error { constructor(status, code) { super(code); this.status = status; this.code = code; } }
 
-export function createRelay({ webhook, token, allowInsecure = false, fetchImpl = fetch, maxJson = 5 * 1024 * 1024, maxFile = 25 * 1024 * 1024, ratePerSec = 10, timeoutMs = 20000 }) {
+export function createRelay({ webhook, token, projects = createProjects({ store: null }), allowInsecure = false, fetchImpl = fetch, maxJson = 5 * 1024 * 1024, maxFile = 25 * 1024 * 1024, ratePerSec = 10, timeoutMs = 20000 }) {
   if (!token || token.length < 24) throw new Error('RELAY_TOKEN должен быть не короче 24 символов');
   const wh = normalizeWebhook(webhook, { allowInsecure });
   const tokenHash = createHash('sha256').update(token).digest();
@@ -59,8 +60,10 @@ export function createRelay({ webhook, token, allowInsecure = false, fetchImpl =
     const t0 = Date.now(); let path = '-', code = 500;
     try {
       const url = new URL(req.url, 'http://relay');
-      path = url.pathname.replace(/\/\d{3,}$/, '/<id>');
+      path = url.pathname.replace(/\/\d{3,}$/, '/<id>').replace(/\/[0-9a-f]{8}-[0-9a-f-]{27}$/, '/<id>');
       if (url.pathname === '/healthz') { code = 200; return reply(res, 200, 'ok'); }
+      // общая база проектов: своя проверка токена и доступа из браузера (CORS); Битрикс эти маршруты не затрагивают
+      if (await projects(req, res, url, reply, take)) { code = res.statusCode; return; }
       if (req.method !== 'GET') throw new HttpError(405, 'method_not_allowed');
       if (!authorized(req)) throw new HttpError(401, 'unauthorized');
       if (!take()) throw new HttpError(429, 'rate_limited');
@@ -81,9 +84,16 @@ export function createRelay({ webhook, token, allowInsecure = false, fetchImpl =
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const { BITRIX24_WEBHOOK_URL, RELAY_TOKEN, PORT = '3000' } = process.env;
+  const { BITRIX24_WEBHOOK_URL, RELAY_TOKEN, PORT = '3000', DATABASE_URL, DATABASE_SSL, PROJECTS_FILE, PROJECTS_TOKEN, ALLOWED_ORIGINS } = process.env;
   let server;
-  try { server = createRelay({ webhook: BITRIX24_WEBHOOK_URL || '', token: RELAY_TOKEN || '' }); }
-  catch (e) { console.error('Не запустились:', e.message); process.exit(1); }
+  try {
+    // PostgreSQL, если задан DATABASE_URL; иначе файл (на бесплатном Render он стирается при перезапуске) или ничего
+    const store = DATABASE_URL ? await createPgStore(DATABASE_URL, { ssl: DATABASE_SSL !== '0' }) : PROJECTS_FILE ? new MemoryStore({ file: PROJECTS_FILE }) : null;
+    if (!store) console.log('Проекты: хранилище не задано (DATABASE_URL или PROJECTS_FILE), маршруты /projects отвечают 503');
+    else if (!DATABASE_URL) console.log('Проекты: хранятся в файле, при перезапуске на бесплатном Render они пропадут. Для общей базы задайте DATABASE_URL');
+    const origins = (ALLOWED_ORIGINS || 'https://kitchen-prototype.onrender.com').split(',').map(x => x.trim()).filter(Boolean);
+    const projects = createProjects({ store, tokens: [PROJECTS_TOKEN, RELAY_TOKEN], origins });
+    server = createRelay({ webhook: BITRIX24_WEBHOOK_URL || '', token: RELAY_TOKEN || '', projects });
+  } catch (e) { console.error('Не запустились:', e.message); process.exit(1); }
   server.listen(Number(PORT), '0.0.0.0', () => console.log(`kitchen-api слушает порт ${PORT}`));
 }
