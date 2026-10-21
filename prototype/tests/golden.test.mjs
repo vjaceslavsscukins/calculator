@@ -202,7 +202,7 @@ test('ящики TANDEMBOX: детали совпадают с ведомост�
   // 2 ящика: два высоких ящика D
   assert.equal(parts('base_drawers2', 600), 'Дно ящика 492×492 ×2 | Задняя стенка ящика 480×183 ×2');
   assert.equal(parts('base_drawers2', 500), 'Дно ящика 392×492 ×2 | Задняя стенка ящика 380×183 ×2');
-  // 2 ящика с внутренним: C сверху, D снизу, внутри D ящик M (задние стенки 151, 183 и 68)
+  // 2 ящика с внутренним (опция модуля): внутренний ящик в верхнем (по моделям Базиса и владельцу); в ведомости классы C, D и внутренний M (задние стенки 151, 183 и 68)
   const exp = (w) => ['Дно ящика ' + (w - 108) + '×492 ×1', 'Дно ящика ' + (w - 108) + '×492 ×1', 'Дно ящика ' + (w - 108) + '×492 ×1',
     'Задняя стенка ящика ' + (w - 120) + '×151 ×1', 'Задняя стенка ящика ' + (w - 120) + '×183 ×1', 'Задняя стенка ящика ' + (w - 120) + '×68 ×1'].sort().join(' | ');
   assert.equal(parts('base_drawers2_inner', 600), exp(600));
@@ -227,9 +227,9 @@ test('шаблон ящика: неверный класс ящика откло
 const SHOP_CASES = [
   { name: 'без Gola: тумба с одной дверцей 600', type: 's_base_door', W: 600, H: 720, D: 510, handle: 'bar',
     parts: ['Боковина 704×510 ×2', 'Дно 600×510 ×1', 'М-планка 567×80 ×2', 'Задняя стенка 716×595 ×1', 'Полка 565×500 ×1'], facades: ['716×596'] },
-  { name: 'без Gola: 2 ящика с внутренним 600', type: 's_base_drawers2_inner', W: 600, H: 720, D: 510, handle: 'bar', drawers: 'tandembox',
+  { name: 'без Gola: 2 ящика с внутренним 600', type: 's_base_drawers2', inner: true, W: 600, H: 720, D: 510, handle: 'bar', drawers: 'tandembox',
     parts: ['Боковина 704×510 ×2', 'Дно 600×510 ×1', 'М-планка 567×80 ×2', 'Задняя стенка 716×595 ×1', 'Дно ящика 492×492 ×3', 'Задняя стенка ящика 480×183 ×1', 'Задняя стенка ящика 480×151 ×1', 'Задняя стенка ящика 480×68 ×1'], facades: ['356×596', '356×596'] },
-  { name: 'без Gola: 2 ящика с внутренним 800', type: 's_base_drawers2_inner', W: 800, H: 720, D: 510, handle: 'bar', drawers: 'tandembox',
+  { name: 'без Gola: 2 ящика с внутренним 800', type: 's_base_drawers2', inner: true, W: 800, H: 720, D: 510, handle: 'bar', drawers: 'tandembox',
     parts: ['Боковина 704×510 ×2', 'Дно 800×510 ×1', 'М-планка 767×80 ×2', 'Дно ящика 692×492 ×3', 'Задняя стенка ящика 680×183 ×1', 'Задняя стенка ящика 680×151 ×1', 'Задняя стенка ящика 680×68 ×1'], facades: ['356×796', '356×796'] },
   { name: 'без Gola: 3 ящика 600 (176 + 176 + 356)', type: 's_base_drawers3', W: 600, H: 720, D: 510, handle: 'bar', drawers: 'tandembox',
     parts: ['Боковина 704×510 ×2', 'Дно 600×510 ×1', 'М-планка 567×80 ×2', 'Дно ящика 492×492 ×3', 'Задняя стенка ящика 480×183 ×1', 'Задняя стенка ящика 480×68 ×2'], facades: ['356×596', '176×596', '176×596'] },
@@ -250,7 +250,7 @@ for (const c of SHOP_CASES) {
   test('конструкция цеха совпадает с ведомостью: ' + c.name, () => {
     const S = {
       layout: 'I', walls: { A: 4000, B: 2000, C: 2000 }, room: { height: 2700, wall: '#fff', floor: 'oakL' }, disc: 0, extra: [], nextId: 5,
-      modules: [{ id: 'm1', type: c.type, wall: 'A', w: c.W, h: c.H, d: c.D, blind: 'left', corpus: null, facade: null, light: false, cut: { sink: false, hob: false, pipe: false } }],
+      modules: [{ id: 'm1', type: c.type, wall: 'A', w: c.W, h: c.H, d: c.D, blind: 'left', corpus: null, facade: null, light: false, cut: { sink: false, hob: false, pipe: false }, ...(c.inner ? { inner: true } : null) }],
       mat: { corpus: cur.DEFAULT_CAT.corpus[0].id, facade: cur.DEFAULT_CAT.facade[0].id, milling: cur.DEFAULT_CAT.milling[0].id, fLow: 'k1', fUp: 'k4', handle: c.handle, drawers: c.drawers || 'legrabox', drawerColor: 'silk', top: cur.DEFAULT_CAT.top[0].id, splash: false },
     };
     const m = S.modules[0], got = {};
@@ -310,4 +310,43 @@ test('угловой модуль: фальшпланка из фасадног�
   assert.equal(+line.q.toFixed(4), 0.0432);
   S.modules[0].plank = 0;
   assert.ok(!cur.calcAll(S, cur.DEFAULT_PRICES, cur.DEFAULT_CAT).common.some((c) => /Угловая фальшпланка/.test(c.n)));
+});
+
+test('верхний с двумя фасадами по высоте: нижняя дверца H−X1−8, малая сверху X1 (по моделям Базиса)', () => {
+  const S = shopState(); S.mat.handle = 'bar';
+  S.modules[0] = { ...S.modules[0], type: 's_up_door_tall', w: 600, h: 1250, d: 340 };
+  const f = cur.facadesOf(S.modules[0], S).map((x) => [x.y, Math.round(x.h)]);
+  assert.equal(JSON.stringify(f), JSON.stringify([[2, 896], [902, 346]]));
+  S.modules[0].x1 = 276;
+  assert.equal(JSON.stringify(cur.facadesOf(S.modules[0], S).map((x) => [x.y, Math.round(x.h)])), JSON.stringify([[2, 966], [972, 276]]));
+});
+
+test('внутренний ящик — в верхнем ящике: верхний класса D с внутренним M, нижний C', () => {
+  const S = shopState(); S.modules[0] = { ...S.modules[0], type: 's_base_drawers2', inner: true };
+  const f = cur.facadesOf(S.modules[0], S).sort((a, b) => a.y - b.y);
+  assert.equal(JSON.stringify(f.map((x) => [x.box, x.inner || null])), JSON.stringify([['C', null], ['D', 'M']]));
+  assert.equal(cur.hwOf(S.modules[0], f, S).slide, 3, 'внутренний ящик считается отдельно');
+});
+
+test('система ящиков и марка петель у модуля; без цены в прайсе есть предупреждение', () => {
+  const S = shopState(); S.mat.drawers = 'legrabox';
+  S.modules[0] = { ...S.modules[0], type: 's_base_drawers2', drawers: 'atira' };
+  let A = cur.calcAll(S, cur.DEFAULT_PRICES, cur.DEFAULT_CAT);
+  assert.ok(A.R.warnings.some((w) => /Не задана цена.*Atira/.test(w)), A.R.warnings.join('|'));
+  const P = JSON.parse(JSON.stringify(cur.DEFAULT_PRICES)); P.blum.atira = 7000;
+  A = cur.calcAll(S, P, cur.DEFAULT_CAT);
+  assert.ok(!A.R.warnings.some((w) => /Не задана цена/.test(w)));
+  const base = cur.calcAll({ ...S, modules: [{ ...S.modules[0], drawers: undefined }] }, P, cur.DEFAULT_CAT);
+  assert.ok(A.mods[0].c.hw !== base.mods[0].c.hw, 'цена ящиков зависит от системы');
+  S.modules[0] = { ...S.modules[0], type: 's_base_door', drawers: undefined, hingeBrand: 'hettich' };
+  A = cur.calcAll(S, P, cur.DEFAULT_CAT);
+  assert.ok(A.R.warnings.some((w) => /Sensys/.test(w)));
+});
+
+test('шкаф в алюминиевой рамке: фасад считается по цене профиля, профиль выбирается у модуля', () => {
+  const S = shopState(); S.modules[0] = { ...S.modules[0], type: 's_up_frame', w: 450, h: 720, d: 340 };
+  const P = cur.DEFAULT_PRICES, a = cur.calcAll(S, P, cur.DEFAULT_CAT).mods[0];
+  S.modules[0].frame = 'w4040'; const P2 = JSON.parse(JSON.stringify(P)); P2.frames.w4040 = 9999;
+  const b = cur.calcAll(S, P2, cur.DEFAULT_CAT).mods[0];
+  assert.ok(b.c.facade > a.c.facade, 'цена рамки 40×40 из прайса');
 });
