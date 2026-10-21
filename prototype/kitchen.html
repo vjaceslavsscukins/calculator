@@ -1154,7 +1154,7 @@ function deepMerge(base, over){
 function load(key){ try { const s = localStorage.getItem(key); return s ? JSON.parse(s) : null; } catch(e){ return null; } }
 function store(key, v){ try { localStorage.setItem(key, JSON.stringify(v)); } catch(e){} if (key === KS) projectChanged(); else if (key === KP) settingsChanged('prices'); else if (key === KC) settingsChanged('catalogs'); }
 // Проекты: общая база для тестирования. Настройки подключения лежат в браузере, данные проектов на сервере (kitchen-api, PostgreSQL).
-const BUILD = '21.10.2026, сборка 14'; // меняется при каждом выпуске: по ней видно, какая версия открыта
+const BUILD = '21.10.2026, сборка 15'; // меняется при каждом выпуске: по ней видно, какая версия открыта
 const KSRV = 'kitchen.server.v1', API_DEFAULT = 'https://kitchen-api-c112.onrender.com';
 const PKEYS = ['client', 'order', 'layout', 'walls', 'room', 'mat', 'disc', 'modules', 'nextId', 'extra', 'parts', 'kp'];
 let srv = Object.assign({url:API_DEFAULT, code:'', name:'', role:''}, load(KSRV) || {});
@@ -2936,6 +2936,13 @@ function buildModule(m, pos){
   // Шаблоны без golaKeep считаются без прибавки Gola, в 3D верхний фасад дотягиваем до общего уровня столешницы
   const rz = TYPES[m.type].tpl.golaKeep ? 0 : riseOf(m), fsList = facadesOf(m, S).map(f => rz && f.y + f.h >= m.h - 40 ? Object.assign({}, f, {h:f.h + rz}) : f);
   const golaTop = Math.max(0, ...fsList.map(f => f.y + f.h));
+  // Угловая фальшпланка: полоса из материала фасада в глухой части, вплотную к дверце.
+  // TODO(технолог): положение планки (у дверцы или у торца глухой части) уточнить, пока у дверцы.
+  const cdoor = t.corner ? fsList.find(f => f.k === 'door') : null;
+  if (cdoor && +m.plank > 4){
+    const pw = Math.min(+m.plank, W - cdoor.w - 4), px = cdoor.x < W / 2 ? cdoor.x + cdoor.w + 2 : cdoor.x - 2 - pw, pg = new THREE.Group();
+    pg.position.set(px / 1000, (baseY + cdoor.y) / 1000, D / 1000); g.add(pg); facadePanel(pg, pw, cdoor.h, 0, 0, fac, mill, false);
+  }
   fsList.forEach((f, fi) => {
     if (f.k === 'cargo') return;
     const fid = m.id + ':' + fi; let piv = new THREE.Group(), hx0 = 0, hy0 = 0; piv.userData.fid = fid;
