@@ -159,6 +159,8 @@ input[type=color]{width:36px;height:30px;padding:2px;border:1px solid var(--line
 .card:hover{border-color:var(--accent);box-shadow:0 4px 14px rgba(28,27,25,.1);transform:translateY(-1px)}
 .card[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
 .card svg{width:100%;height:64px;pointer-events:none}
+.card .cthumb{width:100%;height:112px;object-fit:contain;pointer-events:none;display:block;border-radius:8px;background:linear-gradient(180deg,#ECE9E2,#DDD9D0)}
+.cards{grid-template-columns:repeat(2,minmax(0,1fr))}
 .card .cn{font-size:11.5px;line-height:1.25;font-weight:500;pointer-events:none}
 .card .cs{font-family:var(--f-mono);font-size:10.5px;color:var(--muted);pointer-events:none}
 .dnd-note{display:flex;gap:8px;align-items:flex-start;font-size:12.5px;color:var(--muted);background:var(--sunk);border-radius:10px;padding:8px 10px}
@@ -270,8 +272,11 @@ details.paste textarea{min-height:90px;font-family:var(--f-mono);font-size:12px;
 .pickfield .pf-t small{font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sw.big{width:34px;height:34px;flex:none;border-radius:8px}
 .top-proj{white-space:nowrap}
-.top-sync{font-size:12px;color:var(--muted);white-space:nowrap;max-width:230px;overflow:hidden;text-overflow:ellipsis}
-.top-sync.warn{color:var(--accent)}
+.sdot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-left:8px;background:#B8B4AA;vertical-align:1px}
+#btnProj[data-s="ok"] .sdot{background:#4C9A5F}
+#btnProj[data-s="warn"] .sdot{background:#D08A2E}
+#btnProj[data-s="busy"] .sdot{background:#5C86B8}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .proj-list{width:100%;border-collapse:collapse;font-size:13px}
 .proj-list td{padding:8px 6px;border-top:1px solid var(--line);vertical-align:middle}
 .proj-list tr.cur td{background:color-mix(in srgb,var(--accent) 8%,transparent)}
@@ -380,8 +385,7 @@ dialog.dlg::backdrop{background:rgba(20,18,15,.5)}
         <div class="brand-sub" id="hdrProject"></div>
       </div>
     </div>
-    <button class="btn top-proj" data-act="proj-open" id="btnProj" title="Проекты: создать, открыть, сохранить в общую базу">Проекты</button>
-    <span class="top-sync" id="projStatus" aria-live="polite"></span>
+    <button class="btn top-proj" data-act="proj-open" id="btnProj" data-s="off" title="Проекты: создать, открыть, сохранить в общую базу">Проекты<span class="sdot" aria-hidden="true"></span><span class="sr-only" id="projStatus" aria-live="polite"></span></button>
     <span class="top-flag">Цены примерные. Свои загружаются во вкладке «Прайс и каталоги»</span>
     <button class="btn top-sketch" data-act="print-sketch" title="Печать картинки для показа клиенту">Печать эскиза</button>
     <button class="btn pri top-kp" data-act="print-kp">Печать КП</button>
@@ -1005,6 +1009,47 @@ function modNotes(m){
 }
 
 /* ---------------- module schematic (drawn from the same facade data) ---------------- */
+/* ---------------- картинки модулей для каталога: настоящий рендер из 3D ---------------- */
+const thumbs = {}; let thumbTimer = null;
+const thumbSig = () => [S.mat.corpus, S.mat.facade, S.mat.milling, S.mat.fLow, S.mat.fUp, S.mat.handle, S.mat.hwColor, S.mat.drawers, S.mat.drawerColor, Object.keys(TYPES).length].join('|');
+function thumbGet(type){ const t = thumbs[thumbSig()]; return t && t[type] || ''; }
+// Рисует один модуль на нейтральном фоне с выдвинутыми ящиками. Возвращает адрес картинки или пустую строку.
+function renderThumb(type){
+  if (!has3D || !scene || !renderer || !root) return '';
+  const t = TYPES[type]; if (!t || t.gap) return '';
+  const sig = thumbSig(); (thumbs[sig] = thumbs[sig] || {});
+  if (thumbs[sig][type]) return thumbs[sig][type];
+  const m = {id:'th_' + type, type, wall:'A', w:t.w, h:t.h, d:t.d, blind:'left', corpus:null, facade:null, light:false, cut:defCut(type)};
+  const nAnim = anims.length, nDisp = disposables.length, opened = [];
+  facadesOf(m, S).forEach((f, i) => { if (f.k === 'drawer'){ const id = m.id + ':' + i; if (!openSet.has(id)){ openSet.add(id); opened.push(id); } } });
+  let url = '', g = null; const old = renderer.getSize(new THREE.Vector2()), rootWas = root.visible, helperWas = helper && helper.visible;
+  try {
+    g = buildModule(m, {x:0, wall:'A'});
+    g.position.set(0, 0, 0); g.rotation.set(0, 0, 0); root.visible = false; if (helper) helper.visible = false; scene.add(g);
+    const w = 360, h = 300, box3 = new THREE.Box3().setFromObject(g), size = box3.getSize(new THREE.Vector3()), c = box3.getCenter(new THREE.Vector3());
+    const cam = new THREE.PerspectiveCamera(26, w / h, .1, 60), fov = cam.fov * Math.PI / 180;
+    const dir = new THREE.Vector3(.5, .3, 1).normalize(), r = Math.max(size.x * .56, size.y * .5, .22);
+    cam.position.copy(c).addScaledVector(dir, r / Math.tan(fov / 2) * 1.02 + size.z / 2); cam.lookAt(c); cam.updateProjectionMatrix();
+    renderer.setSize(w, h, false); renderer.render(scene, cam); url = renderer.domElement.toDataURL('image/png');
+  } catch(e){ url = ''; }
+  if (g){ scene.remove(g); g.traverse(o => { if (o.geometry) o.geometry.dispose(); }); }
+  root.visible = rootWas; if (helper) helper.visible = helperWas; renderer.setSize(old.x, old.y, false);
+  opened.forEach(id => openSet.delete(id)); anims.length = nAnim; disposables.length = nDisp;
+  return thumbs[sig][type] = url;
+}
+// Картинки делаем по одной после отрисовки списка, чтобы каталог открывался сразу.
+function scheduleThumbs(){
+  clearTimeout(thumbTimer);
+  const next = () => {
+    if (S.ltab !== 'catalog' || !has3D) return;
+    const el = [...document.querySelectorAll('#lbody .card[data-type]')].find(c => !c.dataset.thumb && !c.querySelector('img.cthumb'));
+    if (!el) return;
+    const ty = el.dataset.type, url = renderThumb(ty); el.dataset.thumb = '1';
+    if (url){ const old = el.querySelector('svg'); const im = new Image(); im.className = 'cthumb'; im.alt = ''; im.src = url; if (old) old.replaceWith(im); }
+    thumbTimer = setTimeout(next, 0);
+  };
+  thumbTimer = setTimeout(next, 30);
+}
 function moduleSvg(type){
   const t = TYPES[type];
   const m = {type, w:t.w, h:t.gap ? (t.row === 'mezz' ? 360 : 720) : t.h, d:t.d, wall:'A', blind:'left'};
@@ -1041,6 +1086,7 @@ function renderLeft(){
   ['room','catalog','module','mat'].forEach(t => $('lt-' + t).setAttribute('aria-selected', String(S.ltab === t)));
   const f = {room:leftRoom, catalog:leftCatalog, module:leftModule, mat:leftMat}[S.ltab] || leftCatalog;
   keepFocus(() => { $('lbody').innerHTML = f(); });
+  if (S.ltab === 'catalog') scheduleThumbs();
 }
 function fillHtml(){
   let h = '';
@@ -1096,7 +1142,7 @@ function leftCatalog(){
   const ws = wallsOf(S), num = numberMap();
   let h = `<div class="sec"><h3>Добавить модуль</h3>
     <div class="cats">${CATS.map(([k, n]) => `<button class="cat" data-act="cat" data-v="${k}" aria-pressed="${S.cat === k}">${n}</button>`).join('')}</div>
-    <div class="cards">${Object.entries(TYPES).filter(([, t]) => t.cat === S.cat).map(([k, t]) => `<button class="card" data-act="pick" data-v="${k}" data-type="${k}" aria-pressed="${!!placing && placing.type === k}" aria-label="Поставить на стену: ${esc(t.name)}">${moduleSvg(k)}${t.todo ? '<span class="cwarn" title="Правило требует проверки технолога">!</span>' : ''}<span class="cn">${esc(t.name)}</span><span class="cs">${t.gap ? t.w : t.w + '×' + t.h}</span></button>`).join('')}</div>
+    <div class="cards">${Object.entries(TYPES).filter(([, t]) => t.cat === S.cat).map(([k, t]) => `<button class="card" data-act="pick" data-v="${k}" data-type="${k}" aria-pressed="${!!placing && placing.type === k}" aria-label="Поставить на стену: ${esc(t.name)}">${thumbGet(k) ? `<img class="cthumb" alt="" src="${thumbGet(k)}">` : moduleSvg(k)}${t.todo ? '<span class="cwarn" title="Правило требует проверки технолога">!</span>' : ''}<span class="cn">${esc(t.name)}</span><span class="cs">${t.gap ? t.w : t.w + '×' + t.h}</span></button>`).join('')}</div>
     <button class="btn sm" data-act="lib-open">Библиотека модулей…</button>
     <div class="dnd-note"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex:none;margin-top:2px"><path d="M8 1.5v13M1.5 8h13M8 1.5L6 3.5M8 1.5l2 2M8 14.5l-2-2M8 14.5l2-2M1.5 8l2-2M1.5 8l2 2M14.5 8l-2-2M14.5 8l-2 2"/></svg><span>Перетащите модуль на стену в 3D-виде. На планшете: нажмите на модуль, затем на нужное место на стене.</span></div>
   </div><div class="sec"><h3><span>Состав кухни</span><span>${A.mods.filter(r => !TYPES[r.m.type].gap).length} модулей</span></h3>`;
@@ -1799,7 +1845,11 @@ function projStatus(){
   if (proj.saved !== projHash()) return ['Есть изменения, сохраним…', false];
   return ['Сохранён в общую базу' + (S.projectAt ? ' · ' + fmtDT(S.projectAt) : ''), false];
 }
-function renderProjStatus(){ const el = $('projStatus'); if (!el) return; const [t, w] = projStatus(); el.textContent = t; el.classList.toggle('warn', w); }
+function renderProjStatus(){
+  const el = $('projStatus'), b = $('btnProj'); if (!el || !b) return; const [t, w] = projStatus();
+  el.textContent = t; b.title = 'Проекты. ' + t;
+  b.dataset.s = !srvOn() ? 'off' : (w ? 'warn' : (proj.saving || proj.saved !== projHash() ? 'busy' : 'ok'));
+}
 function projectChanged(){
   renderProjStatus();
   if (!S.projectId || !srvOn() || proj.loading || proj.conflict) return;
@@ -2417,6 +2467,23 @@ function aoMat(a){
   return matCache[k] = new THREE.MeshBasicMaterial({map:tex, transparent:true, depthWrite:false});
 }
 let curNum = {};
+// Круглый рейлинг вдоль глубины ящика
+function rodZ(parent, x, y, z, len, mat){
+  const me = new THREE.Mesh(new THREE.CylinderGeometry(.005, .005, len / 1000, 12), mat);
+  me.rotation.x = Math.PI / 2; me.position.set(x / 1000, y / 1000, (z + len / 2) / 1000); me.castShadow = true; parent.add(me); return me;
+}
+// Ящик Blum TANDEMBOX antaro, как в ведомостях: дно (Ш − 108) из ЛДСП, задняя стенка (Ш − 120) из ЛДСП, металлические борта и рейлинги.
+// Высота борта: M — 83, C — 167, D — 199 мм; задняя стенка стоит на дне (68 / 151 / 183). inset сужает ящик (внутренний ящик).
+// TODO(технолог): число и положение рейлингов у классов C и D нарисованы по виду, размеров в ведомостях нет.
+function tandemboxBox(slide, cls, W, len, by, z0, inset, dmat, white, rod){
+  const side = {M:83, C:167, D:199}[cls] || 199, back = {M:68, C:151, D:183}[cls] || 183, x0 = 54 + inset, x1 = W - 54 - inset;
+  box(slide, x1 - x0, 16, len, x0, by, z0, white);
+  box(slide, 13, side, len, x0 - 13, by, z0, dmat); box(slide, 13, side, len, x1, by, z0, dmat);
+  box(slide, x1 - x0 - 12, back, 16, x0 + 6, by + 16, z0, white);
+  if (cls === 'M') return;
+  const rails = cls === 'D' ? [side - 20, side - 80] : [side - 20];
+  rails.forEach(h => { rodZ(slide, x0 + 8, by + h, z0 + 24, len - 56, rod); rodZ(slide, x1 - 8, by + h, z0 + 24, len - 56, rod); });
+}
 function buildModule(m, pos){
   const t = TYPES[m.type], g = new THREE.Group(); g.userData.modId = m.id; g.userData.row = t.row;
   placeGroup(g, m.wall, pos.x, m.w);
@@ -2483,10 +2550,19 @@ function buildModule(m, pos){
       piv.position.set(f.x / 1000, (baseY + f.y) / 1000, D / 1000); g.add(piv); facadePanel(piv, f.w, f.h, 0, 0, fac, mill, false);
     } else if (f.k === 'drawer'){
       const slide = new THREE.Group(); slide.userData.fid = fid; g.add(slide);
-      const side = Math.min(f.h - 50, f.h < 220 ? 90 : f.h < 330 ? 177 : 241), len = D - 70, iw = W - 2*T - 26, by = baseY + f.y + 22, z0 = D - len - 8;
-      box(slide, 13, side, len, T + 1, by, z0, dmat); box(slide, 13, side, len, W - T - 14, by, z0, dmat);
-      box(slide, iw, 16, len, T + 13, by, z0, white);
-      box(slide, iw, side * .85, 13, T + 13, by, z0, S.mat.drawers === 'legrabox' ? dmat : white);
+      const tb = S.mat.drawers === 'tandembox', by = baseY + f.y + 22;
+      let len = D - 70;
+      if (tb){
+        len = Math.min(500, D - 40);
+        const cls = f.box || (f.h < 200 ? 'M' : 'D'), z0 = D - len - 8;
+        tandemboxBox(slide, cls, W, len, by, z0, 0, dmat, white, steel);
+        if (f.inner) tandemboxBox(slide, f.inner, W, len - 110, by + 22, z0 + 50, 38, dmat, white, steel);
+      } else {
+        const side = Math.min(f.h - 50, f.h < 220 ? 90 : f.h < 330 ? 177 : 241), iw = W - 2*T - 26, z0 = D - len - 8;
+        box(slide, 13, side, len, T + 1, by, z0, dmat); box(slide, 13, side, len, W - T - 14, by, z0, dmat);
+        box(slide, iw, 16, len, T + 13, by, z0, white);
+        box(slide, iw, side * .85, 13, T + 13, by, z0, S.mat.drawers === 'legrabox' ? dmat : white);
+      }
       piv.position.set(f.x / 1000, (baseY + f.y) / 1000, D / 1000); slide.add(piv);
       facadePanel(piv, f.w, f.h, 0, 0, fac, mill, false);
       addAnim(fid, slide, 'z', (len * .8) / 1000);
