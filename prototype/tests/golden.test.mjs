@@ -221,3 +221,54 @@ test('шаблон ящика: неверный класс ящика откло
   t.code = 'my_inner_bad'; t.facades[0].box = 'X';
   assert.match(cur.validateTemplate(t).join(';'), /класс ящика/);
 });
+
+// Эталон: настоящие модули из комплектовочных ведомостей технолога (кухни К-1878, К-1974, К-18xx и др.).
+// Каждый случай: что получилось у технолога. Проверяем, что шаблон даёт те же детали и фасады до миллиметра.
+const SHOP_CASES = [
+  { name: 'без Gola: тумба с одной дверцей 600', type: 's_base_door', W: 600, H: 720, D: 510, handle: 'bar',
+    parts: ['Боковина 704×510 ×2', 'Дно 600×510 ×1', 'М-планка 567×80 ×2', 'Задняя стенка 716×595 ×1', 'Полка 565×500 ×1'], facades: ['716×596'] },
+  { name: 'без Gola: 2 ящика с внутренним 600', type: 's_base_drawers2_inner', W: 600, H: 720, D: 510, handle: 'bar', drawers: 'tandembox',
+    parts: ['Боковина 704×510 ×2', 'Дно 600×510 ×1', 'М-планка 567×80 ×2', 'Задняя стенка 716×595 ×1', 'Дно ящика 492×492 ×3', 'Задняя стенка ящика 480×183 ×1', 'Задняя стенка ящика 480×151 ×1', 'Задняя стенка ящика 480×68 ×1'], facades: ['356×596', '356×596'] },
+  { name: 'без Gola: 2 ящика с внутренним 800', type: 's_base_drawers2_inner', W: 800, H: 720, D: 510, handle: 'bar', drawers: 'tandembox',
+    parts: ['Боковина 704×510 ×2', 'Дно 800×510 ×1', 'М-планка 767×80 ×2', 'Дно ящика 692×492 ×3', 'Задняя стенка ящика 680×183 ×1', 'Задняя стенка ящика 680×151 ×1', 'Задняя стенка ящика 680×68 ×1'], facades: ['356×796', '356×796'] },
+  { name: 'без Gola: 3 ящика 600 (176 + 176 + 356)', type: 's_base_drawers3', W: 600, H: 720, D: 510, handle: 'bar', drawers: 'tandembox',
+    parts: ['Боковина 704×510 ×2', 'Дно 600×510 ×1', 'М-планка 567×80 ×2', 'Дно ящика 492×492 ×3', 'Задняя стенка ящика 480×183 ×1', 'Задняя стенка ящика 480×68 ×2'], facades: ['356×596', '176×596', '176×596'] },
+  { name: 'Gola (К-1878): 2 ящика 900', type: 's_base_drawers2', W: 900, H: 720, D: 510, handle: 'gola', drawers: 'tandembox',
+    parts: ['Боковина 764×510 ×2', 'Дно 900×510 ×1', 'М-планка 867×80 ×2', 'Задняя стенка 776×895 ×1', 'Дно ящика 792×492 ×2', 'Задняя стенка ящика 780×183 ×2'], facades: ['356×896', '356×896'] },
+  { name: 'Gola (К-1878): две дверцы 884', type: 's_base_door2', W: 884, H: 720, D: 510, handle: 'gola',
+    parts: ['Боковина 764×510 ×2', 'Дно 884×510 ×1', 'М-планка 851×80 ×2'], facades: ['746×438', '746×438'] },
+  { name: 'без Gola: посудомойка 600 (только фасад)', type: 's_base_dw', W: 600, H: 720, D: 510, handle: 'bar', parts: [], facades: ['716×596'] },
+  { name: 'Gola: посудомойка 600 (фасад выше на 30)', type: 's_base_dw', W: 600, H: 720, D: 510, handle: 'gola', parts: [], facades: ['746×596'] },
+  { name: 'без Gola: бутылочница 200', type: 's_base_cargo', W: 200, H: 720, D: 510, handle: 'bar',
+    parts: ['Боковина 704×510 ×2', 'Дно 200×510 ×1', 'Горизонт 167×510 ×1', 'Задняя стенка 716×195 ×1'], facades: ['716×196'] },
+  { name: 'Gola: бутылочница 200', type: 's_base_cargo', W: 200, H: 720, D: 510, handle: 'gola',
+    parts: ['Боковина 764×510 ×2', 'Дно 200×510 ×1', 'Горизонт 167×485 ×1', 'Задняя стенка 776×195 ×1'], facades: ['746×196'] },
+  { name: 'верхний (К-1974): одна дверца 600, высота 926, глубина 336', type: 's_up_door', W: 600, H: 926, D: 336, handle: 'bar',
+    parts: ['Боковина 926×336 ×2', 'Дно 566×320 ×1', 'Горизонт 566×316 ×1', 'Ребро жёсткости 566×80 ×1', 'Задняя стенка 914×580 ×1'], facadeH: [923] },
+];
+for (const c of SHOP_CASES) {
+  test('конструкция цеха совпадает с ведомостью: ' + c.name, () => {
+    const S = {
+      layout: 'I', walls: { A: 4000, B: 2000, C: 2000 }, room: { height: 2700, wall: '#fff', floor: 'oakL' }, disc: 0, extra: [], nextId: 5,
+      modules: [{ id: 'm1', type: c.type, wall: 'A', w: c.W, h: c.H, d: c.D, blind: 'left', corpus: null, facade: null, light: false, cut: { sink: false, hob: false, pipe: false } }],
+      mat: { corpus: cur.DEFAULT_CAT.corpus[0].id, facade: cur.DEFAULT_CAT.facade[0].id, milling: cur.DEFAULT_CAT.milling[0].id, fLow: 'k1', fUp: 'k4', handle: c.handle, drawers: c.drawers || 'legrabox', drawerColor: 'silk', top: cur.DEFAULT_CAT.top[0].id, splash: false },
+    };
+    const m = S.modules[0], got = {};
+    cur.panelsOf(m, S).forEach((p) => { const k = `${p.n} ${p.a}×${p.b}`; got[k] = (got[k] || 0) + p.q; });
+    for (const e of c.parts) { const [, name, dims, q] = /^(.+?) (\d+×\d+) ×(\d+)$/.exec(e); assert.equal(got[`${name} ${dims}`] || 0, +q, `${e}; получено: ${JSON.stringify(got)}`); }
+    const facs = cur.facadesOf(m, S);
+    if (c.facades) assert.equal(facs.map((f) => `${Math.round(f.h)}×${Math.round(f.w)}`).sort().join(' | '), [...c.facades].sort().join(' | '), 'фасады');
+    if (c.facadeH) assert.equal(facs.map((f) => Math.round(f.h)).join(','), c.facadeH.join(','), 'высота фасадов');
+  });
+}
+
+test('шаблон с деталями: плохая формула и неверное количество отклоняются', () => {
+  const t = JSON.parse(JSON.stringify(cur.BUILTIN_TEMPLATES.find((x) => x.code === 's_base_door')));
+  assert.equal(cur.validateTemplate({ ...t, code: 'my_shop_ok' }).join(';'), '');
+  const bad1 = JSON.parse(JSON.stringify(t)); bad1.code = 'my_shop_1'; bad1.panels[0].a = 'W - X';
+  assert.match(cur.validateTemplate(bad1).join(';'), /неизвестная переменная/);
+  const bad2 = JSON.parse(JSON.stringify(t)); bad2.code = 'my_shop_2'; bad2.panels[1].b = '0-5';
+  assert.match(cur.validateTemplate(bad2).join(';'), /размеры/);
+  const bad3 = JSON.parse(JSON.stringify(t)); bad3.code = 'my_shop_3'; bad3.panels[2].q = '1.5';
+  assert.match(cur.validateTemplate(bad3).join(';'), /количество/);
+});
