@@ -157,3 +157,31 @@ test('библиотека: свой шаблон появляется в кат
   cur.setTemplates([]);
   assert.equal(cur.TYPES.my_drawers3, undefined);
 });
+
+test('фасадный бок: боковина из ЛДСП заменяется панелью фасада, цена и ведомость считаются по фасаду', () => {
+  const mk = (extra) => ({
+    layout: 'I', walls: { A: 3000, B: 2000, C: 2000 }, room: { height: 2700, wall: '#fff', floor: 'oakL' }, disc: 0, extra: [], nextId: 5,
+    modules: [{ id: 'm1', type: 'base_door', wall: 'A', w: 600, h: 720, d: 560, blind: 'left', corpus: null, facade: null, light: false, cut: { sink: false, hob: false, pipe: false }, ...extra }],
+    mat: { corpus: cur.DEFAULT_CAT.corpus[0].id, facade: cur.DEFAULT_CAT.facade[0].id, milling: cur.DEFAULT_CAT.milling[0].id, fLow: 'k1', fUp: 'k4', handle: 'bar', drawers: 'legrabox', drawerColor: 'silk', top: cur.DEFAULT_CAT.top[0].id, splash: false },
+  });
+  const run = (S) => ({ S, A: cur.calcAll(S, cur.DEFAULT_PRICES, cur.DEFAULT_CAT) });
+  const base = run(mk({})), one = run(mk({ endL: true })), both = run(mk({ endL: true, endR: true }));
+  const sides = (r) => r.A.mods[0].panels.filter((p) => p.n === 'Боковина' || p.n === 'Фасадный бок').map((p) => `${p.n}:${p.q}:${p.mat}`).join(' | ');
+  assert.equal(sides(base), 'Боковина:2:ldsp');
+  assert.equal(sides(one), 'Боковина:1:ldsp | Фасадный бок:1:facade');
+  assert.equal(sides(both), 'Фасадный бок:2:facade');
+  // размер фасадного бока пока как у боковины (В × Г), правило технолога не описано
+  const fs = both.A.mods[0].panels.find((p) => p.n === 'Фасадный бок');
+  assert.deepEqual([fs.a, fs.b], [720, 560]);
+  // ЛДСП и кромки стало меньше, фасадная часть стоит по цене фасадного материала
+  assert.ok(both.A.mods[0].ldsp < one.A.mods[0].ldsp && one.A.mods[0].ldsp < base.A.mods[0].ldsp);
+  const fm = cur.DEFAULT_CAT.facade[0];
+  const extra = both.A.mods[0].c.facade - base.A.mods[0].c.facade;
+  assert.ok(Math.abs(extra - 2 * 0.72 * 0.56 * fm.price) < 1e-6, `доплата за фасад: ${extra}`);
+  const bom = cur.bomOf(both.A, both.S, cur.DEFAULT_PRICES, cur.DEFAULT_CAT).find((r) => /Фасадные боковины/.test(r.n || ''));
+  assert.ok(bom && bom.u === 'м²' && Math.abs(bom.q - 2 * 0.72 * 0.56) < 1e-9);
+  assert.ok(!cur.bomOf(base.A, base.S, cur.DEFAULT_PRICES, cur.DEFAULT_CAT).some((r) => /Фасадные боковины/.test(r.n || '')));
+  // у модуля без корпуса (посудомойка) опция ничего не меняет
+  const dw = run({ ...mk({}), modules: [{ ...mk({}).modules[0], type: 'base_dw', w: 600, endL: true }] });
+  assert.equal(dw.A.mods[0].panels.length, 0);
+});
