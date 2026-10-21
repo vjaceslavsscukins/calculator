@@ -17,3 +17,21 @@ services:
       - path: /*
         name: X-Content-Type-Options
         value: nosniff
+
+  # Сервер «только чтение» между нами и Битрикс24: ключ вебхука хранится только здесь.
+  # RELAY_TOKEN Render сгенерирует сам (Dashboard → kitchen-api → Environment), BITRIX24_WEBHOOK_URL введите при создании.
+  - type: web
+    name: kitchen-api
+    runtime: node
+    plan: free
+    rootDir: apps/api
+    buildCommand: npm install
+    startCommand: node src/server.mjs
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: BITRIX24_WEBHOOK_URL
+        sync: false
+      - key: RELAY_TOKEN
+        generateValue: true
