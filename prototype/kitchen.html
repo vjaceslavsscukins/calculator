@@ -1,0 +1,1389 @@
+<title>Конструктор кухонь</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&family=Unbounded:wght@500;600&display=swap">
+<style>
+/* Layout: workbench. Operating menu on the left (Помещение / Каталог / Модуль / Материалы), 3D stage + documents on the right; stacks on phones */
+:root{
+  --bg:#EDEFEB; --surface:#FFFFFF; --sunk:#E3E7E1; --input:#FBFCFA;
+  --ink:#1A211F; --muted:#5D6864; --line:#D2D8D1;
+  --accent:#2C52C4; --accent-ink:#FFFFFF; --accent-soft:#E2E8F9;
+  --warn:#B23E0C; --warn-soft:#FBE8DD; --ok:#2E7649;
+  --stage:#E5E8E3; --glass:rgba(255,255,255,.88);
+  --f-display:"Unbounded","Golos Text",system-ui,sans-serif;
+  --f-body:"Golos Text",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#131716; --surface:#1B201E; --sunk:#232927; --input:#161A19;
+  --ink:#E6EBE8; --muted:#97A29E; --line:#2D3532;
+  --accent:#7D9BFF; --accent-ink:#0E1430; --accent-soft:#222C4A;
+  --warn:#FF9A62; --warn-soft:#3A2418; --ok:#6FCB91;
+  --stage:#202523; --glass:rgba(27,32,30,.88); color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#131716; --surface:#1B201E; --sunk:#232927; --input:#161A19;
+  --ink:#E6EBE8; --muted:#97A29E; --line:#2D3532;
+  --accent:#7D9BFF; --accent-ink:#0E1430; --accent-soft:#222C4A;
+  --warn:#FF9A62; --warn-soft:#3A2418; --ok:#6FCB91;
+  --stage:#202523; --glass:rgba(27,32,30,.88); color-scheme:dark }
+
+*{box-sizing:border-box}
+html,body{background:var(--bg);color:var(--ink)}
+body{font-family:var(--f-body);font-size:14px;line-height:1.45;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:12px 40px}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.app{max-width:1600px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+
+.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 28px}
+.brand{display:flex;gap:12px;align-items:center;min-width:0}
+.mark{width:38px;height:38px;border-radius:9px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;flex:none}
+.brand-name{font-family:var(--f-display);font-weight:600;font-size:17px;letter-spacing:-.01em}
+.brand-sub{color:var(--muted);font-size:13px}
+.hdr-total{text-align:right}
+.lbl{font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:600}
+.hdr-total .num{font-family:var(--f-display);font-size:28px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.02em;line-height:1.15}
+.hdr-split{color:var(--muted);font-size:12.5px;font-variant-numeric:tabular-nums}
+
+.work{display:grid;grid-template-columns:390px minmax(0,1fr);grid-template-areas:"side stage" "side docs";gap:14px;align-items:start}
+.stage-wrap{grid-area:stage;position:relative;height:clamp(380px,64vh,720px);border-radius:14px;overflow:hidden;background:var(--stage);border:1px solid var(--line)}
+#stage{position:absolute;inset:0}
+#stage canvas{display:block;width:100%;height:100%;touch-action:none}
+.stage-tools{position:absolute;top:10px;right:10px;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.gbtn{border:1px solid var(--line);background:var(--glass);backdrop-filter:blur(6px);border-radius:8px;padding:6px 10px;font-size:12.5px;font-weight:500}
+.gbtn[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.stage-flag{position:absolute;left:10px;top:10px;max-width:calc(100% - 330px);font-size:12px;background:var(--warn-soft);color:var(--warn);padding:5px 9px;border-radius:7px;font-weight:500}
+.stage-hint{position:absolute;left:10px;bottom:10px;right:10px;font-size:12px;color:var(--muted);pointer-events:none}
+.stage-err{position:absolute;inset:0;display:grid;place-items:center;padding:24px;text-align:center;color:var(--muted)}
+
+.side{grid-area:side;position:sticky;top:12px;max-height:calc(100vh - 24px);display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.ltabs{display:grid;grid-template-columns:repeat(4,1fr);gap:2px;padding:6px;background:var(--sunk);border-bottom:1px solid var(--line)}
+.ltab{border:0;background:transparent;border-radius:8px;padding:8px 4px;font-size:13px;font-weight:500;color:var(--muted)}
+.ltab[aria-selected="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.lbody{overflow:auto;padding:14px;display:flex;flex-direction:column;gap:16px;scrollbar-width:thin;min-height:0}
+.sec{display:flex;flex-direction:column;gap:10px}
+.sec+.sec{padding-top:14px;border-top:1px solid var(--line)}
+.sec h3{margin:0;font-size:11.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:600;display:flex;justify-content:space-between;gap:8px}
+.field{display:flex;flex-direction:column;gap:5px;min-width:0}
+.field>label,.flabel{font-size:12.5px;color:var(--muted)}
+input[type=number],input[type=text],select,textarea{width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:8px;background:var(--input);min-width:0}
+input[type=number]{font-family:var(--f-mono);font-size:13px}
+input[type=color]{width:36px;height:30px;padding:2px;border:1px solid var(--line);border-radius:7px;background:var(--input)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.seg{display:flex;background:var(--sunk);border-radius:9px;padding:3px;gap:3px}
+.seg button{flex:1;border:0;background:transparent;border-radius:7px;padding:6px 8px;font-size:13px;font-weight:500;color:var(--muted);white-space:nowrap}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.swatches{display:flex;flex-wrap:wrap;gap:7px;align-items:center}
+.sw{width:28px;height:28px;border-radius:50%;border:1px solid rgba(0,0,0,.18);padding:0;background-size:cover}
+.sw[aria-pressed="true"]{box-shadow:0 0 0 2px var(--surface),0 0 0 4px var(--accent)}
+.sw.none{background:var(--surface);font-size:11px;color:var(--muted);width:auto;border-radius:14px;padding:0 9px;border:1px dashed var(--muted)}
+.swname{font-size:12.5px;color:var(--ink);font-weight:500}
+.chk{display:flex;gap:8px;align-items:center;font-size:13px}
+.chk input{width:16px;height:16px;accent-color:var(--accent);flex:none}
+.plan{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.plan button{border:1px solid var(--line);background:var(--input);border-radius:9px;padding:8px 4px 6px;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:12.5px;color:var(--muted)}
+.plan button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);color:var(--ink)}
+.plan svg{width:44px;height:30px}
+
+.fill{display:flex;flex-direction:column;gap:7px}
+.fillrow{display:grid;grid-template-columns:76px 1fr;gap:8px;align-items:center;font-size:12px}
+.fillrow .t{color:var(--muted)}
+.bar{height:6px;border-radius:3px;background:var(--sunk);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent);border-radius:3px}
+.bar.over i{background:var(--warn)}
+.fillnote{grid-column:2;font-family:var(--f-mono);font-size:11.5px;color:var(--muted);margin-top:-3px}
+.fillnote.over{color:var(--warn)}
+.warn{font-size:12.5px;color:var(--warn);background:var(--warn-soft);border-radius:8px;padding:7px 9px}
+
+.cats{display:flex;flex-wrap:wrap;gap:5px}
+.cat{border:1px solid var(--line);background:var(--input);border-radius:16px;padding:5px 11px;font-size:12.5px;font-weight:500}
+.cat[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+.card{border:1px solid var(--line);background:var(--input);border-radius:10px;padding:8px 6px 7px;display:flex;flex-direction:column;align-items:center;gap:5px;text-align:center;min-width:0}
+.card:hover{border-color:var(--accent);background:var(--accent-soft)}
+.card svg{width:100%;height:64px}
+.card .cn{font-size:11.5px;line-height:1.25;font-weight:500}
+.card .cs{font-family:var(--f-mono);font-size:10.5px;color:var(--muted)}
+
+.mgroup{display:flex;flex-direction:column;gap:2px}
+.mgroup h4{margin:4px 0 2px;font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.mitem{display:grid;grid-template-columns:22px minmax(0,1fr) auto;gap:8px;align-items:center;text-align:left;border:1px solid transparent;background:transparent;border-radius:8px;padding:5px 8px;width:100%}
+.mitem:hover{background:var(--sunk)}
+.mitem[aria-current="true"]{background:var(--accent-soft);border-color:var(--accent)}
+.mitem .n{font-family:var(--f-mono);font-size:11.5px;color:var(--muted)}
+.mitem .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px}
+.mitem .nm small{font-family:var(--f-mono);color:var(--muted);font-size:11.5px;margin-left:4px}
+.mitem .pr{font-variant-numeric:tabular-nums;font-size:12.5px;color:var(--muted)}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:7px 11px;font-size:13px;font-weight:500;white-space:nowrap}
+.btn:hover{background:var(--sunk)}
+.btn.pri{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.pri:hover{filter:brightness(1.07)}
+.btn.danger{color:var(--warn)}
+.btn.sm{padding:4px 8px;font-size:12px}
+.btns{display:flex;flex-wrap:wrap;gap:6px}
+.chips{display:flex;flex-wrap:wrap;gap:5px}
+.chip{border:1px solid var(--line);background:var(--input);border-radius:6px;padding:3px 7px;font-family:var(--f-mono);font-size:12px}
+.chip[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);color:var(--ink)}
+.edhead{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.edhead .ttl{font-weight:600;font-size:15px}
+.edhead .pr{font-family:var(--f-display);font-weight:600;font-size:17px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.mini{width:100%;border-collapse:collapse;font-size:12px}
+.mini td{padding:4px 0;border-bottom:1px dashed var(--line);vertical-align:top}
+.mini td:last-child{text-align:right;font-family:var(--f-mono);white-space:nowrap;padding-left:8px}
+.mini td.sz{font-family:var(--f-mono);white-space:nowrap;color:var(--muted);padding-left:8px}
+.muted{color:var(--muted)}
+.small{font-size:12.5px}
+.empty{color:var(--muted);font-size:13px;padding:6px 0}
+
+.docs{grid-area:docs;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:0 16px 18px;min-width:0}
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);overflow-x:auto}
+.tab{padding:13px 12px 11px;border:0;background:none;font-weight:500;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;font-size:14px}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.dochead{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px 16px;padding:14px 0 10px}
+.dochead h2{margin:0;font-family:var(--f-display);font-size:17px;font-weight:600;letter-spacing:-.01em;text-wrap:balance}
+.dochead .meta{color:var(--muted);font-size:13px;max-width:90ch}
+.doctools{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.disc{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted)}
+.disc input{width:70px}
+.tblwrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px}
+table.t{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums;font-size:13px}
+.t th,.t td{padding:8px 11px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+.t th{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600;background:var(--sunk)}
+.t tr:last-child td{border-bottom:0}
+.t .num{text-align:right}
+.t .sz{font-family:var(--f-mono);font-size:12.5px;color:var(--muted)}
+.t .sub{display:block;font-size:11.5px;color:var(--muted)}
+.t .grp td{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600;padding-top:12px}
+.t .strong{font-weight:600}
+.t tr.sel td{background:var(--accent-soft)}
+.t tbody tr[data-id]{cursor:pointer}
+.t input{padding:4px 6px;font-size:12.5px}
+.t input[type=number]{width:96px;text-align:right}
+.t input[type=text]{min-width:190px}
+.t select{width:auto;padding:4px 6px;font-size:12.5px}
+.sums{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 24px;max-width:460px;margin:16px 0 0 auto;font-variant-numeric:tabular-nums}
+.sums dt{color:var(--muted)}
+.sums dd{margin:0;text-align:right}
+.sums .total{font-family:var(--f-display);font-weight:600;font-size:20px;color:var(--ink);padding-top:8px;border-top:1px solid var(--line)}
+.sums .cost{font-size:12.5px}
+.note{font-size:12.5px;color:var(--muted);margin:14px 0 0;max-width:80ch}
+.pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
+.pgroup{border:1px solid var(--line);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:7px}
+.pgroup h4{margin:0 0 3px;font-size:12px;font-weight:600}
+.prow{display:grid;grid-template-columns:minmax(0,1fr) 96px 62px;gap:8px;align-items:center;font-size:13px}
+.prow .u{font-size:11.5px;color:var(--muted)}
+.prow input{padding:5px 7px;text-align:right}
+.catblock{display:flex;flex-direction:column;gap:8px;margin-top:22px}
+.catblock h3{margin:0;font-size:14px;font-weight:600}
+details.paste summary{cursor:pointer;font-size:13px;color:var(--accent);font-weight:500}
+details.paste[open]{background:var(--sunk);border-radius:10px;padding:10px}
+details.paste textarea{min-height:90px;font-family:var(--f-mono);font-size:12px;margin:8px 0}
+
+.toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:9px 14px;border-radius:9px;font-size:13px;z-index:20;box-shadow:0 6px 20px rgba(0,0,0,.2)}
+.copybox{width:100%;min-height:160px;margin-top:10px;font-family:var(--f-mono);font-size:12px}
+
+@media (max-width: 1080px){
+  .work{grid-template-columns:minmax(0,1fr);grid-template-areas:"stage" "side" "docs"}
+  .side{position:static;max-height:none}
+  .lbody{overflow:visible}
+  .stage-wrap{height:clamp(320px,52vh,540px)}
+}
+@media (max-width: 560px){
+  .hdr-total{text-align:left}
+  .stage-flag{max-width:calc(100% - 20px);top:auto;bottom:34px}
+  .cards{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .row3{grid-template-columns:1fr 1fr}
+}
+@media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <div class="mark" aria-hidden="true">
+        <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2.5" y="2.5" width="17" height="17" rx="1.5"/><path d="M11 2.5v17M2.5 12h17"/><path d="M8 7v2M14 7v2M8 15h-1.5M15.5 15H14"/></svg>
+      </div>
+      <div style="min-width:0">
+        <div class="brand-name">Конструктор кухонь</div>
+        <div class="brand-sub" id="hdrProject"></div>
+      </div>
+    </div>
+    <div class="hdr-total">
+      <div class="lbl">Итого для клиента</div>
+      <div class="num" id="hdrTotal">0 ₽</div>
+      <div class="hdr-split" id="hdrSplit"></div>
+    </div>
+  </header>
+
+  <main class="work">
+    <aside class="side" aria-label="Меню проекта">
+      <div class="ltabs" role="tablist">
+        <button class="ltab" role="tab" id="lt-room" data-act="ltab" data-v="room">Помещение</button>
+        <button class="ltab" role="tab" id="lt-catalog" data-act="ltab" data-v="catalog">Каталог</button>
+        <button class="ltab" role="tab" id="lt-module" data-act="ltab" data-v="module">Модуль</button>
+        <button class="ltab" role="tab" id="lt-mat" data-act="ltab" data-v="mat">Материалы</button>
+      </div>
+      <div class="lbody" id="lbody"></div>
+    </aside>
+
+    <div class="stage-wrap">
+      <div id="stage" aria-label="3D-вид кухни"></div>
+      <div class="stage-flag">Цены примерные. Свои загружаются во вкладке «Прайс и каталоги»</div>
+      <div class="stage-tools">
+        <button class="gbtn" id="btnOpen" data-act="open-all" aria-pressed="false">Открыть всё</button>
+        <button class="gbtn" id="btnDims" data-act="toggle-dims" aria-pressed="true">Размеры</button>
+        <button class="gbtn" data-act="reset-view">Сбросить вид</button>
+      </div>
+      <div class="stage-hint">Вращение: перетаскивание. Клик по шкафу выбирает модуль, двойной клик открывает его.</div>
+    </div>
+
+    <section class="docs">
+      <div class="tabs" role="tablist">
+        <button class="tab" role="tab" id="tb-smeta" data-act="tab" data-v="smeta">Смета</button>
+        <button class="tab" role="tab" id="tb-bom" data-act="tab" data-v="bom">Материалы</button>
+        <button class="tab" role="tab" id="tb-prices" data-act="tab" data-v="prices">Прайс и каталоги</button>
+      </div>
+      <div id="tab-smeta" role="tabpanel"></div>
+      <div id="tab-bom" role="tabpanel" hidden></div>
+      <div id="tab-prices" role="tabpanel" hidden></div>
+    </section>
+  </main>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+// CALC-START
+const T = 16, SHEET_M2 = 2.8 * 2.07, BASE_Y = 100, UP_TOP = 2170, GOLA = 30;
+
+const TYPES = {
+  base_door:        {name:'С дверцами',            cat:'low',  row:'low',  w:600,  h:720,  d:560, widths:[300,400,450,500,600,800,900]},
+  base_drawer_door: {name:'Ящик и дверцы',         cat:'low',  row:'low',  w:600,  h:720,  d:560, widths:[400,450,500,600,800,900]},
+  base_drawers2:    {name:'2 ящика',               cat:'low',  row:'low',  w:600,  h:720,  d:560, widths:[400,450,500,600,800,900,1000]},
+  base_drawers3:    {name:'3 ящика',               cat:'low',  row:'low',  w:600,  h:720,  d:560, widths:[400,450,500,600,800,900,1000]},
+  base_sink:        {name:'Под мойку',             cat:'low',  row:'low',  w:800,  h:720,  d:560, widths:[600,800,900]},
+  base_oven:        {name:'Под духовой шкаф',      cat:'low',  row:'low',  w:600,  h:720,  d:560, widths:[600]},
+  base_dw:          {name:'Посудомойка',           cat:'low',  row:'low',  w:600,  h:720,  d:560, widths:[450,600]},
+  base_cargo:       {name:'Бутылочница',           cat:'low',  row:'low',  w:200,  h:720,  d:560, widths:[150,200,300]},
+  base_corner:      {name:'Угловой нижний',        cat:'low',  row:'low',  w:1050, h:720,  d:560, widths:[900,1000,1050,1100]},
+  upper_door:       {name:'С дверцами',            cat:'up',   row:'up',   w:600,  h:720,  d:300, widths:[300,400,450,500,600,800,900]},
+  upper_glass:      {name:'Витрина со стеклом',    cat:'up',   row:'up',   w:600,  h:720,  d:300, widths:[400,450,500,600,800]},
+  upper_lift:       {name:'С подъёмником',         cat:'up',   row:'up',   w:600,  h:360,  d:300, widths:[500,600,800,900]},
+  upper_open:       {name:'Открытая полка',        cat:'up',   row:'up',   w:600,  h:720,  d:300, widths:[300,400,600,800]},
+  upper_corner:     {name:'Угловой верхний',       cat:'up',   row:'up',   w:620,  h:720,  d:300, widths:[620,650,700]},
+  mezz_door:        {name:'Антресоль с дверцами',  cat:'mezz', row:'mezz', w:600,  h:360,  d:300, widths:[400,600,800,900]},
+  mezz_lift:        {name:'Антресоль с подъёмником', cat:'mezz', row:'mezz', w:600, h:360,  d:300, widths:[600,800,900]},
+  tall_door:        {name:'Пенал с дверцами',      cat:'tall', row:'low',  w:600,  h:2070, d:560, widths:[400,450,500,600], tall:true},
+  tall_oven:        {name:'Под духовку и СВЧ',     cat:'tall', row:'low',  w:600,  h:2070, d:560, widths:[600], tall:true},
+  tall_fridge:      {name:'Под встроенный холодильник', cat:'tall', row:'low', w:600, h:2070, d:560, widths:[600], tall:true},
+  gap_low:          {name:'Проём внизу',           cat:'gap',  row:'low',  w:600,  h:0, d:0, widths:[600,700,900], gap:true},
+  gap_up:           {name:'Проём вверху',          cat:'gap',  row:'up',   w:600,  h:0, d:0, widths:[400,600,800], gap:true},
+  gap_mezz:         {name:'Проём на антресолях',   cat:'gap',  row:'mezz', w:600,  h:0, d:0, widths:[600,800,1200], gap:true},
+};
+const CATS = [['low','Нижние'],['up','Верхние'],['mezz','Антресоли'],['tall','Пеналы'],['gap','Проёмы']];
+const ROWS = [['low','нижний ряд и пеналы'],['up','верхний ряд'],['mezz','антресоли']];
+
+const DRAWERS = {
+  legrabox:{n:'LEGRABOX', colors:[{id:'orion',name:'Орион серый',hex:'#8B9095'},{id:'silk',name:'Шёлковый белый',hex:'#E9E8E3'},{id:'carbon',name:'Карбон чёрный',hex:'#2A2A2B'},{id:'steel',name:'Нерж. сталь',hex:'#B9BCBE',metal:true}]},
+  tandembox:{n:'TANDEMBOX', colors:[{id:'silk',name:'Шёлковый белый',hex:'#E9E8E3'},{id:'grey',name:'Серый',hex:'#9A9C9E'},{id:'terra',name:'Терра чёрный',hex:'#333230'}]},
+};
+const HANDLES = {bar:'Ручка-скоба', gola:'Профиль Gola', push:'Push, TIP-ON'};
+
+const DEFAULT_CAT = {
+  corpus:[
+    {id:'c1', name:'Белый', hex:'#EDEDE8', pattern:'plain', price:1100},
+    {id:'c2', name:'Серый камень', hex:'#A3A6A1', pattern:'plain', price:1150},
+    {id:'c3', name:'Графит', hex:'#3D4042', pattern:'plain', price:1150},
+    {id:'c4', name:'Дуб Сонома', hex:'#C9A57A', pattern:'wood', price:1200}],
+  facade:[
+    {id:'f1', name:'МДФ плёнка ПВХ', finish:'satin', price:6500},
+    {id:'f2', name:'МДФ эмаль матовая', finish:'matte', price:11000},
+    {id:'f3', name:'МДФ эмаль глянец', finish:'gloss', price:13500},
+    {id:'f4', name:'Пластик AGT', finish:'satin', price:9000},
+    {id:'f5', name:'ЛДСП 16 мм', finish:'matte', price:2600}],
+  milling:[
+    {id:'n0', name:'Без фрезеровки', style:'flat', add:0},
+    {id:'n1', name:'Рамка «Шейкер»', style:'frame', add:1800},
+    {id:'n2', name:'Классика', style:'classic', add:3200},
+    {id:'n3', name:'Вертикальные пазы', style:'grooves', add:1500}],
+  fcolor:[
+    {id:'k1', name:'Белый', hex:'#F1F0EA', pattern:'plain'}, {id:'k2', name:'Кашемир', hex:'#C9BCAE', pattern:'plain'},
+    {id:'k3', name:'Песочный', hex:'#D6C3A2', pattern:'plain'}, {id:'k4', name:'Шалфей', hex:'#9EAC95', pattern:'plain'},
+    {id:'k5', name:'Оливковый', hex:'#6F7356', pattern:'plain'}, {id:'k6', name:'Тёмно-синий', hex:'#2C3B57', pattern:'plain'},
+    {id:'k7', name:'Графит', hex:'#3A3E41', pattern:'plain'}, {id:'k8', name:'Дуб натуральный', hex:'#B98A57', pattern:'wood'}],
+  top:[
+    {id:'t1', name:'Постформинг 38 мм, бетон', hex:'#A9A7A1', pattern:'plain', t:38, price:3200, joint:2500, cut:800},
+    {id:'t2', name:'Постформинг 38 мм, дуб', hex:'#B48A5A', pattern:'wood', t:38, price:3200, joint:2500, cut:800},
+    {id:'t3', name:'Компакт-плита 12 мм, графит', hex:'#383735', pattern:'plain', t:12, price:9000, joint:3500, cut:2500},
+    {id:'t4', name:'Кварц 20 мм, белый мрамор', hex:'#ECEBE6', pattern:'marble', t:20, price:28000, joint:9000, cut:6000}],
+};
+const DEFAULT_PRICES = {
+  hdf:250, edge2:40, edge04:12,
+  blum:{hinge:750, legrabox:9500, tandembox:6800, aventos:12500, tipon:1200, cargo:16000, fridgeMount:900},
+  leg:70, hanger:90, shelfPin:10, fixings:200, dwMount:400, bar:350, gola:1800, glass:4500,
+  led:2400, ledDriver:3800, cutPipe:300,
+  plinth:450, splash:2500,
+  work:{cut:150, edging:35, assembly:700},
+  waste:{ldsp:1.2, hdf:1.15, edge:1.1},
+  markup:100, install:10, delivery:3000,
+};
+
+function catFind(list, id){ return list.find(r => r.id === id) || list[0]; }
+function wallsOf(S){ return S.layout === 'U' ? ['A','B','C'] : S.layout === 'L' ? ['A','B'] : ['A']; }
+function activeModules(S){ const w = wallsOf(S); return S.modules.filter(m => w.includes(m.wall)); }
+function facadeColorId(m, S){ return m.facade || (TYPES[m.type].row === 'low' ? S.mat.fLow : S.mat.fUp); }
+
+function shelvesOf(m){
+  const H = m.h;
+  switch (m.type){
+    case 'base_door': case 'base_corner': return [Math.round(H / 2)];
+    case 'base_drawer_door': return [Math.round(H * .39)];
+    case 'base_oven': return [H - 600];
+    case 'upper_door': case 'upper_glass': case 'upper_corner': case 'upper_open':
+      return H > 760 ? [Math.round(H / 3), Math.round(H * 2 / 3)] : [Math.round(H / 2)];
+    case 'mezz_door': return H > 450 ? [Math.round(H / 2)] : [];
+    case 'tall_door': return [1, 2, 3, 4].map(i => Math.round(H * i / 5));
+    case 'tall_oven': return [520, 1115, 1495];
+    case 'tall_fridge': return [1770];
+    default: return [];
+  }
+}
+
+function facadesOf(m, S){
+  const t = TYPES[m.type], W = m.w, H = m.h, out = [];
+  const door = (x, y, w, h, hinge, ex = {}) => out.push(Object.assign({x, y, w, h, k:'door', hinge}, ex));
+  const cols = (y, h, ex = {}) => { const n = W > 500 ? 2 : 1, cw = W / n; for (let i = 0; i < n; i++) door(i*cw + 2, y, cw - 4, h, n === 1 ? 'left' : (i ? 'right' : 'left'), ex); };
+  const drw = (y, h) => out.push({x:2, y, w:W - 4, h, k:'drawer'});
+  switch (m.type){
+    case 'base_door': case 'base_sink': case 'upper_door': case 'mezz_door': cols(2, H - 4); break;
+    case 'upper_glass': cols(2, H - 4, {glass:true}); break;
+    case 'base_drawer_door': { const dh = Math.round(H * .22); cols(2, H - dh - 4); drw(H - dh + 2, dh - 4); break; }
+    case 'base_drawers2': { const a = Math.round(H / 2); drw(2, a - 4); drw(a + 2, H - a - 4); break; }
+    case 'base_drawers3': { const a = Math.round(H * .39), b = Math.round(H * .39); drw(2, a - 4); drw(a + 2, b - 4); drw(a + b + 2, H - a - b - 4); break; }
+    case 'base_oven': drw(2, Math.max(H - 600, 60) - 4); break;
+    case 'base_dw': out.push({x:2, y:2, w:W - 4, h:H - 4, k:'dw'}); break;
+    case 'base_cargo': out.push({x:2, y:2, w:W - 4, h:H - 4, k:'cargo'}); break;
+    case 'base_corner': case 'upper_corner': {
+      const blind = m.type === 'base_corner' ? 600 : 320, dw = Math.max(W - blind, 250);
+      if (m.blind === 'right') door(2, 2, dw - 4, H - 4, 'left'); else door(W - dw + 2, 2, dw - 4, H - 4, 'right');
+      break; }
+    case 'upper_lift': case 'mezz_lift': out.push({x:2, y:2, w:W - 4, h:H - 4, k:'lift'}); break;
+    case 'tall_door': {
+      const n = W > 500 ? 2 : 1, cw = W / n, hb = Math.round(H * .62);
+      for (let i = 0; i < n; i++){ const hg = n === 1 ? 'left' : (i ? 'right' : 'left');
+        door(i*cw + 2, 2, cw - 4, hb - 4, hg, {part:'bottom'}); door(i*cw + 2, hb + 2, cw - 4, H - hb - 4, hg, {part:'top'}); }
+      break; }
+    case 'tall_oven': { drw(2, 256); drw(262, 254); const y0 = 520 + 595 + 380; cols(y0 + 2, H - y0 - 4, {part:'top'}); break; }
+    case 'tall_fridge': {
+      out.push({x:2, y:2, w:W - 4, h:716, k:'fridge', hinge:'right', part:'bottom'}, {x:2, y:722, w:W - 4, h:1046, k:'fridge', hinge:'right', part:'bottom'});
+      cols(1772, H - 1774, {part:'top'}); break; }
+  }
+  if (S.mat.handle === 'gola'){
+    if (t.row === 'low' && !t.tall) out.forEach(f => { f.h -= GOLA; f.channel = true; });
+    else if (t.tall) out.forEach(f => {
+      if (f.k === 'drawer'){ f.h -= GOLA; f.channel = true; return; }
+      if (f.hinge === 'left'){ f.w -= GOLA; f.vch = f.x + f.w + 2; } else { f.x += GOLA; f.w -= GOLA; f.vch = f.x - GOLA - 2; }
+    });
+    else out.forEach(f => { f.y -= 20; f.h += 20; });
+  }
+  return out;
+}
+
+function panelsOf(m, S){
+  const t = TYPES[m.type], p = [];
+  if (t.gap || m.type === 'base_dw') return p;
+  const W = m.w, H = m.h, D = m.d, wi = W - 2*T;
+  const add = (n, a, b, q, mat, e2) => { if (q > 0) p.push({n, a:Math.round(a), b:Math.round(b), q, mat, e2:e2 || 0}); };
+  add('Боковина', H, D, 2, 'ldsp', H);
+  if (t.row === 'low' && !t.tall){ add('Дно', wi, D, 1, 'ldsp', wi); add('Царга', wi, 100, 2, 'ldsp', wi); }
+  else add('Дно и крыша', wi, D, 2, 'ldsp', wi);
+  add('Полка', wi - 2, D - 20, shelvesOf(m).length, 'ldsp', wi - 2);
+  const nd = facadesOf(m, S).filter(f => f.k === 'drawer').length;
+  add('Дно ящика', wi - 26, D - 70, nd, 'ldsp', 0);
+  if (S.mat.drawers === 'tandembox') add('Задняя стенка ящика', wi - 38, 120, nd, 'ldsp', 0);
+  if (m.type !== 'base_sink') add('Задняя стенка', W - 2, H - 2, 1, 'hdf');
+  return p;
+}
+
+function hwOf(m, facs, S){
+  const t = TYPES[m.type];
+  const h = {hinge:0, slide:0, lift:0, cargo:0, fridge:0, dw:0, bar:0, push:0, gola:0, leg:0, hanger:0, pin:0, fix:0, glass:0};
+  facs.forEach(f => {
+    if (f.k === 'door') h.hinge += f.h <= 900 ? 2 : f.h <= 1600 ? 3 : 4;
+    if (f.k === 'drawer') h.slide++;
+    if (f.k === 'lift') h.lift++;
+    if (f.k === 'cargo') h.cargo++;
+    if (f.k === 'fridge') h.fridge++;
+    if (f.k === 'dw') h.dw++;
+    if (f.glass) h.glass += Math.max(0, f.w - 120) * Math.max(0, f.h - 120) / 1e6;
+    if (S.mat.handle === 'bar') h.bar++;
+    if (S.mat.handle === 'push' && f.k !== 'dw' && f.k !== 'fridge') h.push++;
+    if (f.channel) h.gola += (f.w + 4) / 1000;
+    if (f.vch !== undefined) h.gola += (f.h + 4) / 1000;
+  });
+  if (!t.gap && m.type !== 'base_dw'){
+    h.fix = 1;
+    if (t.row === 'low') h.leg = m.w >= 800 ? 6 : 4; else h.hanger = 2;
+  }
+  h.pin = shelvesOf(m).length * 4;
+  return h;
+}
+
+function calcModule(m, S, P, C){
+  const facs = facadesOf(m, S), panels = panelsOf(m, S), hw = hwOf(m, facs, S), t = TYPES[m.type];
+  let ldsp = 0, hdf = 0, e2 = 0, e04 = 0;
+  panels.forEach(p => { const a = p.a * p.b / 1e6 * p.q;
+    if (p.mat === 'ldsp'){ ldsp += a; e2 += p.e2 * p.q / 1000; e04 += (2*(p.a + p.b) - p.e2) * p.q / 1000; } else hdf += a; });
+  const facArea = facs.reduce((s, f) => s + f.w * f.h / 1e6, 0);
+  const decor = catFind(C.corpus, m.corpus || S.mat.corpus);
+  const fm = catFind(C.facade, S.mat.facade), ml = catFind(C.milling, S.mat.milling);
+  const Wt = P.waste, B = P.blum;
+  const corpus = ldsp*Wt.ldsp*decor.price + hdf*Wt.hdf*P.hdf + (e2*P.edge2 + e04*P.edge04)*Wt.edge;
+  const facade = facArea * (fm.price + ml.add) + hw.glass * P.glass;
+  const light = m.light && t.row === 'up' && !t.gap ? m.w / 1000 * P.led : 0;
+  const hwc = hw.hinge*B.hinge + hw.slide*B[S.mat.drawers] + hw.lift*B.aventos + hw.cargo*B.cargo + hw.fridge*B.fridgeMount
+    + hw.dw*P.dwMount + hw.bar*P.bar + hw.push*B.tipon + hw.gola*P.gola + hw.leg*P.leg + hw.hanger*P.hanger
+    + hw.pin*P.shelfPin + hw.fix*P.fixings + light;
+  const work = ldsp*P.work.cut + (e2 + e04)*P.work.edging + (hw.fix ? P.work.assembly : 0) + (m.cut && m.cut.pipe ? P.cutPipe : 0);
+  const cost = corpus + facade + hwc + work;
+  return {m, facs, panels, hw, ldsp, hdf, e2, e04, facArea, light, decor, c:{corpus, facade, hw:hwc, work}, cost, price:cost * (1 + P.markup / 100)};
+}
+
+function layoutOf(S){
+  const res = {pos:{}, walls:{}, tops:[], warnings:[]};
+  const ws = wallsOf(S);
+  ws.forEach(wl => {
+    const L = S.walls[wl], side = wl !== 'A';
+    const mods = S.modules.filter(m => m.wall === wl);
+    const by = r => mods.filter(m => TYPES[m.type].row === r);
+    const offL = side ? 600 : 0, offU = side ? 320 : 0;
+    let x = offL; const tallI = [];
+    by('low').forEach(m => { res.pos[m.id] = {x, wall:wl}; if (TYPES[m.type].tall) tallI.push([x, x + m.w]); x += m.w; });
+    let u = offU;
+    by('up').forEach(m => {
+      let moved = true;
+      while (moved){ moved = false; for (const [a, b] of tallI) if (u < b && u + m.w > a){ u = b; moved = true; } }
+      res.pos[m.id] = {x:u, wall:wl}; u += m.w; });
+    let z = offU;
+    by('mezz').forEach(m => { res.pos[m.id] = {x:z, wall:wl}; z += m.w; });
+    const upEnd = Math.max(u, offU, ...tallI.map(i => i[1]));
+    res.walls[wl] = {L, lowEnd:x, upEnd, mezzEnd:z, nLow:by('low').length, nUp:by('up').length, nMezz:by('mezz').length, offL, offU, lows:by('low'), ups:by('up')};
+    let seg = null;
+    by('low').forEach(m => {
+      const t = TYPES[m.type], p = res.pos[m.id];
+      if (t.tall || t.gap){ if (seg){ res.tops.push(seg); seg = null; } return; }
+      if (!seg) seg = {wall:wl, x0:p.x, x1:p.x + m.w, h:m.h}; else { seg.x1 = p.x + m.w; seg.h = Math.max(seg.h, m.h); }
+    });
+    if (seg) res.tops.push(seg);
+    const nm = {A:'А', B:'Б', C:'В'}[wl];
+    if (x > L) res.warnings.push(`Стена ${nm}: нижний ряд длиннее стены на ${x - L} мм`);
+    if (upEnd > L) res.warnings.push(`Стена ${nm}: верхний ряд длиннее стены на ${upEnd - L} мм`);
+    if (z > L) res.warnings.push(`Стена ${nm}: антресоли длиннее стены на ${z - L} мм`);
+  });
+  const A = res.walls.A;
+  if (ws.includes('B')){
+    if (res.walls.B.nLow && A.lows[0] && !(A.lows[0].type === 'base_corner' && A.lows[0].blind !== 'right')) res.warnings.push('Угол со стеной Б: первым внизу на стене А поставьте «Угловой нижний» с глухой частью слева');
+    if (res.walls.B.nUp && A.ups[0] && !(A.ups[0].type === 'upper_corner' && A.ups[0].blind !== 'right')) res.warnings.push('Угол со стеной Б: первым вверху на стене А поставьте «Угловой верхний» с глухой частью слева');
+  }
+  if (ws.includes('C')){
+    const ll = A.lows[A.lows.length - 1], lu = A.ups[A.ups.length - 1];
+    if (res.walls.C.nLow && ll && !(ll.type === 'base_corner' && ll.blind === 'right')) res.warnings.push('Угол со стеной В: последним внизу на стене А поставьте «Угловой нижний» с глухой частью справа');
+    if (res.walls.C.nUp && lu && !(lu.type === 'upper_corner' && lu.blind === 'right')) res.warnings.push('Угол со стеной В: последним вверху на стене А поставьте «Угловой верхний» с глухой частью справа');
+  }
+  const hiMezz = S.modules.filter(m => ws.includes(m.wall) && TYPES[m.type].row === 'mezz' && !TYPES[m.type].gap && UP_TOP + m.h > S.room.height);
+  if (hiMezz.length) res.warnings.push(`Антресоли выше потолка ${S.room.height} мм: уменьшите высоту антресолей`);
+  return res;
+}
+
+function calcAll(S, P, C){
+  const R = layoutOf(S);
+  const mods = activeModules(S).map(m => calcModule(m, S, P, C));
+  const k = 1 + P.markup / 100, top = catFind(C.top, S.mat.top);
+  const topLen = R.tops.reduce((s, t) => s + (t.x1 - t.x0), 0) / 1000;
+  let joints = 0;
+  if (R.walls.B && R.tops.some(t => t.wall === 'A' && t.x0 === 0) && R.tops.some(t => t.wall === 'B' && t.x0 === R.walls.B.offL)) joints++;
+  if (R.walls.C && R.tops.some(t => t.wall === 'A' && t.x1 >= S.walls.A - 1) && R.tops.some(t => t.wall === 'C' && t.x0 === R.walls.C.offL)) joints++;
+  const lowNonGap = mods.filter(r => TYPES[r.m.type].row === 'low' && !TYPES[r.m.type].gap);
+  const plinthLen = lowNonGap.reduce((s, r) => s + r.m.w, 0) / 1000;
+  const cuts = lowNonGap.reduce((s, r) => s + (r.m.cut && !TYPES[r.m.type].tall ? (r.m.cut.sink ? 1 : 0) + (r.m.cut.hob ? 1 : 0) : 0), 0);
+  const ledLen = mods.reduce((s, r) => s + (r.light ? r.m.w : 0), 0) / 1000;
+  const common = [];
+  if (topLen > 0) common.push({n:'Столешница ' + top.name, q:topLen, u:'м.п.', unit:top.price});
+  if (joints) common.push({n:'Угловое соединение столешницы', q:joints, u:'шт', unit:top.joint});
+  if (cuts && topLen > 0) common.push({n:'Вырезы в столешнице под мойку и варочную', q:cuts, u:'шт', unit:top.cut});
+  if (plinthLen > 0) common.push({n:'Цоколь', q:plinthLen, u:'м.п.', unit:P.plinth});
+  if (S.mat.splash && topLen > 0) common.push({n:'Стеновая панель (фартук)', q:topLen, u:'м.п.', unit:P.splash});
+  if (ledLen > 0) common.push({n:'Подсветка: блок питания и сенсорный выключатель', q:Math.ceil(ledLen / 4), u:'шт', unit:P.ledDriver});
+  common.forEach(c => { c.cost = c.q * c.unit; c.price = c.cost * k; });
+  const sum = (a, f) => a.reduce((s, x) => s + f(x), 0);
+  const furnCost = sum(mods, r => r.cost), furnPrice = sum(mods, r => r.price);
+  const commonCost = sum(common, c => c.cost), commonPrice = sum(common, c => c.price);
+  const sub = furnPrice + commonPrice, disc = sub * (S.disc || 0) / 100, after = sub - disc;
+  const install = after * P.install / 100, delivery = +P.delivery || 0, total = after + install + delivery;
+  return {R, mods, common, topLen, plinthLen, ledLen, joints, cuts, furnCost, furnPrice, commonCost, commonPrice, sub, disc, after, install, delivery, total, totalCost:furnCost + commonCost, margin:after - furnCost - commonCost};
+}
+
+function bomOf(A, S, P, C){
+  const rows = [], s = f => A.mods.reduce((t, r) => t + f(r), 0), Wt = P.waste, B = P.blum;
+  rows.push({g:'Корпус'});
+  const byDecor = {};
+  A.mods.forEach(r => { if (!r.ldsp) return; byDecor[r.decor.id] = (byDecor[r.decor.id] || 0) + r.ldsp; });
+  Object.entries(byDecor).forEach(([id, a]) => { const d = catFind(C.corpus, id);
+    rows.push({n:`ЛДСП 16 мм ${d.name} (чисто ${a.toFixed(2)} м², ≈ ${Math.ceil(a * Wt.ldsp / SHEET_M2)} лист.)`, q:a * Wt.ldsp, u:'м²', p:d.price}); });
+  rows.push({n:'ХДФ 3 мм, задние стенки', q:s(r => r.hdf) * Wt.hdf, u:'м²', p:P.hdf});
+  rows.push({n:'Кромка ПВХ 2 мм', q:s(r => r.e2) * Wt.edge, u:'м', p:P.edge2});
+  rows.push({n:'Кромка ПВХ 0,4 мм', q:s(r => r.e04) * Wt.edge, u:'м', p:P.edge04});
+  rows.push({g:'Фасады'});
+  const fm = catFind(C.facade, S.mat.facade), ml = catFind(C.milling, S.mat.milling), fg = {};
+  A.mods.forEach(r => { if (!r.facs.length) return; const cid = facadeColorId(r.m, S); fg[cid] = fg[cid] || {a:0, n:0}; fg[cid].a += r.facArea; fg[cid].n += r.facs.length; });
+  Object.entries(fg).forEach(([cid, v]) => rows.push({n:`${fm.name}, ${ml.name.toLowerCase()}, ${catFind(C.fcolor, cid).name.toLowerCase()} (${v.n} шт)`, q:v.a, u:'м²', p:fm.price + ml.add}));
+  const glass = s(r => r.hw.glass); if (glass) rows.push({n:'Стекло для витрин', q:glass, u:'м²', p:P.glass});
+  rows.push({g:'Фурнитура Blum и комплектующие'});
+  const H = k => s(r => r.hw[k]), dr = DRAWERS[S.mat.drawers], dc = dr.colors.find(c => c.id === S.mat.drawerColor) || dr.colors[0];
+  [['Петля CLIP top BLUMOTION', H('hinge'), B.hinge, 'шт'], [`Ящик ${dr.n}, ${dc.name.toLowerCase()}`, H('slide'), B[S.mat.drawers], 'шт'],
+   ['Подъёмник AVENTOS HK top', H('lift'), B.aventos, 'шт'], ['Карго для бутылочницы', H('cargo'), B.cargo, 'шт'],
+   ['Крепление фасада холодильника', H('fridge'), B.fridgeMount, 'шт'], ['Крепление фасада посудомойки', H('dw'), P.dwMount, 'шт'],
+   ['Ручка-скоба', H('bar'), P.bar, 'шт'], ['Толкатель TIP-ON', H('push'), B.tipon, 'шт'], ['Профиль Gola', H('gola'), P.gola, 'м'],
+   ['Светодиодная лента с профилем', A.ledLen, P.led, 'м'],
+   ['Опора регулируемая', H('leg'), P.leg, 'шт'], ['Навес для верхнего модуля', H('hanger'), P.hanger, 'шт'],
+   ['Полкодержатель', H('pin'), P.shelfPin, 'шт'], ['Крепёж, комплект на модуль', H('fix'), P.fixings, 'шт']]
+    .forEach(([n, q, p, u]) => { if (q) rows.push({n, q, u, p}); });
+  if (A.common.length){ rows.push({g:'Столешница и отделка'}); A.common.forEach(c => rows.push({n:c.n, q:c.q, u:c.u, p:c.unit})); }
+  rows.forEach(r => { if (!r.g) r.sum = r.q * r.p; });
+  return rows;
+}
+// CALC-END
+
+/* ---------------- state ---------------- */
+const KS = 'kitchen.state.v2', KP = 'kitchen.prices.v2', KC = 'kitchen.catalog.v2';
+const WALL_COLORS = [{name:'Белый', hex:'#F2F1EC'}, {name:'Тёплый серый', hex:'#D9D5CC'}, {name:'Оливковый', hex:'#B9B89B'}, {name:'Глиняный', hex:'#CDAA90'}, {name:'Сизый', hex:'#A9B4BA'}, {name:'Графит', hex:'#55595B'}];
+const FLOORS = [{id:'oakL', name:'Дуб светлый', hex:'#CDB497', pattern:'planks'}, {id:'oakD', name:'Дуб тёмный', hex:'#7C5C40', pattern:'planks'}, {id:'tile', name:'Плитка серая', hex:'#B9BAB6', pattern:'tiles'}, {id:'conc', name:'Микроцемент', hex:'#C8C6C0', pattern:'plain'}];
+
+function sampleState(){
+  let id = 0;
+  const mk = (type, wall, o = {}) => Object.assign({id:'m' + (++id), type, wall, w:TYPES[type].w, h:TYPES[type].h, d:TYPES[type].d, blind:'left', corpus:null, facade:null, light:false, cut:{sink:false, hob:false, pipe:false}}, o);
+  const modules = [
+    mk('base_corner','A'), mk('base_dw','A'), mk('base_sink','A', {w:800, cut:{sink:true, hob:false, pipe:true}}), mk('base_drawers3','A'),
+    mk('upper_corner','A'), mk('upper_door','A', {w:800, light:true}), mk('upper_glass','A', {w:800, light:true}), mk('upper_door','A', {w:800, light:true}),
+    mk('base_drawers2','B', {w:450}), mk('base_oven','B', {cut:{sink:false, hob:true, pipe:false}}), mk('tall_fridge','B'),
+    mk('upper_door','B', {w:730}), mk('upper_lift','B'),
+    mk('gap_mezz','B', {w:1330}), mk('mezz_door','B', {d:560})];
+  return {client:'Анна И. (пример)', order:'К-0142', layout:'L', walls:{A:3200, B:2400, C:2400},
+    room:{height:2700, wall:'#E7E4DD', floor:'oakL'},
+    mat:{corpus:'c1', facade:'f2', milling:'n1', fLow:'k4', fUp:'k1', handle:'bar', drawers:'legrabox', drawerColor:'orion', top:'t4', splash:true},
+    disc:0, modules, selected:'m3', showDims:true, clientView:false, nextId:id + 1, tab:'smeta', ltab:'catalog', cat:'low', place:'A'};
+}
+function deepMerge(base, over){
+  const out = JSON.parse(JSON.stringify(base));
+  (function walk(o, v){ for (const k in v){ if (v[k] && typeof v[k] === 'object' && o[k] && typeof o[k] === 'object' && !Array.isArray(o[k])) walk(o[k], v[k]); else if (typeof v[k] === 'number' && k in o) o[k] = v[k]; } })(out, over || {});
+  return out;
+}
+function load(key){ try { const s = localStorage.getItem(key); return s ? JSON.parse(s) : null; } catch(e){ return null; } }
+function store(key, v){ try { localStorage.setItem(key, JSON.stringify(v)); } catch(e){} }
+
+let S = (() => { const s = load(KS); if (s && Array.isArray(s.modules) && s.mat && s.walls) return Object.assign(sampleState(), s); return sampleState(); })();
+let P = deepMerge(DEFAULT_PRICES, load(KP));
+let C = (() => { const c = load(KC); const d = JSON.parse(JSON.stringify(DEFAULT_CAT)); if (c) for (const k in d) if (Array.isArray(c[k]) && c[k].length) d[k] = c[k]; return d; })();
+let A = null;
+let openAll = false; const openSet = new Set();
+
+/* ---------------- helpers ---------------- */
+const $ = id => document.getElementById(id);
+const nf0 = new Intl.NumberFormat('ru-RU', {maximumFractionDigits:0});
+const nf2 = new Intl.NumberFormat('ru-RU', {maximumFractionDigits:2});
+const rub = v => nf0.format(Math.round(v)) + ' ₽';
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const WN = {A:'А', B:'Б', C:'В'};
+const pathGet = (o, p) => p.split('.').reduce((x, k) => x?.[k], o);
+const pathSet = (o, p, v) => { const ks = p.split('.'); let x = o; ks.slice(0, -1).forEach(k => x = x[k]); x[ks[ks.length - 1]] = v; };
+function toast(msg){ const t = $('toast'); t.textContent = msg; t.hidden = false; clearTimeout(toast._t); toast._t = setTimeout(() => t.hidden = true, 2200); }
+function keepFocus(fn){ const id = document.activeElement && document.activeElement.id; fn(); if (id){ const el = $(id); if (el && el !== document.activeElement) el.focus({preventScroll:true}); } }
+function orderedMods(){ const out = []; wallsOf(S).forEach(wl => ROWS.forEach(([row]) => S.modules.forEach(m => { if (m.wall === wl && TYPES[m.type].row === row) out.push(m); }))); return out; }
+function numberMap(){ const map = {}; orderedMods().forEach((m, i) => map[m.id] = i + 1); return map; }
+function resultOf(id){ return A.mods.find(r => r.m.id === id); }
+function selMod(){ const m = S.modules.find(x => x.id === S.selected); return m && wallsOf(S).includes(m.wall) ? m : null; }
+function sizeStr(m){ return TYPES[m.type].gap ? `${m.w}` : `${m.w}×${m.h}×${m.d}`; }
+function shade(hex, pct){ const n = parseInt(hex.slice(1), 16); const f = c => Math.max(0, Math.min(255, Math.round(c + c * pct / 100))); return '#' + [f(n >> 16), f((n >> 8) & 255), f(n & 255)].map(v => v.toString(16).padStart(2, '0')).join(''); }
+function swBg(c){ return c.pattern === 'wood' || c.pattern === 'planks' ? `repeating-linear-gradient(95deg, ${c.hex} 0 3px, ${shade(c.hex, -12)} 3px 4px)` : c.pattern === 'marble' ? `linear-gradient(135deg, ${c.hex} 40%, #C9C8C3 48%, ${c.hex} 56%)` : c.pattern === 'tiles' ? `linear-gradient(90deg, ${shade(c.hex, -15)} 1px, transparent 1px) 0 0/9px 9px, linear-gradient(${shade(c.hex, -15)} 1px, ${c.hex} 1px) 0 0/9px 9px` : c.hex; }
+function newModule(type, wall, o = {}){
+  const t = TYPES[type];
+  return Object.assign({id:'m' + (S.nextId++), type, wall, w:t.w, h:t.h, d:t.d, blind:wall === 'B' ? 'right' : 'left', corpus:null, facade:null,
+    light:false, cut:{sink:type === 'base_sink', hob:type === 'base_oven', pipe:type === 'base_sink'}}, o);
+}
+function modLabel(m){
+  const t = TYPES[m.type];
+  if (m.type.includes('corner')) return t.name;
+  if (t.cat === 'low') return 'Нижний: ' + t.name.toLowerCase();
+  if (t.cat === 'up') return 'Верхний: ' + t.name.toLowerCase();
+  return t.name;
+}
+function modNotes(m){
+  const n = [];
+  if (m.corpus) n.push('корпус ' + catFind(C.corpus, m.corpus).name.toLowerCase());
+  if (m.facade) n.push('фасад ' + catFind(C.fcolor, m.facade).name.toLowerCase());
+  if (m.light && TYPES[m.type].row === 'up') n.push('подсветка');
+  if (m.cut && m.cut.sink) n.push('мойка');
+  if (m.cut && m.cut.hob) n.push('варочная');
+  if (m.cut && m.cut.pipe) n.push('вырез под трубы');
+  return n.join(', ');
+}
+
+/* ---------------- module schematic (drawn from the same facade data) ---------------- */
+function moduleSvg(type){
+  const t = TYPES[type];
+  const m = {type, w:t.w, h:t.gap ? (t.row === 'mezz' ? 360 : 720) : t.h, d:t.d, wall:'A', blind:'left'};
+  const sc = 60 / Math.max(m.w, m.h), W = m.w * sc, H = m.h * sc, ox = (80 - W) / 2, oy = (68 - H) / 2;
+  if (t.gap) return `<svg viewBox="0 0 80 68" aria-hidden="true"><rect x="${ox}" y="${oy}" width="${W}" height="${H}" fill="none" stroke="var(--muted)" stroke-dasharray="3 3"/></svg>`;
+  let s = `<rect x="${ox}" y="${oy}" width="${W}" height="${H}" fill="var(--sunk)" stroke="var(--muted)" stroke-width=".8"/>`;
+  const Y = (y, h) => oy + H - (y + h) * sc;
+  if (type === 'upper_open') shelvesOf(m).forEach(y => s += `<line x1="${ox}" x2="${ox + W}" y1="${Y(y, 0)}" y2="${Y(y, 0)}" stroke="var(--muted)"/>`);
+  if (type === 'base_oven') s += `<rect x="${ox + 2}" y="${Y(m.h - 597, 595)}" width="${W - 4}" height="${595 * sc}" fill="var(--ink)" opacity=".85"/>`;
+  if (type === 'tall_oven') s += `<rect x="${ox + 2}" y="${Y(520, 595)}" width="${W - 4}" height="${595 * sc}" fill="var(--ink)" opacity=".85"/><rect x="${ox + 2}" y="${Y(1115, 380)}" width="${W - 4}" height="${380 * sc}" fill="var(--ink)" opacity=".6"/>`;
+  facadesOf(m, {mat:{handle:'bar'}}).forEach(f => {
+    s += `<rect x="${ox + f.x * sc}" y="${Y(f.y, f.h)}" width="${f.w * sc}" height="${f.h * sc}" fill="${f.glass ? 'var(--accent-soft)' : 'var(--surface)'}" stroke="var(--ink)" stroke-width=".8"/>`;
+    if (f.glass) s += `<rect x="${ox + f.x * sc + 3}" y="${Y(f.y, f.h) + 3}" width="${f.w * sc - 6}" height="${f.h * sc - 6}" fill="none" stroke="var(--ink)" stroke-width=".5"/>`;
+    const cx = ox + (f.x + f.w / 2) * sc, top = Y(f.y, f.h);
+    if (f.k === 'door' || f.k === 'fridge'){
+      const hx = f.hinge === 'left' ? ox + (f.x + f.w) * sc - 3 : ox + f.x * sc + 3;
+      const hy = t.row === 'low' && !t.tall ? top + 3 : (f.part === 'bottom' ? top + 3 : top + f.h * sc - 9);
+      s += `<line x1="${hx}" x2="${hx}" y1="${hy}" y2="${hy + 6}" stroke="var(--ink)" stroke-width="1.4"/>`;
+    } else { const ly = f.k === 'lift' ? top + f.h * sc - 3 : top + 3; s += `<line x1="${cx - 5}" x2="${cx + 5}" y1="${ly}" y2="${ly}" stroke="var(--ink)" stroke-width="1.4"/>`; }
+  });
+  return `<svg viewBox="0 0 80 68" aria-hidden="true">${s}</svg>`;
+}
+function planSvg(kind){
+  const p = kind === 'I' ? 'M6 6h32' : kind === 'L' ? 'M6 26V6h32' : 'M6 26V6h32v20';
+  return `<svg viewBox="0 0 44 30" aria-hidden="true"><path d="${p}" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="square"/></svg>`;
+}
+
+/* ---------------- left menu ---------------- */
+function swatchRow(list, cur, act, key, extra = ''){
+  return `<div class="swatches">${extra}${list.map(c => `<button class="sw" data-act="${act}" data-k="${key}" data-v="${esc(c.id ?? c.hex)}" aria-pressed="${(c.id ?? c.hex) === cur}" aria-label="${esc(c.name)}" title="${esc(c.name)}" style="background:${swBg(c)}"></button>`).join('')}</div>`;
+}
+function renderLeft(){
+  ['room','catalog','module','mat'].forEach(t => $('lt-' + t).setAttribute('aria-selected', String(S.ltab === t)));
+  const f = {room:leftRoom, catalog:leftCatalog, module:leftModule, mat:leftMat}[S.ltab] || leftCatalog;
+  keepFocus(() => { $('lbody').innerHTML = f(); });
+}
+function fillHtml(){
+  let h = '';
+  wallsOf(S).forEach(wl => {
+    const w = A.R.walls[wl];
+    [['низ', w.lowEnd, w.nLow], ['верх', w.upEnd, w.nUp], ['антресоли', w.mezzEnd, w.nMezz]].forEach(([nm, used, n]) => {
+      if (nm === 'антресоли' && !n) return;
+      const over = used > w.L, pct = Math.min(100, used / w.L * 100);
+      h += `<div class="fillrow"><span class="t">${WN[wl]} · ${nm}</span><div class="bar ${over ? 'over' : ''}"><i style="width:${pct}%"></i></div>
+        <div class="fillnote ${over ? 'over' : ''}">${used} из ${w.L} мм · ${over ? 'не помещается +' + (used - w.L) : 'свободно ' + (w.L - used)}</div></div>`;
+    });
+  });
+  A.R.warnings.forEach(x => h += `<div class="warn">${esc(x)}</div>`);
+  const hidden = S.modules.filter(m => !wallsOf(S).includes(m.wall)).length;
+  if (hidden) h += `<div class="small muted">Скрыто модулей на неиспользуемых стенах: ${hidden}. В смету они не входят.</div>`;
+  return h;
+}
+function leftRoom(){
+  const ws = wallsOf(S);
+  return `
+  <div class="sec"><h3>Заказ</h3>
+    <div class="row2">
+      <div class="field"><label for="inClient">Клиент</label><input type="text" id="inClient" value="${esc(S.client)}"></div>
+      <div class="field"><label for="inOrder">Номер</label><input type="text" id="inOrder" value="${esc(S.order)}"></div>
+    </div>
+    <div class="btns"><button class="btn" data-act="load-sample" id="btnSample">Загрузить пример</button><button class="btn danger" data-act="clear-mods" id="btnClear">Очистить модули</button></div>
+  </div>
+  <div class="sec"><h3>Планировка</h3>
+    <div class="plan">${[['I','Прямая'],['L','Угловая'],['U','П-образная']].map(([k, n]) => `<button data-act="layout" data-v="${k}" aria-pressed="${S.layout === k}">${planSvg(k)}${n}</button>`).join('')}</div>
+    <div class="row3">${['A','B','C'].filter(w => ws.includes(w)).map(w => `<div class="field"><label for="inWall${w}">Стена ${WN[w]}, мм</label><input type="number" id="inWall${w}" min="600" max="9000" step="10" value="${S.walls[w]}"></div>`).join('')}
+      <div class="field"><label for="inCeil">Потолок, мм</label><input type="number" id="inCeil" min="2200" max="4000" step="10" value="${S.room.height}"></div></div>
+    <div class="small muted">Стена А основная. Б примыкает к ней слева, В справа.</div>
+    <div class="fill">${fillHtml()}</div>
+  </div>
+  <div class="sec"><h3>Отделка помещения</h3>
+    <div class="field"><span class="flabel">Цвет стен</span>
+      ${swatchRow(WALL_COLORS, S.room.wall, 'room-wall', 'wall', `<input type="color" id="inWallHex" value="${S.room.wall}" aria-label="Свой цвет стен" title="Свой цвет">`)}</div>
+    <div class="field"><span class="flabel">Пол: <span class="swname">${esc((FLOORS.find(f => f.id === S.room.floor) || FLOORS[0]).name)}</span></span>${swatchRow(FLOORS, S.room.floor, 'room-floor', 'floor')}</div>
+  </div>`;
+}
+function leftCatalog(){
+  const ws = wallsOf(S), num = numberMap();
+  if (!ws.includes(S.place)) S.place = 'A';
+  let h = `<div class="sec"><h3>Добавить модуль</h3>
+    ${ws.length > 1 ? `<div class="seg" role="group" aria-label="Стена">${ws.map(w => `<button data-act="place" data-v="${w}" aria-pressed="${S.place === w}">Стена ${WN[w]}</button>`).join('')}</div>` : ''}
+    <div class="cats">${CATS.map(([k, n]) => `<button class="cat" data-act="cat" data-v="${k}" aria-pressed="${S.cat === k}">${n}</button>`).join('')}</div>
+    <div class="cards">${Object.entries(TYPES).filter(([, t]) => t.cat === S.cat).map(([k, t]) => `<button class="card" data-act="add" data-v="${k}" aria-label="Добавить: ${esc(t.name)}">${moduleSvg(k)}<span class="cn">${esc(t.name)}</span><span class="cs">${t.gap ? t.w : t.w + '×' + t.h}</span></button>`).join('')}</div>
+    <div class="small muted">Модуль встаёт после выбранного в том же ряду или в конец ряда стены ${WN[S.place]}.</div>
+  </div><div class="sec"><h3><span>Состав кухни</span><span>${A.mods.filter(r => !TYPES[r.m.type].gap).length} модулей</span></h3>`;
+  ws.forEach(wl => ROWS.forEach(([row, rn]) => {
+    const list = S.modules.filter(m => m.wall === wl && TYPES[m.type].row === row);
+    if (!list.length) return;
+    h += `<div class="mgroup"><h4>${ws.length > 1 ? 'Стена ' + WN[wl] + ' · ' : ''}${rn}</h4>`;
+    list.forEach(m => { const r = resultOf(m.id);
+      h += `<button class="mitem" data-act="select-mod" data-id="${m.id}" aria-current="${m.id === S.selected}"><span class="n">${num[m.id]}</span><span class="nm">${esc(modLabel(m))}<small>${m.w}</small></span><span class="pr">${TYPES[m.type].gap ? '—' : rub(r.price)}</span></button>`; });
+    h += '</div>';
+  }));
+  if (!activeModules(S).length) h += '<div class="empty">Пока пусто. Нажмите на карточку модуля выше.</div>';
+  return h + '</div>';
+}
+function typeOptions(sel){
+  return CATS.map(([c, n]) => `<optgroup label="${n}">${Object.entries(TYPES).filter(([, t]) => t.cat === c).map(([k, t]) => `<option value="${k}" ${k === sel ? 'selected' : ''}>${t.name}</option>`).join('')}</optgroup>`).join('');
+}
+function leftModule(){
+  const m = selMod();
+  if (!m) return `<div class="sec"><h3>Модуль</h3><div class="empty">Выберите модуль кликом по шкафу на 3D-виде или в «Каталоге», раздел «Состав кухни».</div></div>`;
+  const t = TYPES[m.type], r = resultOf(m.id), num = numberMap()[m.id], ws = wallsOf(S);
+  let h = `<div class="sec">
+    <h3><span>Модуль №${num}</span><span>${ws.length > 1 ? 'Стена ' + WN[m.wall] : ''}</span></h3>
+    <div class="edhead"><span class="ttl">${esc(modLabel(m))}</span><span class="pr">${t.gap ? '' : rub(r.price)}</span></div>
+    <div class="field"><label for="edType">Тип</label><select id="edType">${typeOptions(m.type)}</select></div>
+    ${ws.length > 1 ? `<div class="seg" role="group" aria-label="Стена">${ws.map(w => `<button data-act="ed-wall" data-v="${w}" aria-pressed="${m.wall === w}">Стена ${WN[w]}</button>`).join('')}</div>` : ''}
+    <div class="${t.gap ? '' : 'row3'}">
+      <div class="field"><label for="edW">Ширина, мм</label><input type="number" id="edW" min="150" max="2400" step="1" value="${m.w}"></div>
+      ${t.gap ? '' : `<div class="field"><label for="edH">Высота</label><input type="number" id="edH" min="200" max="2400" step="1" value="${m.h}"></div>
+      <div class="field"><label for="edD">Глубина</label><input type="number" id="edD" min="250" max="700" step="1" value="${m.d}"></div>`}
+    </div>
+    <div class="chips">${t.widths.map(w => `<button class="chip" data-act="w-chip" data-v="${w}" aria-pressed="${w === m.w}">${w}</button>`).join('')}</div>
+    <div class="btns">
+      <button class="btn" data-act="mv" data-v="-1">← Левее</button><button class="btn" data-act="mv" data-v="1">Правее →</button>
+      ${t.gap || m.type === 'upper_open' ? '' : `<button class="btn" data-act="toggle-open">${isOpen(m.id) ? 'Закрыть' : 'Открыть'}</button>`}
+      <button class="btn" data-act="dup">Копия</button><button class="btn danger" data-act="del">Удалить</button>
+    </div></div>`;
+  if (t.gap) return h + `<div class="sec"><div class="small muted">Свободное место: окно, отдельностоящий холодильник, плита. В смету не входит.</div></div>`;
+  h += `<div class="sec"><h3>Цвета этого модуля</h3>
+    <div class="field"><span class="flabel">Корпус: <span class="swname">${esc(m.corpus ? catFind(C.corpus, m.corpus).name : 'как у кухни')}</span></span>
+      ${swatchRow(C.corpus, m.corpus, 'ov', 'corpus', `<button class="sw none" data-act="ov" data-k="corpus" data-v="" aria-pressed="${!m.corpus}">как у кухни</button>`)}</div>
+    ${r.facs.length ? `<div class="field"><span class="flabel">Фасад: <span class="swname">${esc(m.facade ? catFind(C.fcolor, m.facade).name : 'как у кухни')}</span></span>
+      ${swatchRow(C.fcolor, m.facade, 'ov', 'facade', `<button class="sw none" data-act="ov" data-k="facade" data-v="" aria-pressed="${!m.facade}">как у кухни</button>`)}</div>` : ''}
+  </div><div class="sec"><h3>Опции</h3>`;
+  if (t.row === 'up') h += `<label class="chk"><input type="checkbox" id="edLight" ${m.light ? 'checked' : ''}> Подсветка снизу, ${nf0.format(P.led)} ₽/м</label>`;
+  if (t.row === 'low' && !t.tall && m.type !== 'base_dw'){
+    h += `<label class="chk"><input type="checkbox" id="edSink" ${m.cut.sink ? 'checked' : ''}> Мойка: вырез в столешнице</label>
+      <label class="chk"><input type="checkbox" id="edHob" ${m.cut.hob ? 'checked' : ''}> Варочная панель: вырез в столешнице</label>`;
+  }
+  if (t.row === 'low' && m.type !== 'base_dw') h += `<label class="chk"><input type="checkbox" id="edPipe" ${m.cut.pipe ? 'checked' : ''}> Вырез под трубы и коммуникации</label>`;
+  if (t.row === 'mezz') h += `<div class="small muted">Над пеналом ставьте глубину 560, над верхними 300.</div>`;
+  if (m.type.includes('corner')) h += `<div class="field"><span class="flabel">Глухая часть (заходит под соседний ряд)</span><div class="seg"><button data-act="blind" data-v="left" aria-pressed="${m.blind !== 'right'}">Слева</button><button data-act="blind" data-v="right" aria-pressed="${m.blind === 'right'}">Справа</button></div></div>`;
+  const hw = r.hw, dr = DRAWERS[S.mat.drawers];
+  const hwl = [hw.hinge && `петли CLIP top ${hw.hinge}`, hw.slide && `${dr.n} ${hw.slide}`, hw.lift && `AVENTOS ${hw.lift}`, hw.cargo && `карго ${hw.cargo}`,
+    hw.fridge && `крепления холодильника ${hw.fridge}`, hw.dw && `крепление ПММ ${hw.dw}`, hw.bar && `ручки ${hw.bar}`, hw.push && `TIP-ON ${hw.push}`,
+    hw.gola && `Gola ${nf2.format(hw.gola)} м`, hw.leg && `опоры ${hw.leg}`, hw.hanger && `навесы ${hw.hanger}`].filter(Boolean).join(', ');
+  h += `</div><div class="sec"><h3>Детали и цена</h3>
+    <table class="mini" aria-label="Детали модуля">
+      ${r.panels.map(p => `<tr><td>${p.n}${p.mat === 'hdf' ? ' <span class="muted">(ХДФ)</span>' : ''}</td><td class="sz">${p.a}×${p.b}</td><td>${p.q} шт</td></tr>`).join('')}
+      ${r.facs.map((f, i) => `<tr><td>Фасад ${i + 1}${f.glass ? ' со стеклом' : ''}</td><td class="sz">${Math.round(f.h)}×${Math.round(f.w)}</td><td>1 шт</td></tr>`).join('')}
+    </table>
+    <div class="small"><span class="muted">Фурнитура Blum:</span> ${hwl || '—'}</div>
+    <table class="mini" aria-label="Состав цены">
+      <tr><td>Корпус, ${esc(r.decor.name.toLowerCase())}</td><td></td><td>${rub(r.c.corpus)}</td></tr>
+      <tr><td>Фасады, ${nf2.format(r.facArea)} м²</td><td></td><td>${rub(r.c.facade)}</td></tr>
+      <tr><td>Фурнитура${r.light ? ' и подсветка' : ''}</td><td></td><td>${rub(r.c.hw)}</td></tr>
+      <tr><td>Работа цеха</td><td></td><td>${rub(r.c.work)}</td></tr>
+      <tr><td><b>Себестоимость</b>, цена ×${nf2.format(1 + P.markup / 100)}</td><td></td><td><b>${rub(r.cost)}</b></td></tr>
+    </table></div>`;
+  return h;
+}
+function leftMat(){
+  const dr = DRAWERS[S.mat.drawers];
+  const ups = activeModules(S).filter(m => TYPES[m.type].row === 'up' && !TYPES[m.type].gap), lit = ups.filter(m => m.light).length;
+  return `
+  <div class="sec"><h3>Корпус</h3>
+    <div class="field"><span class="flabel">ЛДСП: <span class="swname">${esc(catFind(C.corpus, S.mat.corpus).name)}</span></span>${swatchRow(C.corpus, S.mat.corpus, 'mat', 'corpus')}</div></div>
+  <div class="sec"><h3>Фасады</h3>
+    <div class="field"><label for="selFacade">Материал</label><select id="selFacade">${C.facade.map(f => `<option value="${f.id}" ${f.id === S.mat.facade ? 'selected' : ''}>${esc(f.name)} · ${nf0.format(f.price)} ₽/м²</option>`).join('')}</select></div>
+    <div class="field"><label for="selMilling">Фрезеровка</label><select id="selMilling">${C.milling.map(f => `<option value="${f.id}" ${f.id === S.mat.milling ? 'selected' : ''}>${esc(f.name)}${f.add ? ' · +' + nf0.format(f.add) + ' ₽/м²' : ''}</option>`).join('')}</select></div>
+    <div class="field"><span class="flabel">Низ и пеналы: <span class="swname">${esc(catFind(C.fcolor, S.mat.fLow).name)}</span></span>${swatchRow(C.fcolor, S.mat.fLow, 'mat', 'fLow')}</div>
+    <div class="field"><span class="flabel">Верх и антресоли: <span class="swname">${esc(catFind(C.fcolor, S.mat.fUp).name)}</span></span>${swatchRow(C.fcolor, S.mat.fUp, 'mat', 'fUp')}</div>
+    <div class="field"><span class="flabel">Открывание</span><div class="seg">${Object.entries(HANDLES).map(([k, v]) => `<button data-act="mat" data-k="handle" data-v="${k}" aria-pressed="${S.mat.handle === k}">${v}</button>`).join('')}</div></div>
+  </div>
+  <div class="sec"><h3>Фурнитура Blum</h3>
+    <div class="small muted">Петли CLIP top BLUMOTION, подъёмники AVENTOS HK top.</div>
+    <div class="field"><span class="flabel">Система ящиков</span><div class="seg">${Object.entries(DRAWERS).map(([k, v]) => `<button data-act="mat" data-k="drawers" data-v="${k}" aria-pressed="${S.mat.drawers === k}">${v.n} · ${nf0.format(P.blum[k])} ₽</button>`).join('')}</div></div>
+    <div class="field"><span class="flabel">Цвет ящиков: <span class="swname">${esc((dr.colors.find(c => c.id === S.mat.drawerColor) || dr.colors[0]).name)}</span></span>${swatchRow(dr.colors, S.mat.drawerColor, 'mat', 'drawerColor')}</div>
+    <div class="small muted">Чтобы увидеть ящики, нажмите «Открыть всё» над 3D-видом.</div>
+  </div>
+  <div class="sec"><h3>Столешница и подсветка</h3>
+    <div class="field"><label for="selTop">Столешница</label><select id="selTop">${C.top.map(f => `<option value="${f.id}" ${f.id === S.mat.top ? 'selected' : ''}>${esc(f.name)} · ${nf0.format(f.price)} ₽/м.п.</option>`).join('')}</select></div>
+    <label class="chk"><input type="checkbox" id="chkSplash" ${S.mat.splash ? 'checked' : ''}> Стеновая панель (фартук) в цвет столешницы</label>
+    <div class="btns"><button class="btn" data-act="all-light" data-v="1">Подсветка под всеми верхними</button><button class="btn" data-act="all-light" data-v="0">Убрать подсветку</button></div>
+    <div class="small muted">Подсветка сейчас: ${lit} из ${ups.length} верхних модулей.</div>
+  </div>`;
+}
+
+function renderHeader(){
+  $('hdrProject').textContent = `Заказ ${S.order || '—'} · ${S.client || 'клиент не указан'}`;
+  $('hdrTotal').textContent = rub(A.total);
+  $('hdrSplit').textContent = `мебель и столешница ${rub(A.after)} · монтаж ${rub(A.install)} · доставка ${rub(A.delivery)}`;
+}
+
+/* ---------------- documents ---------------- */
+function matLine(){
+  const dr = DRAWERS[S.mat.drawers], dc = dr.colors.find(c => c.id === S.mat.drawerColor) || dr.colors[0];
+  return `Корпус ЛДСП ${catFind(C.corpus, S.mat.corpus).name.toLowerCase()} · фасады ${catFind(C.facade, S.mat.facade).name}, ${catFind(C.milling, S.mat.milling).name.toLowerCase()}: низ ${catFind(C.fcolor, S.mat.fLow).name.toLowerCase()}, верх ${catFind(C.fcolor, S.mat.fUp).name.toLowerCase()} · ${HANDLES[S.mat.handle].toLowerCase()} · Blum, ящики ${dr.n} ${dc.name.toLowerCase()}`;
+}
+function renderSmeta(){
+  const cv = S.clientView, num = numberMap(), cols = cv ? 4 : 9;
+  let rows = '';
+  wallsOf(S).forEach(wl => ROWS.forEach(([row, rn]) => {
+    const list = A.mods.filter(r => r.m.wall === wl && TYPES[r.m.type].row === row && !TYPES[r.m.type].gap);
+    if (!list.length) return;
+    rows += `<tr class="grp"><td colspan="${cols}">${wallsOf(S).length > 1 ? 'Стена ' + WN[wl] + ' · ' : ''}${rn}</td></tr>`;
+    list.forEach(r => { const nt = modNotes(r.m);
+      rows += `<tr data-id="${r.m.id}" class="${r.m.id === S.selected ? 'sel' : ''}"><td>${num[r.m.id]}</td><td>${esc(modLabel(r.m))}${nt ? `<span class="sub">${esc(nt)}</span>` : ''}</td><td class="sz">${sizeStr(r.m)}</td>
+        ${cv ? '' : `<td class="num">${nf0.format(r.c.corpus)}</td><td class="num">${nf0.format(r.c.facade)}</td><td class="num">${nf0.format(r.c.hw)}</td><td class="num">${nf0.format(r.c.work)}</td><td class="num">${nf0.format(r.cost)}</td>`}
+        <td class="num strong">${rub(r.price)}</td></tr>`; });
+  }));
+  if (A.common.length){
+    rows += `<tr class="grp"><td colspan="${cols}">Столешница и отделка</td></tr>`;
+    A.common.forEach(c => rows += `<tr><td></td><td>${esc(c.n)}</td><td class="sz">${nf2.format(c.q)} ${c.u}</td>${cv ? '' : `<td colspan="4" class="num muted">${nf0.format(c.unit)} ₽/${c.u}</td><td class="num">${nf0.format(c.cost)}</td>`}<td class="num strong">${rub(c.price)}</td></tr>`);
+  }
+  if (!rows) rows = `<tr><td colspan="${cols}" class="muted">Добавьте модули в «Каталоге», и смета соберётся автоматически.</td></tr>`;
+  $('tab-smeta').innerHTML = `
+    <div class="dochead">
+      <div><h2>Смета на кухню, заказ ${esc(S.order || '—')}</h2><div class="meta">${esc(S.client || '')}${S.client ? ' · ' : ''}${esc(matLine())}</div></div>
+      <div class="doctools">
+        <div class="seg" role="group" aria-label="Режим сметы"><button data-act="client-view" data-v="0" aria-pressed="${!cv}">Внутренняя</button><button data-act="client-view" data-v="1" aria-pressed="${cv}">Для клиента</button></div>
+        <label class="disc" for="inDisc">Скидка, % <input type="number" id="inDisc" min="0" max="50" step="0.5" value="${S.disc || 0}"></label>
+      </div>
+    </div>
+    <div class="tblwrap"><table class="t">
+      <thead><tr><th>№</th><th>Позиция</th><th>Размер, мм</th>${cv ? '' : '<th class="num">Корпус</th><th class="num">Фасады</th><th class="num">Фурнитура</th><th class="num">Работа</th><th class="num">Себест.</th>'}<th class="num">Цена</th></tr></thead>
+      <tbody>${rows}</tbody></table></div>
+    <dl class="sums">
+      <dt>Модули</dt><dd>${rub(A.furnPrice)}</dd>
+      <dt>Столешница и отделка</dt><dd>${rub(A.commonPrice)}</dd>
+      ${A.disc ? `<dt>Скидка ${nf2.format(S.disc)}%</dt><dd>−${rub(A.disc)}</dd>` : ''}
+      <dt>Монтаж, ${nf2.format(P.install)}%</dt><dd>${rub(A.install)}</dd>
+      <dt>Доставка</dt><dd>${rub(A.delivery)}</dd>
+      <dt class="total">Итого</dt><dd class="total">${rub(A.total)}</dd>
+      ${cv ? '' : `<dt class="cost">Себестоимость мебели и столешницы</dt><dd class="cost">${rub(A.totalCost)}</dd>
+      <dt class="cost">Маржа до монтажа</dt><dd class="cost" style="color:var(${A.margin >= 0 ? '--ok' : '--warn'})">${rub(A.margin)}${A.after ? ' · ' + nf0.format(A.margin / A.after * 100) + '%' : ''}</dd>`}
+    </dl>
+    <div class="btns" style="margin-top:16px"><button class="btn pri" data-act="copy-text">Скопировать для клиента</button><button class="btn" data-act="copy-tsv">Скопировать в Excel</button></div>
+    <div id="copyFallback"></div>
+    <p class="note">Режим «Для клиента» скрывает себестоимость и маржу. «Скопировать для клиента» даёт текст для мессенджера, «В Excel» — таблицу, которая вставляется в Excel или Google Таблицы по столбцам.</p>`;
+}
+function renderBom(){
+  const rows = bomOf(A, S, P, C); let h = '', tot = 0;
+  rows.forEach(r => {
+    if (r.g){ h += `<tr class="grp"><td colspan="5">${esc(r.g)}</td></tr>`; return; }
+    tot += r.sum;
+    h += `<tr><td>${esc(r.n)}</td><td class="num">${r.u === 'шт' ? nf0.format(r.q) : nf2.format(r.q)}</td><td>${r.u}</td><td class="num">${nf0.format(r.p)}</td><td class="num">${nf0.format(r.sum)}</td></tr>`;
+  });
+  $('tab-bom').innerHTML = `
+    <div class="dochead"><div><h2>Потребность в материалах</h2><div class="meta">По всем модулям заказа ${esc(S.order || '')}, с учётом отхода</div></div></div>
+    <div class="tblwrap"><table class="t"><thead><tr><th>Материал</th><th class="num">Кол-во</th><th>Ед.</th><th class="num">Цена</th><th class="num">Сумма</th></tr></thead>
+    <tbody>${h}<tr><td class="strong">Итого материалы</td><td></td><td></td><td></td><td class="num strong">${rub(tot)}</td></tr></tbody></table></div>
+    <p class="note">Укрупнённая потребность для закупки и проверки цены. Раскрой, присадка и программы для станка — следующий этап, через базы модулей технологов.</p>`;
+}
+
+const PRICE_FIELDS = [
+  {g:'Фурнитура Blum', f:[['blum.hinge','Петля CLIP top BLUMOTION','₽/шт'],['blum.legrabox','Ящик LEGRABOX в сборе','₽/шт'],['blum.tandembox','Ящик TANDEMBOX в сборе','₽/шт'],['blum.aventos','Подъёмник AVENTOS HK top','₽/шт'],['blum.tipon','Толкатель TIP-ON','₽/шт'],['blum.cargo','Карго для бутылочницы','₽/шт'],['blum.fridgeMount','Крепление фасада холодильника','₽/шт']]},
+  {g:'Ручки, профиль, свет', f:[['bar','Ручка-скоба','₽/шт'],['gola','Профиль Gola','₽/м'],['glass','Стекло для витрин','₽/м²'],['led','Подсветка: лента с профилем','₽/м'],['ledDriver','Блок питания и выключатель','₽/шт']]},
+  {g:'Корпус и комплектующие', f:[['hdf','ХДФ 3 мм','₽/м²'],['edge2','Кромка ПВХ 2 мм','₽/м'],['edge04','Кромка ПВХ 0,4 мм','₽/м'],['leg','Опора','₽/шт'],['hanger','Навес верхнего модуля','₽/шт'],['shelfPin','Полкодержатель','₽/шт'],['fixings','Крепёж на модуль','₽'],['dwMount','Крепление фасада ПММ','₽/шт']]},
+  {g:'Отделка', f:[['plinth','Цоколь','₽/м.п.'],['splash','Стеновая панель','₽/м.п.']]},
+  {g:'Работа цеха', f:[['work.cut','Раскрой ЛДСП','₽/м²'],['work.edging','Кромление','₽/м'],['work.assembly','Сборка корпуса','₽/модуль'],['cutPipe','Вырез под трубы','₽/шт']]},
+  {g:'Наценка и услуги', f:[['markup','Наценка на себестоимость','%'],['install','Монтаж','% суммы'],['delivery','Доставка','₽'],['waste.ldsp','Коэфф. отхода ЛДСП','×'],['waste.hdf','Коэфф. отхода ХДФ','×'],['waste.edge','Запас кромки','×']]},
+];
+const PAT = 'sel:plain=Однотон,wood=Древесина';
+const CAT_SPEC = {
+  corpus:{t:'Корпуса (декоры ЛДСП)', cols:[['name','Название','text'],['hex','Цвет','color'],['pattern','Текстура',PAT],['price','₽/м²','num']], paste:['name','price','hex'], hint:'название, цена за м², цвет #RRGGBB (необязательно)'},
+  facade:{t:'Фасады: материалы', cols:[['name','Название','text'],['finish','Поверхность','sel:matte=Матовая,satin=Шелковистая,gloss=Глянец'],['price','₽/м²','num']], paste:['name','price'], hint:'название, цена за м²'},
+  milling:{t:'Фрезеровки', cols:[['name','Название','text'],['style','Вид в 3D','sel:flat=Гладкий,frame=Рамка,classic=Классика,grooves=Пазы'],['add','Доплата, ₽/м²','num']], paste:['name','add'], hint:'название, доплата за м²'},
+  fcolor:{t:'Цвета фасадов', cols:[['name','Название','text'],['hex','Цвет','color'],['pattern','Текстура',PAT]], paste:['name','hex'], hint:'название, цвет #RRGGBB'},
+  top:{t:'Столешницы', cols:[['name','Название','text'],['hex','Цвет','color'],['pattern','Текстура','sel:plain=Однотон,wood=Древесина,marble=Мрамор'],['t','Толщина, мм','num'],['price','₽/м.п.','num'],['joint','Стык, ₽','num'],['cut','Вырез, ₽','num']], paste:['name','price','t','joint','cut'], hint:'название, цена за м.п., толщина, стык, вырез'},
+};
+function catTable(key){
+  const sp = CAT_SPEC[key];
+  const cell = (row, [c, n, type]) => {
+    const id = `cat_${key}_${row.id}_${c}`, v = row[c], a = `id="${id}" data-cat="${key}" data-row="${row.id}" data-col="${c}" aria-label="${esc(n)}: ${esc(row.name)}"`;
+    if (type === 'text') return `<input type="text" ${a} value="${esc(v)}">`;
+    if (type === 'num') return `<input type="number" ${a} value="${v}" min="0" step="any">`;
+    if (type === 'color') return `<input type="color" ${a} value="${v}">`;
+    const opts = type.slice(4).split(',').map(o => o.split('='));
+    return `<select ${a}>${opts.map(([k, nm]) => `<option value="${k}" ${k === v ? 'selected' : ''}>${nm}</option>`).join('')}</select>`;
+  };
+  return `<div class="catblock"><h3>${sp.t} <span class="muted small">· ${C[key].length}</span></h3>
+    <div class="tblwrap"><table class="t"><thead><tr>${sp.cols.map(([, n]) => `<th>${n}</th>`).join('')}<th></th></tr></thead>
+    <tbody>${C[key].map(row => `<tr>${sp.cols.map(col => `<td>${cell(row, col)}</td>`).join('')}<td><button class="btn sm danger" data-act="cat-del" data-k="${key}" data-v="${row.id}" aria-label="Удалить ${esc(row.name)}">×</button></td></tr>`).join('')}</tbody></table></div>
+    <div class="btns"><button class="btn sm" data-act="cat-add" data-k="${key}">+ Строка</button></div>
+    <details class="paste"><summary>Загрузить из Excel</summary>
+      <div class="small muted">Скопируйте строки из Excel и вставьте сюда. Порядок столбцов: ${sp.hint}.</div>
+      <textarea id="paste_${key}" aria-label="Строки из Excel"></textarea>
+      <div class="btns"><button class="btn sm pri" data-act="cat-paste" data-k="${key}" data-v="add">Добавить строки</button><button class="btn sm" data-act="cat-paste" data-k="${key}" data-v="replace" id="btnRepl_${key}">Заменить все</button></div>
+    </details></div>`;
+}
+function renderPrices(){
+  keepFocus(() => { $('tab-prices').innerHTML = `
+    <div class="dochead"><div><h2>Прайс и каталоги</h2><div class="meta">Цены примерные. Введите свои или вставьте строки из Excel — смета пересчитается сразу. Всё сохраняется в этом браузере.</div></div>
+      <div class="doctools"><button class="btn danger" data-act="reset-prices" id="btnResetPrices">Вернуть примерные цены и каталоги</button></div></div>
+    <div class="pgrid">${PRICE_FIELDS.map(g => `<div class="pgroup"><h4>${g.g}</h4>${g.f.map(([p, n, u]) => {
+      const id = 'p_' + p.replace(/\./g, '_');
+      return `<div class="prow"><label for="${id}">${esc(n)}</label><input type="number" id="${id}" data-path="${p}" step="any" min="0" value="${pathGet(P, p)}"><span class="u">${u}</span></div>`; }).join('')}</div>`).join('')}</div>
+    ${Object.keys(CAT_SPEC).map(catTable).join('')}`; });
+}
+function parseNum(s){ const v = parseFloat(String(s ?? '').replace(/[\s ₽]/g, '').replace(',', '.')); return isFinite(v) ? v : NaN; }
+function pasteRows(key, text){
+  const sp = CAT_SPEC[key], out = [];
+  text.split(/\r?\n/).forEach((line, li) => {
+    if (!line.trim()) return;
+    const cells = line.includes('\t') ? line.split('\t') : line.split(';');
+    const row = {id:key[0] + Date.now().toString(36) + li + Math.random().toString(36).slice(2, 5)};
+    sp.cols.forEach(([c, , type]) => { row[c] = type === 'num' ? 0 : type === 'color' ? '#CCCCCC' : type === 'text' ? '' : type.slice(4).split(',')[0].split('=')[0]; });
+    sp.paste.forEach((c, i) => {
+      const v = (cells[i] || '').trim(); if (!v) return;
+      const type = sp.cols.find(x => x[0] === c)[2];
+      if (type === 'num'){ const n = parseNum(v); if (isFinite(n)) row[c] = n; }
+      else if (type === 'color'){ if (/^#?[0-9a-f]{6}$/i.test(v)) row[c] = v[0] === '#' ? v : '#' + v; }
+      else row[c] = v;
+    });
+    if (key === 'top' && !row.t) row.t = 38;
+    if (row.name && !(li === 0 && /назв|name/i.test(row.name))) out.push(row);
+  });
+  return out;
+}
+
+/* ---------------- copy ---------------- */
+function smetaText(){
+  const num = numberMap(), L = [`Смета на кухню, заказ ${S.order || ''}`.trim()];
+  if (S.client) L.push(`Клиент: ${S.client}`);
+  L.push(matLine(), `Столешница: ${catFind(C.top, S.mat.top).name}`, '');
+  orderedMods().forEach(m => { if (TYPES[m.type].gap) return; const r = resultOf(m.id), nt = modNotes(m); L.push(`${num[m.id]}. ${modLabel(m)} ${sizeStr(m)} мм${nt ? ' (' + nt + ')' : ''} — ${rub(r.price)}`); });
+  A.common.forEach(c => L.push(`${c.n}, ${nf2.format(c.q)} ${c.u} — ${rub(c.price)}`));
+  L.push('', `Мебель и столешница: ${rub(A.sub)}`);
+  if (A.disc) L.push(`Скидка ${nf2.format(S.disc)}%: −${rub(A.disc)}`);
+  L.push(`Монтаж: ${rub(A.install)}`, `Доставка: ${rub(A.delivery)}`, `ИТОГО: ${rub(A.total)}`);
+  return L.join('\n');
+}
+function smetaTSV(){
+  const num = numberMap(), R = [['№','Позиция','Размер, мм','Кол-во','Ед.','Цена, ₽']];
+  orderedMods().forEach(m => { if (TYPES[m.type].gap) return; const r = resultOf(m.id), nt = modNotes(m); R.push([num[m.id], modLabel(m) + (nt ? ' (' + nt + ')' : ''), sizeStr(m), 1, 'шт', Math.round(r.price)]); });
+  A.common.forEach(c => R.push(['', c.n, '', String(+c.q.toFixed(2)).replace('.', ','), c.u, Math.round(c.price)]));
+  R.push(['', 'Мебель и столешница', '', '', '', Math.round(A.sub)]);
+  if (A.disc) R.push(['', `Скидка ${S.disc}%`, '', '', '', -Math.round(A.disc)]);
+  R.push(['', 'Монтаж', '', '', '', Math.round(A.install)], ['', 'Доставка', '', '', '', Math.round(A.delivery)], ['', 'ИТОГО', '', '', '', Math.round(A.total)]);
+  return R.map(r => r.join('\t')).join('\n');
+}
+function copy(text){
+  const fb = () => { $('copyFallback').innerHTML = `<textarea class="copybox" id="copyBox" readonly aria-label="Текст сметы">${esc(text)}</textarea><div class="small muted">Выделите текст и скопируйте вручную.</div>`; const b = $('copyBox'); b.focus(); b.select(); };
+  try { navigator.clipboard.writeText(text).then(() => { $('copyFallback').innerHTML = ''; toast('Смета скопирована'); }, fb); } catch(e){ fb(); }
+}
+
+/* ---------------- update ---------------- */
+function recalc(){ A = calcAll(S, P, C); }
+function update({left = true, resetCam = false, rebuild = true} = {}){
+  recalc(); renderHeader();
+  if (left) renderLeft();
+  renderSmeta(); renderBom();
+  if (rebuild) build3D(resetCam);
+  store(KS, S);
+}
+function clampNum(v, lo, hi, def){ const n = Math.round(parseNum(v)); if (!isFinite(n)) return def; return Math.min(hi, Math.max(lo, n)); }
+function selectMod(id, fromScene){ S.selected = id; S.ltab = 'module'; const m = S.modules.find(x => x.id === id); if (m) S.place = m.wall; update(); if (fromScene) $('lbody').scrollTop = 0; }
+function isOpen(id){ return openAll || openSet.has(id); }
+const confirmTimers = {};
+function confirmClick(btn, label, fn){
+  if (btn.dataset.armed === '1'){ btn.dataset.armed = ''; btn.textContent = btn.dataset.orig; clearTimeout(confirmTimers[btn.id]); fn(); return; }
+  btn.dataset.orig = btn.textContent; btn.dataset.armed = '1'; btn.textContent = label;
+  confirmTimers[btn.id] = setTimeout(() => { btn.dataset.armed = ''; btn.textContent = btn.dataset.orig; }, 4000);
+}
+function setTab(v){ S.tab = v; ['smeta','bom','prices'].forEach(t => { $('tab-' + t).hidden = t !== v; $('tb-' + t).setAttribute('aria-selected', String(t === v)); }); }
+function ensureRefs(){
+  ['corpus','facade','milling','top'].forEach(k => { if (!C[k].some(r => r.id === S.mat[k])) S.mat[k] = C[k][0].id; });
+  if (!C.fcolor.some(r => r.id === S.mat.fLow)) S.mat.fLow = C.fcolor[0].id;
+  if (!C.fcolor.some(r => r.id === S.mat.fUp)) S.mat.fUp = C.fcolor[0].id;
+  S.modules.forEach(m => { if (m.corpus && !C.corpus.some(r => r.id === m.corpus)) m.corpus = null; if (m.facade && !C.fcolor.some(r => r.id === m.facade)) m.facade = null; if (!m.cut) m.cut = {sink:false, hob:false, pipe:false}; });
+}
+
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-act]');
+  if (!b){ const tr = e.target.closest('#tab-smeta tr[data-id]'); if (tr) selectMod(tr.dataset.id); return; }
+  const act = b.dataset.act, v = b.dataset.v, k = b.dataset.k, m = selMod();
+  switch (act){
+    case 'ltab': S.ltab = v; renderLeft(); store(KS, S); break;
+    case 'layout': S.layout = v; update({resetCam:true}); break;
+    case 'room-wall': S.room.wall = v; update(); break;
+    case 'room-floor': S.room.floor = v; update(); break;
+    case 'place': S.place = v; renderLeft(); break;
+    case 'cat': S.cat = v; renderLeft(); store(KS, S); break;
+    case 'add': {
+      const wall = wallsOf(S).includes(S.place) ? S.place : 'A', nm = newModule(v, wall), row = TYPES[v].row;
+      if (m && m.wall === wall && TYPES[m.type].row === row) S.modules.splice(S.modules.indexOf(m) + 1, 0, nm); else S.modules.push(nm);
+      S.selected = nm.id; update(); toast(`Добавлен: ${TYPES[v].name}, стена ${WN[wall]}`); break; }
+    case 'select-mod': selectMod(b.dataset.id); break;
+    case 'ed-wall': if (m){ m.wall = v; S.place = v; update(); } break;
+    case 'w-chip': if (m){ m.w = +v; update(); } break;
+    case 'blind': if (m){ m.blind = v; update(); } break;
+    case 'ov': if (m){ m[k] = v || null; update(); } break;
+    case 'mv': if (m){
+      const dir = +v, row = TYPES[m.type].row, i = S.modules.indexOf(m);
+      for (let j = i + dir; j >= 0 && j < S.modules.length; j += dir){ const o = S.modules[j]; if (o.wall === m.wall && TYPES[o.type].row === row){ S.modules[i] = o; S.modules[j] = m; break; } }
+      update(); } break;
+    case 'dup': if (m){ const c = JSON.parse(JSON.stringify(m)); c.id = 'm' + (S.nextId++); S.modules.splice(S.modules.indexOf(m) + 1, 0, c); S.selected = c.id; update(); toast('Копия добавлена'); } break;
+    case 'del': if (m){
+      const grp = S.modules.filter(o => o.wall === m.wall && TYPES[o.type].row === TYPES[m.type].row), gi = grp.indexOf(m), next = grp[gi + 1] || grp[gi - 1];
+      S.modules = S.modules.filter(o => o !== m); S.selected = next ? next.id : null; update(); toast('Модуль удалён'); } break;
+    case 'toggle-open': if (m){ openSet.has(m.id) ? openSet.delete(m.id) : openSet.add(m.id); renderLeft(); } break;
+    case 'open-all': openAll = !openAll; if (!openAll) openSet.clear(); b.setAttribute('aria-pressed', String(openAll)); b.textContent = openAll ? 'Закрыть всё' : 'Открыть всё'; if (S.ltab === 'module') renderLeft(); break;
+    case 'mat':
+      S.mat[k] = v;
+      if (k === 'drawers' && !DRAWERS[v].colors.some(c => c.id === S.mat.drawerColor)) S.mat.drawerColor = DRAWERS[v].colors[0].id;
+      update(); break;
+    case 'all-light': activeModules(S).forEach(o => { if (TYPES[o.type].row === 'up' && !TYPES[o.type].gap) o.light = v === '1'; }); update(); break;
+    case 'toggle-dims': S.showDims = !S.showDims; b.setAttribute('aria-pressed', String(S.showDims)); build3D(false); store(KS, S); break;
+    case 'reset-view': fitCamera(); break;
+    case 'tab': setTab(v); store(KS, S); break;
+    case 'client-view': S.clientView = v === '1'; renderSmeta(); store(KS, S); break;
+    case 'copy-text': copy(smetaText()); break;
+    case 'copy-tsv': copy(smetaTSV()); break;
+    case 'reset-prices': confirmClick(b, 'Нажмите ещё раз для сброса', () => { P = deepMerge(DEFAULT_PRICES, {}); C = JSON.parse(JSON.stringify(DEFAULT_CAT)); store(KP, P); store(KC, C); ensureRefs(); renderPrices(); update(); toast('Цены и каталоги сброшены к примерным'); }); break;
+    case 'load-sample': confirmClick(b, 'Заменить текущий проект?', () => { S = sampleState(); openSet.clear(); ensureRefs(); update({resetCam:true}); toast('Загружен пример'); }); break;
+    case 'clear-mods': confirmClick(b, 'Удалить все модули?', () => { S.modules = []; S.selected = null; update({resetCam:true}); toast('Модули удалены'); }); break;
+    case 'cat-add': {
+      const sp = CAT_SPEC[k], row = {id:k[0] + Date.now().toString(36)};
+      sp.cols.forEach(([c, , type]) => row[c] = type === 'num' ? 0 : type === 'color' ? '#CCCCCC' : type === 'text' ? 'Новая позиция' : type.slice(4).split(',')[0].split('=')[0]);
+      if (k === 'top') row.t = 38;
+      C[k].push(row); store(KC, C); renderPrices(); update(); break; }
+    case 'cat-del':
+      if (C[k].length <= 1){ toast('В каталоге должна остаться хотя бы одна строка'); break; }
+      C[k] = C[k].filter(r => r.id !== v); ensureRefs(); store(KC, C); renderPrices(); update(); break;
+    case 'cat-paste': {
+      const rows = pasteRows(k, $('paste_' + k).value);
+      if (!rows.length){ toast('Строк не найдено. Вставьте строки из Excel в поле выше'); break; }
+      const go = () => { if (v === 'replace') C[k] = rows; else C[k].push(...rows); ensureRefs(); store(KC, C); renderPrices(); update(); toast(`Загружено строк: ${rows.length}`); };
+      if (v === 'replace') confirmClick(b, 'Заменить весь каталог?', go); else go();
+      break; }
+  }
+});
+
+document.addEventListener('change', e => {
+  const t = e.target, id = t.id, m = selMod();
+  if (t.dataset.path){
+    const v = parseNum(t.value);
+    if (!isFinite(v) || v < 0){ t.value = pathGet(P, t.dataset.path); toast('Введите число не меньше нуля'); return; }
+    pathSet(P, t.dataset.path, v); store(KP, P); update(); return;
+  }
+  if (t.dataset.cat){
+    const row = C[t.dataset.cat].find(r => r.id === t.dataset.row); if (!row) return;
+    const type = CAT_SPEC[t.dataset.cat].cols.find(c => c[0] === t.dataset.col)[2];
+    if (type === 'num'){ const n = parseNum(t.value); row[t.dataset.col] = isFinite(n) ? Math.max(0, n) : 0; } else row[t.dataset.col] = t.value;
+    store(KC, C); update(); return;
+  }
+  if (id && id.startsWith('inWall') && id !== 'inWallHex'){ const w = id.slice(6); S.walls[w] = clampNum(t.value, 600, 9000, S.walls[w]); t.value = S.walls[w]; update({resetCam:true}); return; }
+  switch (id){
+    case 'inWallHex': S.room.wall = t.value; update(); break;
+    case 'inCeil': S.room.height = clampNum(t.value, 2200, 4000, S.room.height); update(); break;
+    case 'selFacade': S.mat.facade = t.value; update(); break;
+    case 'selMilling': S.mat.milling = t.value; update(); break;
+    case 'selTop': S.mat.top = t.value; update(); break;
+    case 'chkSplash': S.mat.splash = t.checked; update(); break;
+    case 'inDisc': { const n = parseNum(t.value); S.disc = Math.min(50, Math.max(0, isFinite(n) ? n : 0)); update({left:false, rebuild:false}); break; }
+    case 'edType': if (m){
+      const nt = t.value, d = TYPES[nt], o = TYPES[m.type];
+      if (o.row !== d.row || o.cat !== d.cat || (!d.widths.includes(m.w) && (nt.includes('corner') || nt === 'base_oven' || nt.startsWith('tall_') || nt === 'base_cargo'))) m.w = d.w;
+      m.type = nt; m.h = d.h; m.d = d.d; m.cut = {sink:nt === 'base_sink', hob:nt === 'base_oven', pipe:nt === 'base_sink'}; update(); } break;
+    case 'edW': case 'edH': case 'edD': if (m){
+      const k = {edW:'w', edH:'h', edD:'d'}[id], lim = {w:[150, 2400], h:[200, 2400], d:[250, 700]}[k];
+      const nv = clampNum(t.value, lim[0], lim[1], m[k]);
+      if (nv !== Math.round(parseNum(t.value))) toast(`Допустимо от ${lim[0]} до ${lim[1]} мм`);
+      m[k] = nv; update(); } break;
+    case 'edLight': if (m){ m.light = t.checked; update(); } break;
+    case 'edSink': if (m){ m.cut.sink = t.checked; update(); } break;
+    case 'edHob': if (m){ m.cut.hob = t.checked; update(); } break;
+    case 'edPipe': if (m){ m.cut.pipe = t.checked; update(); } break;
+  }
+});
+document.addEventListener('input', e => {
+  if (e.target.id === 'inClient'){ S.client = e.target.value; renderHeader(); renderSmeta(); store(KS, S); }
+  if (e.target.id === 'inOrder'){ S.order = e.target.value; renderHeader(); renderSmeta(); store(KS, S); }
+});
+
+/* ---------------- 3D ---------------- */
+let renderer, scene, camera, controls, root = null, helper = null, disposables = [], has3D = false, anims = [];
+const matCache = {};
+function cssVar(n){ return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
+function rng(seed){ return () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; }; }
+function canvasTex(size, draw){ const c = document.createElement('canvas'); c.width = c.height = size; draw(c.getContext('2d'), size); const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; return t; }
+function woodTex(hex){ return canvasTex(256, (g, n) => { const r = rng(7); g.fillStyle = hex; g.fillRect(0, 0, n, n);
+  for (let i = 0; i < 150; i++){ const x = r() * n; g.strokeStyle = r() < .55 ? `rgba(70,40,15,${.05 + r() * .1})` : `rgba(255,240,215,${.04 + r() * .08})`; g.lineWidth = .5 + r() * 2.4; g.beginPath(); g.moveTo(x, 0); for (let y = 0; y <= n; y += 16) g.lineTo(x + Math.sin(y / 37 + i) * 2.5, y); g.stroke(); } }); }
+function marbleTex(hex){ return canvasTex(512, (g, n) => { const r = rng(11); g.fillStyle = hex; g.fillRect(0, 0, n, n);
+  for (let i = 0; i < 9; i++){ g.strokeStyle = `rgba(110,110,105,${.12 + r() * .18})`; g.lineWidth = .6 + r() * 1.8; g.beginPath(); let x = r() * n, y = 0; g.moveTo(x, y);
+    while (y < n){ const nx = x + (r() - .45) * 70, ny = y + 30 + r() * 50; g.quadraticCurveTo(x + (r() - .5) * 60, (y + ny) / 2, nx, ny); x = nx; y = ny; } g.stroke(); } }); }
+function planksTex(hex){ return canvasTex(512, (g, n) => { const r = rng(5); for (let i = 0; i < 8; i++){ g.fillStyle = shade(hex, (r() - .5) * 14); g.fillRect(0, i * 64, n, 64); g.fillStyle = 'rgba(0,0,0,.18)'; g.fillRect(0, i * 64, n, 1.5); const sx = r() * n; g.fillRect(sx, i * 64, 1.5, 64);
+    for (let k = 0; k < 14; k++){ g.strokeStyle = `rgba(60,35,15,${.04 + r() * .06})`; g.beginPath(); const y = i * 64 + r() * 64; g.moveTo(0, y); g.lineTo(n, y + (r() - .5) * 6); g.stroke(); } } }); }
+function tilesTex(hex){ return canvasTex(256, (g, n) => { g.fillStyle = hex; g.fillRect(0, 0, n, n); g.fillStyle = shade(hex, -18); g.fillRect(0, 0, n, 3); g.fillRect(0, 0, 3, n); }); }
+function surf(kind, row, rough){
+  const key = `${kind}:${row.hex}:${row.pattern}:${rough}`;
+  if (matCache[key]) return matCache[key];
+  const p = {roughness:rough, metalness:0};
+  if (row.pattern === 'wood'){ p.map = woodTex(row.hex); p.color = 0xffffff; }
+  else if (row.pattern === 'marble'){ p.map = marbleTex(row.hex); p.color = 0xffffff; }
+  else p.color = new THREE.Color(row.hex);
+  return matCache[key] = new THREE.MeshStandardMaterial(p);
+}
+function plainMat(key, hex, rough = .6, metal = 0, extra = {}){
+  const k = key + hex + rough + metal; if (matCache[k]) return matCache[k];
+  return matCache[k] = new THREE.MeshStandardMaterial(Object.assign({color:new THREE.Color(hex), roughness:rough, metalness:metal}, extra));
+}
+function box(parent, w, h, d, x, y, z, material, cast = true){
+  const me = new THREE.Mesh(new THREE.BoxGeometry(Math.max(w, 1) / 1000, Math.max(h, 1) / 1000, Math.max(d, 1) / 1000), material);
+  me.position.set((x + w / 2) / 1000, (y + h / 2) / 1000, (z + d / 2) / 1000);
+  me.castShadow = cast; me.receiveShadow = true; parent.add(me); return me;
+}
+function label(text, x, y, z, accent){
+  const c = document.createElement('canvas'); c.width = 256; c.height = 88; const g = c.getContext('2d');
+  g.fillStyle = accent ? 'rgba(44,82,196,.92)' : 'rgba(255,255,255,.93)';
+  const r = 18; g.beginPath(); g.moveTo(r, 4); g.arcTo(252, 4, 252, 84, r); g.arcTo(252, 84, 4, 84, r); g.arcTo(4, 84, 4, 4, r); g.arcTo(4, 4, 252, 4, r); g.fill();
+  g.fillStyle = accent ? '#fff' : '#1A211F'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  let fs = 46; do { g.font = `600 ${fs}px "IBM Plex Mono", ui-monospace, monospace`; fs -= 2; } while (g.measureText(text).width > 230 && fs > 18);
+  g.fillText(text, 128, 46);
+  const tex = new THREE.CanvasTexture(c), sm = new THREE.SpriteMaterial({map:tex, depthTest:false, transparent:true});
+  const s = new THREE.Sprite(sm); s.scale.set(.3, .103, 1); s.position.set(x / 1000, y / 1000, z / 1000); s.renderOrder = 10;
+  disposables.push(tex, sm); return s;
+}
+let glowTex = null;
+function glow(){ if (glowTex) return glowTex; glowTex = canvasTex(128, (g, n) => { const gr = g.createRadialGradient(n / 2, n / 2, 0, n / 2, n / 2, n / 2); gr.addColorStop(0, 'rgba(255,214,150,.55)'); gr.addColorStop(1, 'rgba(255,214,150,0)'); g.fillStyle = gr; g.fillRect(0, 0, n, n); }); return glowTex; }
+
+function init3D(){
+  try {
+    if (!window.THREE || !THREE.OrbitControls) throw new Error('three');
+    const el = $('stage');
+    renderer = new THREE.WebGLRenderer({antialias:true});
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    el.appendChild(renderer.domElement);
+    scene = new THREE.Scene();
+    camera = new THREE.PerspectiveCamera(38, 1, .05, 100);
+    controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true; controls.dampingFactor = .09; controls.maxPolarAngle = Math.PI * .495; controls.minDistance = .6; controls.maxDistance = 14;
+    scene.add(new THREE.HemisphereLight(0xffffff, 0xb9b3a8, .78));
+    const dl = new THREE.DirectionalLight(0xffffff, .6);
+    dl.position.set(4.5, 6, 5.5); dl.castShadow = true; dl.shadow.mapSize.set(2048, 2048);
+    Object.assign(dl.shadow.camera, {left:-6, right:6, top:6, bottom:-6, near:.5, far:25}); dl.shadow.bias = -.0004;
+    dl.target.position.set(1.5, 0, 1.2); scene.add(dl, dl.target);
+    const fl = new THREE.DirectionalLight(0xffffff, .22); fl.position.set(-2, 3, 6); scene.add(fl);
+    applyStageBg();
+    new ResizeObserver(resize).observe(el); resize();
+    let down = null, lastClick = {id:null, t:0};
+    renderer.domElement.addEventListener('pointerdown', e => down = {x:e.clientX, y:e.clientY});
+    renderer.domElement.addEventListener('pointerup', e => {
+      if (!down || Math.hypot(e.clientX - down.x, e.clientY - down.y) > 5) return;
+      const rect = renderer.domElement.getBoundingClientRect();
+      const v = new THREE.Vector2((e.clientX - rect.left) / rect.width * 2 - 1, -(e.clientY - rect.top) / rect.height * 2 + 1);
+      const rc = new THREE.Raycaster(); rc.setFromCamera(v, camera);
+      const hits = root ? rc.intersectObjects(root.children, true) : [];
+      for (const h of hits){ let o = h.object; while (o && !o.userData.modId) o = o.parent;
+        if (o){ const id = o.userData.modId, now = performance.now();
+          if (lastClick.id === id && now - lastClick.t < 380){ openSet.has(id) ? openSet.delete(id) : openSet.add(id); lastClick = {id:null, t:0}; if (S.ltab === 'module') renderLeft(); return; }
+          lastClick = {id, t:now}; if (S.selected !== id) selectMod(id, true); else if (S.ltab !== 'module'){ S.ltab = 'module'; renderLeft(); } return; } }
+    });
+    (function loop(){
+      requestAnimationFrame(loop); if (document.hidden) return;
+      anims.forEach(a => { const tgt = isOpen(a.id) ? a.open : a.closed, cur = a.get(); if (Math.abs(tgt - cur) > 1e-4) a.set(cur + (tgt - cur) * .16); });
+      if (helper) helper.update();
+      controls.update(); renderer.render(scene, camera);
+    })();
+    has3D = true;
+  } catch (err){ $('stage').innerHTML = '<div class="stage-err">3D-вид не запустился в этом браузере. Смета и материалы работают.</div>'; }
+}
+function applyStageBg(){ if (scene) scene.background = new THREE.Color(cssVar('--stage') || '#E5E8E3'); }
+function resize(){ const el = $('stage'), w = el.clientWidth, h = el.clientHeight; if (!w || !h) return; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); }
+function fitCamera(){
+  if (!has3D) return;
+  const La = S.walls.A / 1000, Lb = S.walls.B / 1000, Lc = S.walls.C / 1000;
+  if (S.layout === 'L'){ controls.target.set(La * .42, 1.1, Lb * .42); camera.position.set(La * .5 + 2.9, 2.1, Lb * .5 + 3.4); }
+  else if (S.layout === 'U'){ const D = Math.max(Lb, Lc); controls.target.set(La / 2, 1.1, D * .38); camera.position.set(La / 2 + .3, 2.2, D + La * .55 + 1.6); }
+  else { controls.target.set(La / 2, 1.2, .35); camera.position.set(La / 2 + .4, 1.85, La * .95 + 1.9); }
+  controls.update();
+}
+function addAnim(id, obj, prop, open){
+  const get = prop === 'z' ? () => obj.position.z : prop === 'rx' ? () => obj.rotation.x : () => obj.rotation.y;
+  const set = prop === 'z' ? v => obj.position.z = v : prop === 'rx' ? v => obj.rotation.x = v : v => obj.rotation.y = v;
+  const closed = get(), a = {id, get, set, open:closed + open, closed};
+  a.set(isOpen(id) ? a.open : a.closed); anims.push(a);
+}
+function facadePanel(parent, w, h, x0, y0, mat, mill, glass){
+  const FT = 18, z0 = 0;
+  if (glass){
+    const fw = 60; box(parent, w, fw, FT, x0, y0, z0, mat); box(parent, w, fw, FT, x0, y0 + h - fw, z0, mat);
+    box(parent, fw, h - 2*fw, FT, x0, y0 + fw, z0, mat); box(parent, fw, h - 2*fw, FT, x0 + w - fw, y0 + fw, z0, mat);
+    const gm = matCache.glassPane || (matCache.glassPane = new THREE.MeshStandardMaterial({color:0xdfe8ea, roughness:.05, metalness:.1, transparent:true, opacity:.28}));
+    box(parent, w - 2*fw, h - 2*fw, 4, x0 + fw, y0 + fw, z0 + 7, gm, false); return;
+  }
+  const style = mill.style;
+  if (style === 'flat' || w < 140 || h < 120){ box(parent, w, h, FT, x0, y0, z0, mat); return; }
+  if (style === 'grooves'){
+    box(parent, w, h, FT, x0, y0, z0, mat);
+    const gmat = plainMat('groove', '#000000', 1, 0, {transparent:true, opacity:.22});
+    const n = Math.max(2, Math.round(w / 90)); for (let i = 1; i < n; i++) box(parent, 4, h - 2, 1, x0 + i * w / n - 2, y0 + 1, z0 + FT, gmat, false);
+    return;
+  }
+  const fw = Math.min(70, Math.max(45, Math.min(w, h) * .13));
+  box(parent, w, fw, FT, x0, y0, z0, mat); box(parent, w, fw, FT, x0, y0 + h - fw, z0, mat);
+  box(parent, fw, h - 2*fw, FT, x0, y0 + fw, z0, mat); box(parent, fw, h - 2*fw, FT, x0 + w - fw, y0 + fw, z0, mat);
+  box(parent, w - 2*fw, h - 2*fw, FT - 6, x0 + fw, y0 + fw, z0, mat);
+  if (style === 'classic' && w - 2*fw > 80 && h - 2*fw > 80) box(parent, w - 2*fw - 50, h - 2*fw - 50, FT - 2, x0 + fw + 25, y0 + fw + 25, z0, mat);
+}
+
+function buildModule(m, pos){
+  const t = TYPES[m.type], g = new THREE.Group(); g.userData.modId = m.id;
+  if (m.wall === 'B'){ g.rotation.y = Math.PI / 2; g.position.set(0, 0, (pos.x + m.w) / 1000); }
+  else if (m.wall === 'C'){ g.rotation.y = -Math.PI / 2; g.position.set(S.walls.A / 1000, 0, pos.x / 1000); }
+  else g.position.set(pos.x / 1000, 0, 0);
+  if (t.gap){
+    const gm = matCache.ghost || (matCache.ghost = new THREE.MeshBasicMaterial({color:0x2C52C4, transparent:true, opacity:.07, depthWrite:false}));
+    const y0 = t.row === 'up' ? 1450 : t.row === 'mezz' ? UP_TOP : 0, hh = t.row === 'up' ? 720 : t.row === 'mezz' ? 360 : 2000, dd = t.row === 'low' ? 600 : 300;
+    box(g, m.w - 10, hh, dd, 5, y0, 0, gm, false);
+    if (S.showDims) g.add(label(`проём ${m.w}`, m.w / 2, y0 + hh / 2, dd + 40, true));
+    return g;
+  }
+  const W = m.w, H = m.h, D = m.d, FT = 18;
+  const baseY = t.row === 'up' ? UP_TOP - H : t.row === 'mezz' ? UP_TOP : BASE_Y;
+  const corp = surf('corp', catFind(C.corpus, m.corpus || S.mat.corpus), .7);
+  const finish = catFind(C.facade, S.mat.facade).finish;
+  const fac = surf('fac', catFind(C.fcolor, facadeColorId(m, S)), {matte:.8, satin:.5, gloss:.16}[finish] || .6);
+  const mill = catFind(C.milling, S.mat.milling);
+  const steel = plainMat('steel', '#A7ABAE', .35, .75), dark = plainMat('dark', '#1C1E20', .25, .2), handleM = plainMat('handle', '#2A2C2E', .4, .6);
+  const alu = plainMat('alu', '#4B4F52', .45, .6);
+  const dr = DRAWERS[S.mat.drawers], dcol = dr.colors.find(c => c.id === S.mat.drawerColor) || dr.colors[0];
+  const dmat = plainMat('drawer', dcol.hex, dcol.metal ? .3 : .45, dcol.metal ? .7 : .25), white = plainMat('dbottom', '#EDEDE8', .7);
+
+  if (m.type === 'base_dw') box(g, W - 4, H - 10, D - 20, 2, baseY, 10, dark);
+  else {
+    box(g, T, H, D, 0, baseY, 0, corp); box(g, T, H, D, W - T, baseY, 0, corp);
+    box(g, W - 2*T, T, D, T, baseY, 0, corp);
+    if (t.row === 'low' && !t.tall){ box(g, W - 2*T, T, 100, T, baseY + H - T, D - 100, corp); box(g, W - 2*T, T, 100, T, baseY + H - T, 0, corp); }
+    else box(g, W - 2*T, T, D, T, baseY + H - T, 0, corp);
+    if (m.type !== 'base_sink') box(g, W - 2*T, H - 2*T, 4, T, baseY + T, 0, corp, false);
+    shelvesOf(m).forEach(y => box(g, W - 2*T - 2, T, D - 20, T + 1, baseY + y - T / 2, 0, corp));
+  }
+  if (m.type === 'base_oven'){ const oy = baseY + H - 597; box(g, W - 6, 535, 22, 3, oy, D, dark); box(g, W - 6, 60, 24, 3, oy + 535, D, steel); box(g, W - 120, 10, 16, 60, oy + 485, D + 22, steel); box(g, W - 40, 560, D - 40, 20, oy, 20, dark); }
+  if (m.type === 'tall_oven'){
+    box(g, W - 6, 535, 22, 3, baseY + 520, D, dark); box(g, W - 6, 60, 24, 3, baseY + 1055, D, steel); box(g, W - 120, 10, 16, 60, baseY + 1005, D + 22, steel);
+    box(g, W - 6, 380, 22, 3, baseY + 1115, D, steel); box(g, W - 180, 300, 24, 20, baseY + 1155, D, dark);
+  }
+  if (m.type === 'tall_fridge') box(g, W - 2*T - 10, 1740, D - 40, T + 5, baseY + T + 5, 20, plainMat('fridge', '#F4F4F2', .4));
+  if (m.type === 'upper_lift') box(g, W - 40, 60, D + 40, 20, baseY - 60, 0, steel);
+  if (m.type === 'base_cargo'){
+    const cg = new THREE.Group(); g.add(cg);
+    [80, 380].forEach(y => { box(cg, W - 2*T - 20, 4, D - 60, T + 10, baseY + y, 20, steel); box(cg, W - 2*T - 20, 60, 3, T + 10, baseY + y, D - 45, steel); });
+    box(cg, 10, H - 80, 10, W / 2 - 5, baseY + 40, D - 30, steel);
+    const fp = new THREE.Group(); fp.position.set(0, baseY / 1000, D / 1000); cg.add(fp);
+    facadePanel(fp, W - 4, H - 4 - (S.mat.handle === 'gola' ? GOLA : 0), 2, 2, fac, mill, false);
+    if (S.mat.handle === 'bar') box(fp, 10, 128, 14, W / 2 - 5, H - 200, FT, handleM);
+    if (S.mat.handle === 'gola') box(g, W, GOLA, 20, 0, baseY + H - GOLA, D - 22, alu, false);
+    addAnim(m.id, cg, 'z', (D - 60) / 1000);
+  }
+
+  facadesOf(m, S).forEach(f => {
+    if (f.k === 'cargo') return;
+    let piv = new THREE.Group(), hx0 = 0, hy0 = 0;
+    if (f.k === 'door' || f.k === 'fridge'){
+      if (f.hinge === 'left') piv.position.set(f.x / 1000, (baseY + f.y) / 1000, D / 1000);
+      else { piv.position.set((f.x + f.w) / 1000, (baseY + f.y) / 1000, D / 1000); hx0 = -f.w; }
+      g.add(piv); facadePanel(piv, f.w, f.h, hx0, 0, fac, mill, f.glass);
+      addAnim(m.id, piv, 'ry', f.hinge === 'left' ? -1.7 : 1.7);
+    } else if (f.k === 'lift'){
+      piv.position.set(f.x / 1000, (baseY + f.y + f.h) / 1000, D / 1000); hy0 = -f.h; g.add(piv);
+      facadePanel(piv, f.w, f.h, 0, hy0, fac, mill, false); addAnim(m.id, piv, 'rx', -1.35);
+    } else if (f.k === 'dw'){
+      piv.position.set(f.x / 1000, (baseY + f.y) / 1000, D / 1000); g.add(piv);
+      facadePanel(piv, f.w, f.h, 0, 0, fac, mill, false); addAnim(m.id, piv, 'rx', 1.35);
+    } else if (f.k === 'drawer'){
+      const slide = new THREE.Group(); g.add(slide);
+      const side = Math.min(f.h - 50, f.h < 220 ? 90 : f.h < 330 ? 177 : 241), len = D - 70, iw = W - 2*T - 26, by = baseY + f.y + 22, z0 = D - len - 8;
+      box(slide, 13, side, len, T + 1, by, z0, dmat); box(slide, 13, side, len, W - T - 14, by, z0, dmat);
+      box(slide, iw, 16, len, T + 13, by, z0, white);
+      box(slide, iw, side * .85, 13, T + 13, by, z0, S.mat.drawers === 'legrabox' ? dmat : white);
+      piv.position.set(f.x / 1000, (baseY + f.y) / 1000, D / 1000); slide.add(piv);
+      facadePanel(piv, f.w, f.h, 0, 0, fac, mill, false);
+      addAnim(m.id, slide, 'z', (len * .8) / 1000);
+    }
+    if (S.mat.handle === 'bar'){
+      if (f.k === 'door' || f.k === 'fridge'){
+        const hx = hx0 + (f.hinge === 'left' ? f.w - 46 : 36);
+        let hy;
+        if (t.row === 'up' || t.row === 'mezz') hy = 40;
+        else if (t.tall) hy = f.part === 'bottom' ? f.h - 60 - 160 : 60;
+        else hy = f.h - 60 - 128;
+        box(piv, 10, t.tall ? 160 : 128, 14, hx, hy, FT, handleM);
+      } else {
+        const L = Math.min(f.w - 80, f.w > 500 ? 192 : 128);
+        const hy = f.k === 'lift' ? hy0 + 26 : (f.h > 160 ? f.h - 48 : f.h / 2 - 5);
+        box(piv, L, 10, 14, f.w / 2 - L / 2, hy, FT, handleM);
+      }
+    }
+    if (f.channel) box(g, f.w + 4, GOLA, 20, f.x - 2, baseY + f.y + f.h + 2, D - 22, alu, false);
+    if (f.vch !== undefined) box(g, GOLA, f.h, 20, f.vch, baseY + f.y, D - 22, alu, false);
+  });
+
+  if (t.row === 'low') box(g, W, 96, 16, 0, 2, D - 70, surf('fac', catFind(C.fcolor, S.mat.fLow), .6), false);
+  if (t.row === 'low' && !t.tall && m.cut){
+    const top = catFind(C.top, S.mat.top), ty = BASE_Y + H + top.t;
+    if (m.cut.hob){ const hw = Math.min(W - 60, 590); box(g, hw, 6, 510, (W - hw) / 2, ty, 45, dark); }
+    if (m.cut.sink){ const bw = Math.min(W - 160, 560);
+      box(g, bw, 4, 440, (W - bw) / 2, ty, 80, steel); box(g, bw - 50, 5, 380, (W - bw) / 2 + 25, ty, 108, plainMat('basin', '#6F7376', .3, .7));
+      box(g, 28, 300, 28, W / 2 - 14, ty, 32, steel); box(g, 24, 24, 200, W / 2 - 12, ty + 276, 40, steel); }
+  }
+  if (m.light && t.row === 'up'){
+    const ledM = matCache.led || (matCache.led = new THREE.MeshBasicMaterial({color:0xFFE2B0}));
+    box(g, W - 40, 6, 12, 20, baseY - 6, D - 70, ledM, false);
+    const gm = new THREE.MeshBasicMaterial({map:glow(), transparent:true, depthWrite:false, blending:THREE.AdditiveBlending});
+    disposables.push(gm);
+    const topY = BASE_Y + 720 + catFind(C.top, S.mat.top).t;
+    const p1 = new THREE.Mesh(new THREE.PlaneGeometry(W * 1.3 / 1000, .62), gm); p1.rotation.x = -Math.PI / 2; p1.position.set(W / 2000, (topY + 2) / 1000, .26); g.add(p1);
+    const p2 = new THREE.Mesh(new THREE.PlaneGeometry(W * 1.3 / 1000, Math.max(.1, (baseY - topY) / 1000 * 1.4)), gm); p2.position.set(W / 2000, (topY + (baseY - topY) * .25) / 1000, .009); g.add(p2);
+  }
+  if (S.showDims) g.add(label(String(W), W / 2, baseY + Math.min(H, 720) / 2 + (t.tall ? 600 : 0), D + 70));
+  return g;
+}
+
+function build3D(resetCam){
+  if (!has3D) return;
+  if (root){ scene.remove(root); root.traverse(o => { if (o.geometry) o.geometry.dispose(); }); disposables.forEach(d => d.dispose()); disposables = []; }
+  if (helper){ scene.remove(helper); helper.geometry.dispose(); helper = null; }
+  anims = [];
+  root = new THREE.Group(); scene.add(root);
+  const ws = wallsOf(S), La = S.walls.A, Lb = S.walls.B, Lc = S.walls.C, Hc = S.room.height;
+  const wallM = plainMat('wall', S.room.wall, .95);
+  box(root, La + (ws.includes('B') ? 20 : 0) + (ws.includes('C') ? 20 : 0), Hc, 20, ws.includes('B') ? -20 : 0, 0, -20, wallM, false);
+  if (ws.includes('B')) box(root, 20, Hc, Lb, -20, 0, 0, wallM, false);
+  if (ws.includes('C')) box(root, 20, Hc, Lc, La, 0, 0, wallM, false);
+  const fl = FLOORS.find(f => f.id === S.room.floor) || FLOORS[0];
+  const fw = La + 2600, fd = Math.max(ws.includes('B') ? Lb : 0, ws.includes('C') ? Lc : 0, 1200) + 2600;
+  const fkey = 'floor:' + fl.id;
+  if (!matCache[fkey]){ const p = {roughness:.85}; if (fl.pattern === 'planks'){ p.map = planksTex(fl.hex); p.color = 0xffffff; } else if (fl.pattern === 'tiles'){ p.map = tilesTex(fl.hex); p.color = 0xffffff; } else p.color = new THREE.Color(fl.hex); matCache[fkey] = new THREE.MeshStandardMaterial(p); }
+  const fm = matCache[fkey]; if (fm.map) fm.map.repeat.set(fw / (fl.pattern === 'tiles' ? 600 : 1600), fd / (fl.pattern === 'tiles' ? 600 : 1100));
+  box(root, fw, 10, fd, -1300, -10, -20, fm, false);
+  if (S.showDims){
+    root.add(label(`А · ${La}`, La / 2, Hc - 220, 30, true));
+    if (ws.includes('B')) root.add(label(`Б · ${Lb}`, 30, Hc - 220, Lb / 2, true));
+    if (ws.includes('C')) root.add(label(`В · ${Lc}`, La - 30, Hc - 220, Lc / 2, true));
+  }
+  activeModules(S).forEach(m => { const p = A.R.pos[m.id]; if (p) root.add(buildModule(m, p)); });
+  const top = catFind(C.top, S.mat.top), topM = surf('top', top, .32), splashM = plainMat('splash', shade(top.hex, -5), .4);
+  A.R.tops.forEach(s => {
+    const y = BASE_Y + s.h, len = s.x1 - s.x0, sh = 1450 - y - top.t;
+    if (s.wall === 'A'){ box(root, len, top.t, 600, s.x0, y, 0, topM); if (S.mat.splash) box(root, len, sh, 6, s.x0, y + top.t, 0, splashM, false); }
+    else if (s.wall === 'B'){ box(root, 600, top.t, len, 0, y, s.x0, topM); if (S.mat.splash) box(root, 6, sh, len, 0, y + top.t, s.x0, splashM, false); }
+    else { box(root, 600, top.t, len, La - 600, y, s.x0, topM); if (S.mat.splash) box(root, 6, sh, len, La - 6, y + top.t, s.x0, splashM, false); }
+  });
+  const sel = root.children.find(o => o.userData && o.userData.modId === S.selected);
+  if (sel){ helper = new THREE.BoxHelper(sel, new THREE.Color(cssVar('--accent') || '#2C52C4')); scene.add(helper); }
+  if (resetCam) fitCamera();
+}
+
+/* ---------------- boot ---------------- */
+ensureRefs(); recalc();
+renderPrices(); setTab(S.tab || 'smeta');
+$('btnDims').setAttribute('aria-pressed', String(S.showDims));
+init3D();
+update({resetCam:true});
+const mq = window.matchMedia('(prefers-color-scheme: dark)');
+const onTheme = () => { applyStageBg(); build3D(false); };
+mq.addEventListener ? mq.addEventListener('change', onTheme) : mq.addListener(onTheme);
+new MutationObserver(onTheme).observe(document.documentElement, {attributes:true, attributeFilter:['data-theme']});
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => build3D(false));
+</script>
