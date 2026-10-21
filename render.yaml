@@ -35,3 +35,11 @@ services:
         sync: false
       - key: RELAY_TOKEN
         generateValue: true
+      # Общая база проектов для тестирования. DATABASE_URL — строка подключения PostgreSQL (Render → New → PostgreSQL → Internal Database URL).
+      # PROJECTS_TOKEN — код доступа, который тестировщики вводят в программе («Проекты»); Render создаёт его сам.
+      - key: DATABASE_URL
+        sync: false
+      - key: PROJECTS_TOKEN
+        generateValue: true
+      - key: ALLOWED_ORIGINS
+        value: https://kitchen-prototype.onrender.com
