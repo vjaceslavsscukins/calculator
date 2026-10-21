@@ -911,21 +911,25 @@ function panelsOf(m, S){
   };
   // Фасадный бок: вместо ЛДСП-боковины панель из материала фасада.
   // TODO(технолог): размер и кромка фасадного бока. В кухне К-1974 он на 100 мм выше обычной боковины (450 против 350): правило не описано, пока В × Г.
-  const nSide = (m.endL ? 1 : 0) + (m.endR ? 1 : 0);
+  const nSide = (m.endL && !m.frL ? 1 : 0) + (m.endR && !m.frR ? 1 : 0);
+  // Торец в алюминиевой рамке со стеклом: вместо ЛДСП-боковины (только верхние и антресоли). TODO(технолог): размер вставки, крепление и цена торцевой рамки.
+  const nFr = t.row === 'low' ? 0 : (m.frL ? 1 : 0) + (m.frR ? 1 : 0);
   if (t.tpl.panels){
     // Детали по формулам шаблона (конструкция цеха из ведомостей технолога). W, H, D — размеры модуля, T — ЛДСП, G — 1 при профиле Gola, N — число полок; в e2 доступны a и b.
     const G = S.mat.handle === 'gola' && !t.noGola ? 1 : 0, V = {W, H, D, T, G, X1:m.x1 ?? t.tpl.x1 ?? 0, N:shelvesOf(m).length};
     t.tpl.panels.forEach(pp => {
       if (pp.when && !evalExpr(pp.when, V)) return;
-      const a = evalExpr(String(pp.a), V), b = evalExpr(String(pp.b), V), q = evalExpr(String(pp.q), V) - (pp.side ? nSide : 0);
+      const a = evalExpr(String(pp.a), V), b = evalExpr(String(pp.b), V), q = evalExpr(String(pp.q), V) - (pp.side ? nSide + nFr : 0);
       add(pp.n, a, b, q, pp.mat || 'ldsp', pp.e2 === undefined ? 0 : evalExpr(String(pp.e2), Object.assign({a, b}, V)));
       if (pp.side && nSide) add('Фасадный бок', a, b, nSide, 'facade');
+      if (pp.side && nFr) add('Торец в алюминиевой рамке со стеклом', a, b, nFr, 'frame');
     });
     drawerParts();
     return p;
   }
-  add('Боковина', H, D, 2 - nSide, 'ldsp', H);
+  add('Боковина', H, D, 2 - nSide - nFr, 'ldsp', H);
   add('Фасадный бок', H, D, nSide, 'facade');
+  add('Торец в алюминиевой рамке со стеклом', H, D, nFr, 'frame');
   if (t.row === 'low' && !t.tall){ add('Дно', wi, D, 1, 'ldsp', wi); add('Царга', wi, 100, 2, 'ldsp', wi); }
   else add('Дно и крыша', wi, D, 2, 'ldsp', wi);
   add('Полка', wi - 2, D - 20, shelvesOf(m).length, 'ldsp', wi - 2);
@@ -964,10 +968,11 @@ function hwOf(m, facs, S){
 function calcModule(m, S, P, C){
   S = modS(m, S);
   const facs = facadesOf(m, S), panels = panelsOf(m, S), hw = hwOf(m, facs, S), t = TYPES[m.type];
-  let ldsp = 0, hdf = 0, e2 = 0, e04 = 0, sideArea = 0;
+  let ldsp = 0, hdf = 0, e2 = 0, e04 = 0, sideArea = 0, endFrameArea = 0, endGlass = 0;
   panels.forEach(p => { const a = p.a * p.b / 1e6 * p.q;
     if (p.mat === 'ldsp'){ ldsp += a; e2 += p.e2 * p.q / 1000; e04 += (2*(p.a + p.b) - p.e2) * p.q / 1000; }
     else if (p.mat === 'facade') sideArea += a;
+    else if (p.mat === 'frame'){ endFrameArea += a; endGlass += Math.max(0, p.a - 120) * Math.max(0, p.b - 120) / 1e6 * p.q; }
     else hdf += a; });
   const facArea = facs.reduce((s, f) => s + f.w * f.h / 1e6, 0);
   const decor = catFind(C.corpus, m.corpus || S.mat.corpus);
@@ -975,8 +980,8 @@ function calcModule(m, S, P, C){
   const Wt = P.waste, B = P.blum;
   const corpus = ldsp*Wt.ldsp*decor.price + hdf*Wt.hdf*P.hdf + (e2*P.edge2 + e04*P.edge04)*Wt.edge;
   // Фасадный бок считаем по цене фасадного материала без фрезеровки. TODO(технолог): нужна ли фрезеровка и кромка.
-  const frameArea = facs.reduce((a, f) => a + (f.frame ? f.w * f.h / 1e6 : 0), 0), frameUnit = frameArea ? ((P.frames || {})[m.frame || t.tpl.frame] || 0) : 0;
-  const facade = (facArea - frameArea) * (fm.price + ml.add) + frameArea * frameUnit + sideArea * fm.price + hw.glass * P.glass;
+  const frameArea = facs.reduce((a, f) => a + (f.frame ? f.w * f.h / 1e6 : 0), 0), frameUnit = frameArea || endFrameArea ? ((P.frames || {})[m.frame || t.tpl.frame || 'w4020'] || 0) : 0;
+  const facade = (facArea - frameArea) * (fm.price + ml.add) + (frameArea + endFrameArea) * frameUnit + sideArea * fm.price + (hw.glass + endGlass) * P.glass;
   const liftUnit = m.lift && P.lifts && P.lifts[m.lift] != null ? P.lifts[m.lift] : B.aventos;
   const light = m.light && t.row === 'up' && !t.gap ? m.w / 1000 * P.led : 0;
   const hwc = hw.hinge*(m.hingeBrand === 'hettich' ? B.hettichHinge : B.hinge) + hw.slide*B[S.mat.drawers] + hw.lift*liftUnit + hw.cargo*B.cargo + hw.fridge*B.fridgeMount
@@ -1103,7 +1108,7 @@ function bomOf(A, S, P, C){
   Object.entries(fg).forEach(([cid, v]) => rows.push({n:`${fm.name}, ${ml.name.toLowerCase()}, ${catFind(C.fcolor, cid).name.toLowerCase()} (${v.n} шт)`, q:v.a, u:'м²', p:fm.price + ml.add}));
   const sides = A.mods.flatMap(r => r.panels.filter(p => p.mat === 'facade')), sideA = sides.reduce((a, p) => a + p.a * p.b / 1e6 * p.q, 0), sideN = sides.reduce((n, p) => n + p.q, 0);
   if (sideA) rows.push({n:`Фасадные боковины, ${fm.name} (${sideN} шт)`, q:sideA, u:'м²', p:fm.price});
-  const glass = s(r => r.hw.glass); if (glass) rows.push({n:'Стекло для витрин', q:glass, u:'м²', p:P.glass});
+  const glass = s(r => r.hw.glass) + A.mods.reduce((a, r) => a + r.panels.filter(p => p.mat === 'frame').reduce((b, p) => b + Math.max(0, p.a - 120) * Math.max(0, p.b - 120) / 1e6 * p.q, 0), 0); if (glass) rows.push({n:'Стекло для витрин', q:glass, u:'м²', p:P.glass});
   rows.push({g:'Фурнитура Blum и комплектующие'});
   const H = k => s(r => r.hw[k]), dr = DRAWERS[S.mat.drawers], dc = dr.colors.find(c => c.id === S.mat.drawerColor) || dr.colors[0];
   [['Петля CLIP top BLUMOTION', H('hinge'), B.hinge, 'шт'], [`Ящик ${dr.n}, ${dc.name.toLowerCase()}`, H('slide'), B[S.mat.drawers], 'шт'],
@@ -1154,7 +1159,7 @@ function deepMerge(base, over){
 function load(key){ try { const s = localStorage.getItem(key); return s ? JSON.parse(s) : null; } catch(e){ return null; } }
 function store(key, v){ try { localStorage.setItem(key, JSON.stringify(v)); } catch(e){} if (key === KS) projectChanged(); else if (key === KP) settingsChanged('prices'); else if (key === KC) settingsChanged('catalogs'); }
 // Проекты: общая база для тестирования. Настройки подключения лежат в браузере, данные проектов на сервере (kitchen-api, PostgreSQL).
-const BUILD = '21.10.2026, сборка 16'; // меняется при каждом выпуске: по ней видно, какая версия открыта
+const BUILD = '21.10.2026, сборка 17'; // меняется при каждом выпуске: по ней видно, какая версия открыта
 const KSRV = 'kitchen.server.v1', API_DEFAULT = 'https://kitchen-api-c112.onrender.com';
 const PKEYS = ['client', 'order', 'layout', 'walls', 'room', 'mat', 'disc', 'modules', 'nextId', 'extra', 'parts', 'kp'];
 let srv = Object.assign({url:API_DEFAULT, code:'', name:'', role:''}, load(KSRV) || {});
@@ -1202,6 +1207,7 @@ function kpText(m){
   const nd = r.facs.filter(f => f.k === 'drawer').length, nr = r.facs.filter(f => f.k === 'door').length, frame = r.facs.some(f => f.frame);
   const out = [`${modLabel(m)}, ширина ${m.w} мм, высота ${m.h + riseOf(m)} мм, глубина ${m.d} мм.`];
   if (t.corner){ const cf = (t.tpl.facades || []).find(f => f.kind === 'corner'); if (cf) out.push(`Открытая часть ${m.w - cf.blind} мм с дверцей, глухая часть ${cf.blind} мм заходит под соседний ряд${+m.plank > 0 ? `, угловая фальшпланка ${m.plank} мм` : ''}.`); }
+  if (t.row !== 'low' && (m.frL || m.frR)) out.push(`Торец${m.frL && m.frR ? 'ы' : ''} (${m.frL && m.frR ? 'слева и справа' : m.frL ? 'слева' : 'справа'}) в алюминиевой рамке ${(FRAMES[m.frame || t.tpl.frame || 'w4020'] || '').replace(/ \(.*\)/, '')} со стеклом.`);
   if (frame) out.push(`Фасады в алюминиевой рамке ${(FRAMES[m.frame || t.tpl.frame] || '').replace(/ \(.*\)/, '')} со стеклом.`);
   if (nd) out.push(`Ящики ${dsys.n} полного выдвижения с доводчиком${m.inner ? ', внутренний ящик в верхнем' : ''}.`);
   if (nr) out.push(`Петли ${m.hingeBrand === 'hettich' ? 'Hettich Sensys' : 'Blum CLIP top BLUMOTION'}.`);
@@ -1223,6 +1229,8 @@ function modNotes(m){
   if (m.light && TYPES[m.type].row === 'up') n.push('подсветка');
   if (m.endL) n.push('фасадный бок слева');
   if (m.endR) n.push('фасадный бок справа');
+  if (m.frL) n.push('торец слева в алюминиевой рамке со стеклом');
+  if (m.frR) n.push('торец справа в алюминиевой рамке со стеклом');
   if (m.cut && m.cut.sink) n.push('мойка');
   if (m.cut && m.cut.hob) n.push('варочная');
   if (m.cut && m.cut.pipe) n.push('вырез под трубы');
@@ -1443,7 +1451,10 @@ function leftModule(){
   if (r.facs.some(f => f.k === 'drawer')) h += `<div class="field"><span class="flabel">Система ящиков этого модуля</span><div class="seg wrap"><button data-act="mod-drawers" data-v="" aria-pressed="${!m.drawers}">Как в кухне</button>${Object.entries(DRAWERS).map(([k, v]) => `<button data-act="mod-drawers" data-v="${k}" aria-pressed="${m.drawers === k}">${esc(v.n.replace('Hettich InnoTech ', 'Hettich ').replace('Hettich ', 'H. '))}</button>`).join('')}</div></div>`;
   if (r.facs.some(f => f.k === 'door')) h += `<div class="field"><span class="flabel">Петли этого модуля</span><div class="seg"><button data-act="mod-hbrand" data-v="" aria-pressed="${m.hingeBrand !== 'hettich'}">Blum CLIP top</button><button data-act="mod-hbrand" data-v="hettich" aria-pressed="${m.hingeBrand === 'hettich'}">Hettich Sensys</button></div></div>`;
   if (t.innerOpt) h += `<label class="chk"><input type="checkbox" id="edInner" ${m.inner ? 'checked' : ''}> Внутренний ящик в верхнем ящике</label>`;
-  if (t.tpl.frame) h += `<div class="field"><span class="flabel">Алюминиевая рамка</span><div class="seg">${Object.entries(FRAMES).map(([k, v]) => `<button data-act="mod-frame" data-v="${k}" aria-pressed="${(m.frame || t.tpl.frame) === k}">${esc(v)}</button>`).join('')}</div></div>`;
+  if (t.carcass !== 'none' && t.row !== 'low') h += `<div class="field"><span class="flabel">Торец в алюминиевой рамке со стеклом (вместо боковины)</span>
+    <label class="chk"><input type="checkbox" id="edFrL" ${m.frL ? 'checked' : ''}> Слева</label>
+    <label class="chk"><input type="checkbox" id="edFrR" ${m.frR ? 'checked' : ''}> Справа</label></div>`;
+  if (t.tpl.frame || m.frL || m.frR) h += `<div class="field"><span class="flabel">Алюминиевая рамка</span><div class="seg">${Object.entries(FRAMES).map(([k, v]) => `<button data-act="mod-frame" data-v="${k}" aria-pressed="${(m.frame || t.tpl.frame || 'w4020') === k}">${esc(v)}</button>`).join('')}</div></div>`;
   if (t.x1) h += `<div class="field"><label for="edX1">Высота малой дверцы сверху, мм</label><input type="number" id="edX1" min="150" max="600" step="1" value="${m.x1 ?? t.x1}"></div>`;
   if (t.carcass !== 'none' && !t.gap) h += `<div class="field"><span class="flabel">Открывание этого модуля</span><div class="seg"><button data-act="mod-handle" data-v="" aria-pressed="${!m.handle}">Как в кухне</button>${Object.entries(HANDLES).map(([k, v]) => `<button data-act="mod-handle" data-v="${k}" aria-pressed="${m.handle === k}">${k === 'bar' ? 'Ручка' : k === 'gola' ? 'Gola' : 'Push'}</button>`).join('')}</div></div>`;
   if (t.row === 'low' && !t.tall && t.carcass !== 'none') h += `<div class="field"><span class="flabel">Ножки этого модуля, мм</span><div class="seg"><button data-act="mod-legs" data-v="" aria-pressed="${!m.legs}">Как в кухне</button>${LEGS.map(v => `<button data-act="mod-legs" data-v="${v}" aria-pressed="${m.legs === v}">${v}</button>`).join('')}</div></div>`;
@@ -1913,7 +1924,7 @@ function techData(){
   const mods = orderedMods().map(m => {
     const r = resultOf(m.id), t = TYPES[m.type];
     return {num:num[m.id], gap:!!t.gap, label:modLabel(m), wall:m.wall, row:t.row, size:sizeStr(m), notes:modNotes(m), todo:t.todo,
-      panels:r.panels.map(p => ({name:p.n, a:p.a, b:p.b, q:p.q, mat:p.mat === 'hdf' ? 'ХДФ 3 мм' : p.mat === 'facade' ? `${fm.name}, ${catFind(C.fcolor, facadeColorId(m, S)).name.toLowerCase()}` : r.decor.name, e2:+(p.e2 / 1000).toFixed(3), e04:p.mat === 'ldsp' ? +((2 * (p.a + p.b) - p.e2) / 1000).toFixed(3) : 0})),
+      panels:r.panels.map(p => ({name:p.n, a:p.a, b:p.b, q:p.q, mat:p.mat === 'hdf' ? 'ХДФ 3 мм' : p.mat === 'frame' ? 'Алюминиевая рамка со стеклом' : p.mat === 'facade' ? `${fm.name}, ${catFind(C.fcolor, facadeColorId(m, S)).name.toLowerCase()}` : r.decor.name, e2:+(p.e2 / 1000).toFixed(3), e04:p.mat === 'ldsp' ? +((2 * (p.a + p.b) - p.e2) / 1000).toFixed(3) : 0})),
       facs:r.facs.map(f => ({name:(FACADE_KIND[f.k] || f.k) + (f.glass ? ' со стеклом' : ''), w:Math.round(f.w), h:Math.round(f.h), mat:`${fm.name}, ${ml.name.toLowerCase()}, ${catFind(C.fcolor, facadeColorId(m, S)).name.toLowerCase()}`})),
       hw:hwText(r.hw)};
   });
@@ -2609,6 +2620,7 @@ document.addEventListener('change', e => {
     case 'edInner': if (m){ m.inner = t.checked; update(); } break;
     case 'edX1': if (m){ m.x1 = clampNum(t.value, 150, 600, TYPES[m.type].x1); t.value = m.x1; update(); } break;
     case 'edPlank': if (m){ m.plank = clampNum(t.value, 0, 300, 0); t.value = m.plank; update(); } break;
+    case 'edFrL': case 'edFrR': if (m){ m[id === 'edFrL' ? 'frL' : 'frR'] = t.checked; update(); } break;
     case 'edEndL': case 'edEndR': if (m){ m[id === 'edEndL' ? 'endL' : 'endR'] = t.checked; update(); } break;
     case 'edSink': if (m){ m.cut.sink = t.checked; update(); } break;
     case 'edHob': if (m){ m.cut.hob = t.checked; update(); } break;
@@ -2908,7 +2920,14 @@ function buildModule(m, pos){
 
   if (t.appliance === 'dw') box(g, W - 4, H - 10, D - 20, 2, baseY, 10, dark);
   else if (t.carcass !== 'none'){
-    box(g, T, H, D, 0, baseY, 0, m.endL ? fac : corp); box(g, T, H, D, W - T, baseY, 0, m.endR ? fac : corp);
+    const frEnd = t.row !== 'low' && !t.tall, frL = frEnd && m.frL, frR = frEnd && m.frR;
+    if (!frL) box(g, T, H, D, 0, baseY, 0, m.endL ? fac : corp);
+    if (!frR) box(g, T, H, D, W - T, baseY, 0, m.endR ? fac : corp);
+    [[frL, 0, -Math.PI / 2, 18], [frR, W, Math.PI / 2, W - 18]].forEach(([on, , ry, px], i) => {   // торец: рамка со стеклом, повёрнутая лицом наружу
+      if (!on) return;
+      const pg = new THREE.Group(); pg.position.set(px / 1000, baseY / 1000, i ? D / 1000 : 0); pg.rotation.y = ry; g.add(pg);
+      facadePanel(pg, D, H, 0, 0, fac, mill, true, {mat:plainMat('aluframe', '#B9BCBE', .3, .8), fw:({w4020:40, w4040:40, n2020:20})[m.frame || t.tpl.frame || 'w4020'] || 40});
+    });
     box(g, W - 2*T, T, D, T, baseY, 0, corp);
     if (t.row === 'low' && !t.tall){ box(g, W - 2*T, T, 100, T, baseY + H - T, D - 100, corp); box(g, W - 2*T, T, 100, T, baseY + H - T, 0, corp); }
     else box(g, W - 2*T, T, D, T, baseY + H - T, 0, corp);
