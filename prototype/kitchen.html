@@ -698,7 +698,11 @@ function panelsOf(m, S){
   if (t.gap || t.carcass === 'none') return p;
   const W = m.w, H = m.h, D = m.d, wi = W - 2*T;
   const add = (n, a, b, q, mat, e2) => { if (q > 0) p.push({n, a:Math.round(a), b:Math.round(b), q, mat, e2:e2 || 0}); };
-  add('Боковина', H, D, 2, 'ldsp', H);
+  // Фасадный бок: вместо ЛДСП-боковины панель из материала фасада.
+  // TODO(технолог): размер и кромка фасадного бока. В кухне К-1974 он на 100 мм выше обычной боковины (450 против 350): правило не описано, пока В × Г.
+  const nSide = (m.endL ? 1 : 0) + (m.endR ? 1 : 0);
+  add('Боковина', H, D, 2 - nSide, 'ldsp', H);
+  add('Фасадный бок', H, D, nSide, 'facade');
   if (t.row === 'low' && !t.tall){ add('Дно', wi, D, 1, 'ldsp', wi); add('Царга', wi, 100, 2, 'ldsp', wi); }
   else add('Дно и крыша', wi, D, 2, 'ldsp', wi);
   add('Полка', wi - 2, D - 20, shelvesOf(m).length, 'ldsp', wi - 2);
@@ -736,15 +740,18 @@ function hwOf(m, facs, S){
 
 function calcModule(m, S, P, C){
   const facs = facadesOf(m, S), panels = panelsOf(m, S), hw = hwOf(m, facs, S), t = TYPES[m.type];
-  let ldsp = 0, hdf = 0, e2 = 0, e04 = 0;
+  let ldsp = 0, hdf = 0, e2 = 0, e04 = 0, sideArea = 0;
   panels.forEach(p => { const a = p.a * p.b / 1e6 * p.q;
-    if (p.mat === 'ldsp'){ ldsp += a; e2 += p.e2 * p.q / 1000; e04 += (2*(p.a + p.b) - p.e2) * p.q / 1000; } else hdf += a; });
+    if (p.mat === 'ldsp'){ ldsp += a; e2 += p.e2 * p.q / 1000; e04 += (2*(p.a + p.b) - p.e2) * p.q / 1000; }
+    else if (p.mat === 'facade') sideArea += a;
+    else hdf += a; });
   const facArea = facs.reduce((s, f) => s + f.w * f.h / 1e6, 0);
   const decor = catFind(C.corpus, m.corpus || S.mat.corpus);
   const fm = catFind(C.facade, S.mat.facade), ml = catFind(C.milling, S.mat.milling);
   const Wt = P.waste, B = P.blum;
   const corpus = ldsp*Wt.ldsp*decor.price + hdf*Wt.hdf*P.hdf + (e2*P.edge2 + e04*P.edge04)*Wt.edge;
-  const facade = facArea * (fm.price + ml.add) + hw.glass * P.glass;
+  // Фасадный бок считаем по цене фасадного материала без фрезеровки. TODO(технолог): нужна ли фрезеровка и кромка.
+  const facade = facArea * (fm.price + ml.add) + sideArea * fm.price + hw.glass * P.glass;
   const light = m.light && t.row === 'up' && !t.gap ? m.w / 1000 * P.led : 0;
   const hwc = hw.hinge*B.hinge + hw.slide*B[S.mat.drawers] + hw.lift*B.aventos + hw.cargo*B.cargo + hw.fridge*B.fridgeMount
     + hw.dw*P.dwMount + hw.bar*P.bar + hw.push*B.tipon + hw.gola*P.gola + hw.leg*P.leg + hw.hanger*P.hanger
@@ -851,6 +858,8 @@ function bomOf(A, S, P, C){
   const fm = catFind(C.facade, S.mat.facade), ml = catFind(C.milling, S.mat.milling), fg = {};
   A.mods.forEach(r => { if (!r.facs.length) return; const cid = facadeColorId(r.m, S); fg[cid] = fg[cid] || {a:0, n:0}; fg[cid].a += r.facArea; fg[cid].n += r.facs.length; });
   Object.entries(fg).forEach(([cid, v]) => rows.push({n:`${fm.name}, ${ml.name.toLowerCase()}, ${catFind(C.fcolor, cid).name.toLowerCase()} (${v.n} шт)`, q:v.a, u:'м²', p:fm.price + ml.add}));
+  const sides = A.mods.flatMap(r => r.panels.filter(p => p.mat === 'facade')), sideA = sides.reduce((a, p) => a + p.a * p.b / 1e6 * p.q, 0), sideN = sides.reduce((n, p) => n + p.q, 0);
+  if (sideA) rows.push({n:`Фасадные боковины, ${fm.name} (${sideN} шт)`, q:sideA, u:'м²', p:fm.price});
   const glass = s(r => r.hw.glass); if (glass) rows.push({n:'Стекло для витрин', q:glass, u:'м²', p:P.glass});
   rows.push({g:'Фурнитура Blum и комплектующие'});
   const H = k => s(r => r.hw[k]), dr = DRAWERS[S.mat.drawers], dc = dr.colors.find(c => c.id === S.mat.drawerColor) || dr.colors[0];
@@ -947,6 +956,8 @@ function modNotes(m){
   if (m.corpus) n.push('корпус ' + catFind(C.corpus, m.corpus).name.toLowerCase());
   if (m.facade) n.push('фасад ' + catFind(C.fcolor, m.facade).name.toLowerCase());
   if (m.light && TYPES[m.type].row === 'up') n.push('подсветка');
+  if (m.endL) n.push('фасадный бок слева');
+  if (m.endR) n.push('фасадный бок справа');
   if (m.cut && m.cut.sink) n.push('мойка');
   if (m.cut && m.cut.hob) n.push('варочная');
   if (m.cut && m.cut.pipe) n.push('вырез под трубы');
@@ -1103,13 +1114,16 @@ function leftModule(){
       <label class="chk"><input type="checkbox" id="edHob" ${m.cut.hob ? 'checked' : ''}> Варочная панель: вырез в столешнице</label>`;
   }
   if (t.row === 'low' && t.carcass !== 'none') h += `<label class="chk"><input type="checkbox" id="edPipe" ${m.cut.pipe ? 'checked' : ''}> Вырез под трубы и коммуникации</label>`;
+  if (t.carcass !== 'none') h += `<div class="field"><span class="flabel">Фасадный бок (боковина из материала фасада)</span>
+    <label class="chk"><input type="checkbox" id="edEndL" ${m.endL ? 'checked' : ''}> Слева</label>
+    <label class="chk"><input type="checkbox" id="edEndR" ${m.endR ? 'checked' : ''}> Справа</label></div>`;
   if (t.row === 'mezz') h += `<div class="small muted">Над пеналом ставьте глубину 560, над верхними 300.</div>`;
   if (t.corner) h += `<div class="field"><span class="flabel">Глухая часть (заходит под соседний ряд)</span><div class="seg"><button data-act="blind" data-v="left" aria-pressed="${m.blind !== 'right'}">Слева</button><button data-act="blind" data-v="right" aria-pressed="${m.blind === 'right'}">Справа</button></div></div>`;
   const hw = r.hw, dr = DRAWERS[S.mat.drawers];
   const hwl = hwText(hw);
   h += `</div><div class="sec"><h3>Детали и цена</h3>
     <table class="mini" aria-label="Детали модуля">
-      ${r.panels.map(p => `<tr><td>${p.n}${p.mat === 'hdf' ? ' <span class="muted">(ХДФ)</span>' : ''}</td><td class="sz">${p.a}×${p.b}</td><td>${p.q} шт</td></tr>`).join('')}
+      ${r.panels.map(p => `<tr><td>${p.n}${p.mat === 'hdf' ? ' <span class="muted">(ХДФ)</span>' : p.mat === 'facade' ? ' <span class="muted">(фасад)</span>' : ''}</td><td class="sz">${p.a}×${p.b}</td><td>${p.q} шт</td></tr>`).join('')}
       ${r.facs.map((f, i) => `<tr><td>Фасад ${i + 1}${f.glass ? ' со стеклом' : ''}</td><td class="sz">${Math.round(f.h)}×${Math.round(f.w)}</td><td>1 шт</td></tr>`).join('')}
     </table>
     <div class="small"><span class="muted">Фурнитура Blum:</span> ${hwl || '—'}</div>
@@ -1533,7 +1547,7 @@ function techData(){
   const mods = orderedMods().map(m => {
     const r = resultOf(m.id), t = TYPES[m.type];
     return {num:num[m.id], gap:!!t.gap, label:modLabel(m), wall:m.wall, row:t.row, size:sizeStr(m), notes:modNotes(m), todo:t.todo,
-      panels:r.panels.map(p => ({name:p.n, a:p.a, b:p.b, q:p.q, mat:p.mat === 'hdf' ? 'ХДФ 3 мм' : r.decor.name, e2:+(p.e2 / 1000).toFixed(3), e04:p.mat === 'ldsp' ? +((2 * (p.a + p.b) - p.e2) / 1000).toFixed(3) : 0})),
+      panels:r.panels.map(p => ({name:p.n, a:p.a, b:p.b, q:p.q, mat:p.mat === 'hdf' ? 'ХДФ 3 мм' : p.mat === 'facade' ? `${fm.name}, ${catFind(C.fcolor, facadeColorId(m, S)).name.toLowerCase()}` : r.decor.name, e2:+(p.e2 / 1000).toFixed(3), e04:p.mat === 'ldsp' ? +((2 * (p.a + p.b) - p.e2) / 1000).toFixed(3) : 0})),
       facs:r.facs.map(f => ({name:(FACADE_KIND[f.k] || f.k) + (f.glass ? ' со стеклом' : ''), w:Math.round(f.w), h:Math.round(f.h), mat:`${fm.name}, ${ml.name.toLowerCase()}, ${catFind(C.fcolor, facadeColorId(m, S)).name.toLowerCase()}`})),
       hw:hwText(r.hw)};
   });
@@ -1945,6 +1959,7 @@ document.addEventListener('change', e => {
       if (nv !== Math.round(parseNum(t.value))) toast(`Допустимо от ${lim[0]} до ${lim[1]} мм`);
       m[k] = nv; update(); } break;
     case 'edLight': if (m){ m.light = t.checked; update(); } break;
+    case 'edEndL': case 'edEndR': if (m){ m[id === 'edEndL' ? 'endL' : 'endR'] = t.checked; update(); } break;
     case 'edSink': if (m){ m.cut.sink = t.checked; update(); } break;
     case 'edHob': if (m){ m.cut.hob = t.checked; update(); } break;
     case 'edPipe': if (m){ m.cut.pipe = t.checked; update(); } break;
@@ -2224,7 +2239,7 @@ function buildModule(m, pos){
 
   if (t.appliance === 'dw') box(g, W - 4, H - 10, D - 20, 2, baseY, 10, dark);
   else if (t.carcass !== 'none'){
-    box(g, T, H, D, 0, baseY, 0, corp); box(g, T, H, D, W - T, baseY, 0, corp);
+    box(g, T, H, D, 0, baseY, 0, m.endL ? fac : corp); box(g, T, H, D, W - T, baseY, 0, m.endR ? fac : corp);
     box(g, W - 2*T, T, D, T, baseY, 0, corp);
     if (t.row === 'low' && !t.tall){ box(g, W - 2*T, T, 100, T, baseY + H - T, D - 100, corp); box(g, W - 2*T, T, 100, T, baseY + H - T, 0, corp); }
     else box(g, W - 2*T, T, D, T, baseY + H - T, 0, corp);
