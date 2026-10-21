@@ -300,3 +300,14 @@ test('планки и доборы: площадь по материалу, пу
   const base = cur.calcAll(shopState(), cur.DEFAULT_PRICES, cur.DEFAULT_CAT);
   assert.ok(A.total > base.total, 'планки увеличивают смету');
 });
+
+test('угловой модуль: фальшпланка из фасадного материала по умолчанию, при ширине 0 без неё', () => {
+  const S = shopState();
+  S.modules[0] = { ...S.modules[0], type: 'base_corner', w: 1050, h: 720, d: 560, plank: 60 };
+  const A = cur.calcAll(S, cur.DEFAULT_PRICES, cur.DEFAULT_CAT);
+  const line = A.common.find((c) => /Угловая фальшпланка/.test(c.n));
+  assert.ok(line, 'строка планки есть');
+  assert.equal(+line.q.toFixed(4), 0.0432);
+  S.modules[0].plank = 0;
+  assert.ok(!cur.calcAll(S, cur.DEFAULT_PRICES, cur.DEFAULT_CAT).common.some((c) => /Угловая фальшпланка/.test(c.n)));
+});
