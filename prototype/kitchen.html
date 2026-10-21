@@ -476,7 +476,7 @@ dialog.dlg::backdrop{background:rgba(20,18,15,.5)}
   <div class="dlg-f" id="impFoot"></div>
 </dialog>
 <dialog id="projDlg" class="dlg" aria-label="Проекты">
-  <div class="dlg-h"><b>Проекты</b><button class="btn sm" data-act="dlg-close" data-v="projDlg" aria-label="Закрыть">×</button></div>
+  <div class="dlg-h"><b>Проекты</b><span class="small muted" id="projVer"></span><button class="btn sm" data-act="dlg-close" data-v="projDlg" aria-label="Закрыть">×</button></div>
   <div class="dlg-b" id="projBody"></div>
 </dialog>
 <dialog id="libDlg" class="dlg" aria-label="Библиотека модулей">
@@ -951,6 +951,7 @@ function deepMerge(base, over){
 function load(key){ try { const s = localStorage.getItem(key); return s ? JSON.parse(s) : null; } catch(e){ return null; } }
 function store(key, v){ try { localStorage.setItem(key, JSON.stringify(v)); } catch(e){} if (key === KS) projectChanged(); }
 // Проекты: общая база для тестирования. Настройки подключения лежат в браузере, данные проектов на сервере (kitchen-api, PostgreSQL).
+const BUILD = '21.10.2026, сборка 5'; // меняется при каждом выпуске: по ней видно, какая версия открыта
 const KSRV = 'kitchen.server.v1', API_DEFAULT = 'https://kitchen-api-c112.onrender.com';
 const PKEYS = ['client', 'order', 'layout', 'walls', 'room', 'mat', 'disc', 'modules', 'nextId', 'extra', 'kp'];
 let srv = Object.assign({url:API_DEFAULT, code:'', name:'', role:''}, load(KSRV) || {});
@@ -1267,7 +1268,7 @@ function leftMat(){
 }
 
 function renderHeader(){
-  $('hdrProject').textContent = `Заказ ${S.order || '—'} · ${S.client || 'клиент не указан'}`; renderProjStatus();
+  $('hdrProject').textContent = `Заказ ${S.order || '—'} · ${S.client || 'клиент не указан'} · сборка ${BUILD.split(' ').pop()}`; $('hdrProject').title = 'Версия программы: ' + BUILD; renderProjStatus();
   $('hdrTotal').textContent = rub(A.total); $('dockTotal').textContent = rub(A.total);
   $('hdrSplit').textContent = `кухня ${rub(A.after + A.exFree)} · монтаж ${rub(A.install)} · доставка ${rub(A.delivery)}`;
 }
@@ -1955,13 +1956,14 @@ function projTakeTheirs(){ const id = S.projectId; proj.conflict = null; projGua
 function projKeepMine(){ const c = proj.conflict; if (!c) return; S.projectRev = c.rev; proj.conflict = null; renderProj(); saveProject(); }
 function projSaveNow(){ if (!S.projectId){ projSaveAs(); return; } saveProject(true); }
 function renderProj(){
-  const body = $('projBody'); if (!body) return;
+  const body = $('projBody'); if (!body) return; $('projVer').textContent = 'версия ' + BUILD;
   const logged = !!srv.code && !!srv.role, admin = srv.role === 'admin', on = srvOn(), cur = S.projectId, c = proj.conflict;
   let h = '';
   if (c) h += `<div class="proj-warn"><b>Проект изменили без вас.</b> ${c.updatedBy ? esc(c.updatedBy) + ', ' : ''}${esc(fmtDT(c.updatedAt))}. Так бывает, если проект открыт на двух компьютерах. Если загрузить версию с сервера, ваши последние правки пропадут. Если перезаписать, пропадут те.
     <div class="btns" style="margin-top:8px"><button class="btn" data-act="proj-theirs">Загрузить версию с сервера</button><button class="btn danger" data-act="proj-mine">Перезаписать моей версией</button></div></div>`;
   if (proj.busy) h += `<div class="note">${esc(proj.busy)}</div>`;
   if (proj.err && !proj.busy) h += `<div class="proj-warn">${esc(proj.err)}</div>`;
+  if (!cur && !admin) h += `<div class="proj-warn"><b>Проект не выбран.</b> Сейчас на экране демонстрационная кухня, она нигде не сохраняется. ${logged ? 'Откройте свой проект из списка или создайте новый.' : 'Войдите личным кодом, затем создайте проект или откройте свой. Закройте окно, если хотите просто посмотреть демо.'}</div>`;
   if (!logged){
     h += `<div class="sec"><h3>Вход</h3><div class="row3"><div class="field"><label for="prCode">Ваш личный код</label><input type="password" id="prCode" value="${esc(srv.code)}" autocomplete="off" placeholder="Выдаёт администратор"></div>
       <div class="field"><label for="prUrl">Адрес сервиса</label><input type="text" id="prUrl" value="${esc(srv.url)}"></div>
@@ -2875,4 +2877,6 @@ const onTheme = () => { applyStageBg(); build3D(false); };
 mq.addEventListener ? mq.addEventListener('change', onTheme) : mq.addListener(onTheme);
 new MutationObserver(onTheme).observe(document.documentElement, {attributes:true, attributeFilter:['data-theme']});
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => build3D(false));
+// без выбранного проекта открываем «Проекты»: вход, список, новый проект
+if (!S.projectId) setTimeout(() => { try { openProj(); } catch(e){} }, 400);
 </script>
