@@ -180,7 +180,21 @@
 - Рендеры подписываются «Визуализация, возможны отличия» (раздел 7: сгенерированные интерьеры не выдаём за реальные работы).
 - Логотип по разделу 9: белый на тёмном, серый `#545452` на светлом.
 
-### 11.3. Что нужно от владельца
+### 11.3. Фирменные файлы
 
-- Файлы шрифтов Prata и Golos Text (woff2, кириллица и латиница) и логотип в SVG — из репозитория сайта.
-- Фактура `stone.jpg`, если хотим «штукатурку» на экране входа и в КП.
+Лежат в `kp-calc/brand/` (состав — `brand/README.txt`):
+- `fonts/` — Prata 400 и Golos Text 400/500/600, woff2, кириллица и латиница, `fonts.css` с подключением. Лицензия SIL Open Font License: можно встраивать в портал и в PDF.
+- `logo/` — `cultura-group-logo-white.svg` (на тёмный фон) и `cultura-group-logo-gray.svg` (`#545452`, на светлый). Это трассировка PNG 2000 px, сверена с оригиналом. Для печати крупных форматов лучше исходник дизайнера (AI, EPS, SVG), если найдётся.
+- `texture/stone.jpg` — фактура штукатурки.
+
+Штукатурка (экран входа, обложка КП) делается как на сайте:
+
+```css
+.stone{
+  background:#3b3b3a url(stone.jpg) center/cover;
+  background-blend-mode:lighten;
+  /* края растворяются в фон #232322 маской-градиентом */
+  -webkit-mask-image:linear-gradient(to bottom,transparent,#000 12%,#000 88%,transparent);
+          mask-image:linear-gradient(to bottom,transparent,#000 12%,#000 88%,transparent);
+}
+```
