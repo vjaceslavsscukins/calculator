@@ -1,0 +1,642 @@
+<title>Калькулятор КП CULTURA</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600&family=Prata&display=swap">
+<style>
+/* Презентация портала: вкладки сверху; внутри — экраны портала. Тёмное поле CULTURA, рабочие таблицы на светлой вставке. */
+:root{
+  --bg:#232322; --bg2:#1c1c1b; --stone:#3b3b3a; --text:#f1f0ed; --muted:#a9a8a3;
+  --line:rgba(241,240,237,.2); --line-strong:rgba(241,240,237,.5);
+  --accent:#7d1e2b; --accent-hover:#9a3246; --accent-bright:#c4405a; --rose:#e0aab6;
+  --p-bg:#ebe8e3; --p-text:#262625; --p-muted:#666663; --p-line:#d3d3cf; --p-strong:#8f8f8a; --p-label:#7d1e2b; --p-row:#e1ded8; --p-input:#f7f6f3; --p-warn:#8a4b00;
+  --ok:#5b8a5e;
+  --f-head:"Prata","Times New Roman",Georgia,serif;
+  --f-body:"Golos Text",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  --r:2px; color-scheme:dark;
+}
+@media (prefers-color-scheme: light){:root:not([data-theme="dark"]){
+  --bg:#e4e1db; --bg2:#d9d6cf; --stone:#cfcbc3; --text:#262625; --muted:#5f5f5c; --line:#c9c6bf; --line-strong:#8f8f8a;
+  --accent-bright:#7d1e2b; --rose:#7d1e2b; --p-bg:#f7f6f3; --p-row:#ecebe6; --p-input:#ffffff; color-scheme:light}}
+:root[data-theme="light"]{
+  --bg:#e4e1db; --bg2:#d9d6cf; --stone:#cfcbc3; --text:#262625; --muted:#5f5f5c; --line:#c9c6bf; --line-strong:#8f8f8a;
+  --accent-bright:#7d1e2b; --rose:#7d1e2b; --p-bg:#f7f6f3; --p-row:#ecebe6; --p-input:#ffffff; color-scheme:light}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--text);font:15px/1.5 var(--f-body);margin:0}
+button,select,input{font:inherit}
+:focus-visible{outline:2px solid var(--rose);outline-offset:2px}
+.wrap{padding-left:max(24px,env(safe-area-inset-left,0px));padding-right:max(24px,env(safe-area-inset-right,0px))}
+/* шапка презентации */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg2);border-bottom:1px solid var(--line)}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg2)}
+.topin{display:flex;flex-wrap:wrap;align-items:center;gap:10px 24px;padding-block:12px}
+.logo{font:600 21px/1 var(--f-body);letter-spacing:-.02em;white-space:nowrap}
+.logo i{font:italic 400 13px Georgia,serif;color:var(--muted);margin-left:6px}
+.tabs{display:flex;flex-wrap:wrap;gap:2px;flex:1}
+.tabs a{color:var(--muted);text-decoration:none;padding:8px 12px;font-size:14px;border-bottom:2px solid transparent}
+.tabs a:hover{color:var(--text)}
+.tabs a.on{color:var(--text);border-bottom-color:var(--accent-bright)}
+.tools{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--muted);align-items:center}
+.seg{display:inline-flex;border:1px solid var(--line-strong)}
+.seg button{background:transparent;border:0;color:var(--muted);padding:6px 10px;cursor:pointer;font-size:12px}
+.seg button[aria-pressed="true"]{background:var(--text);color:var(--bg)}
+main{padding-block:26px 60px}
+section.view{display:flex;flex-direction:column;gap:18px}
+h1{font:400 clamp(26px,2.8vw,40px)/1.1 var(--f-head);text-transform:uppercase;margin:0;text-wrap:balance}
+h2{font:400 20px/1.2 var(--f-head);text-transform:uppercase;margin:0}
+.eyebrow{font:500 12px/1 var(--f-body);letter-spacing:.16em;text-transform:uppercase;color:var(--rose);margin-bottom:10px}
+.lead{color:var(--muted);max-width:70ch;margin:0}
+.btn{height:44px;padding:0 20px;border:1px solid var(--line-strong);background:transparent;color:var(--text);border-radius:var(--r);font-weight:600;font-size:12.5px;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center}
+.btn:hover{background:rgba(127,127,127,.12)}
+.btn.solid{background:var(--accent);border-color:var(--accent);color:#f1f0ed}
+.btn.solid:hover{background:var(--accent-hover)}
+.btn:disabled{opacity:.5;cursor:default}
+.crumbs{font-size:13px;color:var(--muted)}
+.crumbs b{color:var(--text);font-weight:500}
+.head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px}
+.pill{display:inline-block;border:1px solid var(--line-strong);padding:3px 8px;font:400 11px/1.4 var(--f-body);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);vertical-align:middle;margin-left:8px}
+.actions{display:flex;flex-wrap:wrap;gap:10px}
+/* путь */
+.flow{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:0;border-top:1px solid var(--line);border-left:1px solid var(--line)}
+.step{border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:18px;display:flex;flex-direction:column;gap:8px;min-height:190px}
+.step .n{font:400 30px/1 var(--f-head);color:var(--accent-bright)}
+.step h3{font:400 17px/1.2 var(--f-head);text-transform:uppercase;margin:0}
+.step p{margin:0;color:var(--muted);font-size:14px}
+.step .go{margin-top:auto;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--rose);text-decoration:none}
+.step.later{opacity:.6}
+.who{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
+.who div{border:1px solid var(--line);padding:16px}
+.who b{font:400 16px var(--f-head);text-transform:uppercase;display:block;margin-bottom:6px}
+.who p{margin:0;color:var(--muted);font-size:14px}
+/* расчёт */
+.work{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:20px;align-items:start}
+.panel{background:var(--p-bg);color:var(--p-text);border-radius:var(--r);padding:18px 18px 12px;min-width:0}
+.panel h2{font-size:18px}
+.note{color:var(--p-muted);font-size:13px;margin:4px 0 0}
+.tablewrap{overflow-x:auto;margin-top:10px}
+table{width:100%;border-collapse:collapse;font-size:14px;min-width:820px}
+th{font:500 11px/1.2 var(--f-body);letter-spacing:.12em;text-transform:uppercase;color:var(--p-muted);text-align:left;padding:8px;border-bottom:1px solid var(--p-strong)}
+th.num,td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+td{padding:6px 8px;border-bottom:1px solid var(--p-line);height:40px;vertical-align:middle}
+tr.block td{background:var(--p-row);font:400 14px/1 var(--f-head);text-transform:uppercase;letter-spacing:.02em;height:36px}
+tr.block td span{float:right;font:500 13px var(--f-body);letter-spacing:0;text-transform:none;font-variant-numeric:tabular-nums}
+tr.add td{height:34px;border-bottom:1px solid var(--p-strong)}
+.pro{font-size:12px;color:var(--p-muted);font-family:ui-monospace,Menlo,Consolas,monospace}
+.pro.hand{font-family:var(--f-body);color:var(--p-label);font-size:11px;letter-spacing:.08em;text-transform:uppercase}
+td select{width:100%;min-width:220px}
+.in{height:32px;border:1px solid var(--p-line);background:var(--p-input);color:var(--p-text);padding:0 6px;border-radius:var(--r);font-variant-numeric:tabular-nums}
+.qty{width:76px;text-align:right}
+.name{width:100%;min-width:200px}
+.qty.edited{border-color:var(--p-label);box-shadow:inset 3px 0 0 var(--p-label)}
+.sub{display:block;font-size:11px;color:var(--p-muted);line-height:1.3;margin-top:2px}
+.sub.mark{color:var(--p-label)}
+body.mgr .cost{display:none}
+.link{border:0;background:transparent;color:var(--p-label);cursor:pointer;font-size:12px;letter-spacing:.08em;text-transform:uppercase;padding:2px 0;text-decoration:underline;text-underline-offset:3px}
+.x{border:0;background:transparent;color:var(--p-muted);cursor:pointer;font-size:16px;line-height:1;padding:4px}
+.unparsed{margin:12px 0 4px;font-size:13px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.unparsed b{font-weight:500;color:var(--p-label)}
+.chip{border:1px solid var(--p-line);padding:4px 8px;display:inline-flex;gap:8px;align-items:center;background:var(--p-input)}
+.light{margin-top:18px;border:1px solid var(--p-strong);padding:14px}
+.light h3{margin:0;font:400 16px/1.2 var(--f-head);text-transform:uppercase}
+.lgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px 16px;margin-top:12px;font-size:13px}
+.lgrid label{display:flex;flex-direction:column;gap:4px;color:var(--p-muted)}
+.fixed{height:32px;display:flex;align-items:center;border:1px dashed var(--p-line);padding:0 8px;color:var(--p-text)}
+.seglist{margin-top:12px;display:flex;flex-direction:column;gap:6px;font-size:13px}
+.segrow{display:grid;grid-template-columns:minmax(0,1fr) 90px minmax(0,1fr) 28px;gap:8px;align-items:center}
+.segrow .in{width:100%;min-width:0}
+.lsum{margin-top:12px;display:flex;flex-wrap:wrap;gap:8px 22px;font-size:13px;color:var(--p-muted);font-variant-numeric:tabular-nums}
+.lsum b{color:var(--p-text);font-weight:500}
+.warn{margin-top:10px;font-size:13px;color:var(--p-warn);border-left:3px solid var(--p-warn);padding:4px 10px}
+.totals{position:sticky;top:calc(env(safe-area-inset-top,0px) + 76px);border:1px solid var(--line);padding:18px;display:flex;flex-direction:column;gap:10px}
+.totals h2{font-size:18px;margin-bottom:4px}
+.trow{display:flex;justify-content:space-between;gap:10px;font-size:14px;color:var(--muted);font-variant-numeric:tabular-nums}
+.trow b{color:var(--text);font-weight:500}
+.trow em{font-style:normal;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--rose);margin-left:6px}
+.trow.small{font-size:13px;padding-left:10px}
+.disc{display:flex;justify-content:space-between;align-items:center;font-size:14px;color:var(--muted)}
+.disc input{width:64px;height:32px;text-align:right;border:1px solid var(--line-strong);background:transparent;color:var(--text);padding:0 6px;border-radius:var(--r)}
+.hr{border-top:1px solid var(--line)}
+.total{border-top:1px solid var(--line-strong);padding-top:12px;display:flex;flex-direction:column;gap:4px}
+.total span{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--rose)}
+.total b{font:400 30px/1.1 var(--f-head);font-variant-numeric:lining-nums tabular-nums}
+.totals .btn{width:100%}
+.foot{font-size:12px;color:var(--muted);margin:0}
+.grouplist{display:flex;flex-direction:column;gap:4px;border-left:1px solid var(--line);margin-left:2px}
+.images{border:1px solid var(--line);padding:16px;display:flex;flex-direction:column;gap:12px}
+.thumbs{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start}
+.thumb{width:220px;max-width:100%;display:flex;flex-direction:column;gap:6px;font-size:12px;color:var(--muted);cursor:pointer;background:none;border:0;padding:0;text-align:left;color:inherit}
+.thumb svg{width:100%;height:auto;display:block;border:1px solid var(--line)}
+.thumb.sel svg{outline:2px solid var(--accent-bright);outline-offset:3px}
+.thumb span{color:var(--muted)}
+.thumb.busy svg{opacity:.35}
+/* сборка КП */
+.kpgrid{display:grid;grid-template-columns:260px minmax(0,1fr) 260px;gap:18px;align-items:start}
+.box{border:1px solid var(--line);padding:16px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.box h2{font-size:16px}
+.calc{display:grid;grid-template-columns:20px minmax(0,1fr);gap:4px 10px;align-items:start;font-size:14px;padding:8px 0;border-bottom:1px solid var(--line)}
+.calc small{grid-column:2;color:var(--muted);font-size:12px;font-variant-numeric:tabular-nums}
+.field{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted)}
+.field input,.field select{height:36px;border:1px solid var(--line-strong);background:transparent;color:var(--text);padding:0 8px;border-radius:var(--r)}
+.field select option{color:#262625}
+.prev{background:var(--p-bg);color:var(--p-text);padding:20px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.prev .it{display:grid;grid-template-columns:150px minmax(0,1fr) auto;gap:12px;align-items:center;border-bottom:1px solid var(--p-line);padding-bottom:12px}
+.prev .it svg{width:100%;height:auto;display:block}
+.prev .it b{font:400 16px var(--f-head);text-transform:uppercase}
+.prev .num{font-variant-numeric:tabular-nums;white-space:nowrap}
+.prev .sum{display:flex;justify-content:space-between;font-size:14px;font-variant-numeric:tabular-nums}
+.prev .sum.big{font:400 22px var(--f-head)}
+.made{border:1px solid var(--accent-bright);padding:14px;display:flex;flex-direction:column;gap:10px}
+.made code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;word-break:break-all;color:var(--text)}
+.views{font-size:13px;color:var(--muted)}
+/* страница клиента */
+.client-note{display:flex;flex-wrap:wrap;gap:10px 24px;font-size:13px;color:var(--muted);border:1px dashed var(--line-strong);padding:10px 14px}
+.client-note b{color:var(--text);font-weight:500}
+.land{background:#232322;color:#f1f0ed;border:1px solid var(--line);max-width:1100px;width:100%;margin-inline:auto;overflow:hidden}
+.land .hero{position:relative}
+.land .hero svg{display:block;width:100%;height:auto}
+.land .hero .cap{position:absolute;left:0;right:0;bottom:0;padding:28px clamp(16px,4vw,48px);background:linear-gradient(transparent,#232322 70%)}
+.land .cap .eb{font:500 12px/1 var(--f-body);letter-spacing:.16em;text-transform:uppercase;color:#e0aab6;margin-bottom:10px}
+.land .cap h2{font:400 clamp(24px,3.4vw,46px)/1.1 var(--f-head);text-transform:uppercase}
+.land .body{padding:12px clamp(16px,4vw,48px) 40px;display:flex;flex-direction:column;gap:30px}
+.land .lead2{color:#a9a8a3;max-width:60ch;margin:0;font-size:16px}
+.land .prod{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:24px;border-top:1px solid rgba(241,240,237,.2);padding-top:24px}
+.land .prod .no{font:400 13px var(--f-body);color:#c4405a;letter-spacing:.1em}
+.land .prod h3{font:400 24px/1.1 var(--f-head);text-transform:uppercase;margin:6px 0 12px}
+.land .prod svg{width:100%;height:auto;display:block}
+.land .prod .vis{font-size:11px;color:#a9a8a3;margin-top:6px}
+.land dl{margin:0;display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px 14px;font-size:14px}
+.land dt{color:#a9a8a3}
+.land dd{margin:0}
+.land .price{font:400 26px var(--f-head);margin-top:14px;font-variant-numeric:lining-nums}
+.land .facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));border:1px solid rgba(241,240,237,.2)}
+.land .facts div{padding:16px;border-right:1px solid rgba(241,240,237,.2)}
+.land .facts b{display:block;font:400 22px var(--f-head)}
+.land .facts span{font-size:13px;color:#a9a8a3}
+.land .final{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:20px;border-top:1px solid rgba(241,240,237,.5);padding-top:24px}
+.land .final b{font:400 clamp(28px,3.4vw,44px) var(--f-head)}
+.land .final small{display:block;color:#a9a8a3;font-size:13px}
+.land .mgr{font-size:14px;color:#a9a8a3}
+.land .btn{color:#f1f0ed;border-color:rgba(241,240,237,.5)}
+/* карта прайсов */
+.mapwrap{position:relative;border:1px solid var(--line);padding:22px;overflow-x:auto}
+.map{position:relative;display:grid;grid-template-columns:170px 230px 230px minmax(260px,1fr);gap:28px;align-items:start;min-width:980px}
+.map svg.lines{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible}
+.map svg.lines path{fill:none;stroke:var(--line-strong);stroke-width:1}
+.col{display:flex;flex-direction:column;gap:8px;position:relative;z-index:1}
+.node{border:1px solid var(--line-strong);background:var(--bg);color:var(--text);padding:10px 12px;text-align:left;cursor:pointer;border-radius:var(--r);font-size:14px;display:flex;justify-content:space-between;gap:8px;align-items:center}
+.node small{color:var(--muted);font-size:11px;white-space:nowrap}
+.node.on{border-color:var(--accent-bright);box-shadow:inset 3px 0 0 var(--accent-bright)}
+.node.root{font:400 18px/1.2 var(--f-head);text-transform:uppercase;cursor:default;align-self:start;margin-top:120px}
+.tag{font-size:10px;letter-spacing:.1em;text-transform:uppercase;padding:2px 6px;border:1px solid currentColor;white-space:nowrap}
+.tag.own{color:var(--ok)}
+.tag.buy{color:var(--muted)}
+.tag.ask{color:var(--accent-bright)}
+.card{border:1px solid var(--line);padding:16px;display:flex;flex-direction:column;gap:10px;font-size:14px;position:sticky;top:0;background:var(--bg)}
+.card h3{font:400 18px/1.2 var(--f-head);text-transform:uppercase;margin:0}
+.card dl{margin:0;display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px 12px}
+.card dt{color:var(--muted)}
+.card dd{margin:0}
+.card .q{border-left:3px solid var(--accent-bright);padding:6px 10px;color:var(--text);font-size:13px}
+.chain{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:14px}
+.chain span{border:1px solid var(--line-strong);padding:8px 12px}
+.chain i{font-style:normal;color:var(--rose)}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px}
+.list{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px;color:var(--muted)}
+.list b{color:var(--text);font-weight:500}
+.disc-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:18px}
+.qa{border:1px solid var(--line);padding:16px;display:flex;flex-direction:column;gap:6px}
+.qa .t{font:400 16px/1.25 var(--f-head);text-transform:uppercase}
+.qa p{margin:0;color:var(--muted);font-size:14px}
+.done{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:6px;font-size:14px}
+.done li{border-bottom:1px solid var(--line);padding-bottom:6px;display:flex;gap:10px}
+.done li::before{content:"✓";color:var(--ok)}
+@media (max-width:1100px){.work,.kpgrid{grid-template-columns:minmax(0,1fr)}.totals{position:static}}
+@media (max-width:760px){.prev .it{grid-template-columns:minmax(0,1fr)}.land .prod{grid-template-columns:minmax(0,1fr)}.segrow{grid-template-columns:minmax(0,1fr) 70px 28px}.segrow select{grid-column:1/3}.wrap{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<header class="top"><div class="wrap topin">
+  <div class="logo">cultura<i>group</i></div>
+  <nav class="tabs" aria-label="Разделы презентации">
+    <a href="#flow">Как это работает</a><a href="#calc">Расчёт</a><a href="#kp">Собрать КП</a><a href="#client">КП для клиента</a><a href="#prices">Прайсы и наценки</a><a href="#discuss">На обсуждение</a>
+  </nav>
+  <div class="tools">
+    <span>Смотрит <span class="seg"><button type="button" id="rMgr" aria-pressed="false">Менеджер</button><button type="button" id="rBoss" aria-pressed="true">Руководитель</button></span></span>
+    <span>Тема <span class="seg"><button type="button" id="tDark">Тёмная</button><button type="button" id="tLight">Светлая</button></span></span>
+  </div>
+</div></header>
+
+<main class="wrap">
+
+<!-- 1. ПУТЬ -->
+<section class="view" id="v-flow">
+  <div><div class="eyebrow">Калькулятор КП · макет для обсуждения</div>
+  <h1>От рисунка в PRO100 до КП клиенту</h1></div>
+  <p class="lead">Менеджер больше не переносит цифры в Excel и не собирает КП руками. Все расчёты хранятся в одном месте, руководитель видит их сразу. Данные и цены на этой странице — пример.</p>
+  <div class="flow">
+    <div class="step"><div class="n">1</div><h3>Клиент</h3><p>Имя и телефон, город. Все расчёты и КП клиента — в его карточке.</p><a class="go" href="#calc">Экран расчёта →</a></div>
+    <div class="step"><div class="n">2</div><h3>Вставка из PRO100</h3><p>Менеджер копирует вывод PRO100 и вставляет. Площади и штуки сами встают в нужные строки.</p><a class="go" href="#calc">Посмотреть →</a></div>
+    <div class="step"><div class="n">3</div><h3>Расчёт как в Excel</h3><p>Блоки и строки как в привычной книге. Материал из прайса, количество можно исправить, свои строки.</p><a class="go" href="#calc">Посмотреть →</a></div>
+    <div class="step"><div class="n">4</div><h3>Эскиз и рендер</h3><p>Скриншот из PRO100 → «Сделать рендер». Нейросеть делает красивую картинку для КП.</p><a class="go" href="#calc">Внизу экрана расчёта →</a></div>
+    <div class="step"><div class="n">5</div><h3>Собрать КП</h3><p>Отметить расчёты клиента: кухня, шкаф, вариант. Скидка, сроки, условия.</p><a class="go" href="#kp">Посмотреть →</a></div>
+    <div class="step"><div class="n">6</div><h3>Ссылка и PDF</h3><p>У каждого КП своя страница-презентация и PDF. Отправка в WhatsApp или Telegram. Видно, что клиент открыл.</p><a class="go" href="#client">Как видит клиент →</a></div>
+    <div class="step"><div class="n">7</div><h3>Спецификация и договор</h3><p>Из того же КП, без перепечатывания. Образец салона доработаем.</p></div>
+    <div class="step later"><div class="n">8</div><h3>Битрикс24</h3><p>На перспективу: каждое изделие — сделка, стадии двигаются в обе стороны.</p></div>
+  </div>
+  <div class="who">
+    <div><b>Менеджер</b><p>Свои клиенты и расчёты, розничная цена, КП и документы. Себестоимость и наценки не видит.</p></div>
+    <div><b>Руководитель</b><p>Все расчёты своего города, может править. Себестоимость, маржа, прайсы, сводка.</p></div>
+    <div><b>Владелец</b><p>Всё по Москве и Краснодару, наценки, шаблоны, пользователи, журнал изменений.</p></div>
+  </div>
+</section>
+
+<!-- 2. РАСЧЁТ -->
+<section class="view" id="v-calc" hidden>
+  <div class="crumbs">Клиенты / <b>Анна К. (пример)</b> · Краснодар / Расчёты</div>
+  <div class="head">
+    <div><div class="eyebrow">Расчёт № 2</div><h1>Кухня угловая <span class="pill">черновик · сохранено 14:32</span></h1></div>
+    <div class="actions"><button class="btn" type="button">Вставить из PRO100</button><button class="btn" type="button">Скопировать расчёт</button></div>
+  </div>
+  <div class="work">
+    <div style="display:flex;flex-direction:column;gap:18px;min-width:0">
+      <section class="panel" aria-label="Расчёт">
+        <h2>Материалы и фурнитура</h2>
+        <p class="note">Количество пришло из PRO100, его можно исправить. В каждом блоке — строка из прайса или своя; «+ вид» добавляет ещё одну позицию того же типа.</p>
+        <div class="tablewrap"><table>
+          <thead><tr><th>Строка</th><th>Материал / позиция</th><th class="num">Кол-во</th><th>Ед.</th><th class="num cost">Себест. за ед.</th><th class="num cost">Себестоимость</th><th class="num">Розница</th><th></th></tr></thead>
+          <tbody id="rows"></tbody>
+        </table></div>
+        <div class="unparsed" id="unparsed"></div>
+        <div class="light" aria-label="Расчёт подсветки">
+          <h3>Подсветка</h3>
+          <p class="note">Менеджер задаёт профиль и участки. Мощность, блок питания и выключатели считаются сами. Паз включён в цену профиля.</p>
+          <div class="lgrid">
+            <label>Лента<span class="fixed">Лента 24 В, 4000 K (одна позиция)</span></label>
+            <label for="lProf">Профиль<select class="in" id="lProf"></select></label>
+          </div>
+          <div class="seglist" id="segs"></div>
+          <button class="link" type="button" id="addSeg">+ участок</button>
+          <div class="lsum" id="lsum"></div>
+          <div id="lwarn"></div>
+        </div>
+      </section>
+      <section class="images" aria-label="Картинки">
+        <h2>Картинки для КП</h2>
+        <p class="foot">Эскиз — скриншот из PRO100. Рендер делает нейросеть по эскизу и материалам расчёта. Отмеченная картинка идёт в КП.</p>
+        <div class="thumbs" id="thumbs"></div>
+        <div class="actions"><button class="btn" type="button">Загрузить эскиз</button><button class="btn solid" type="button" id="doRender">Сделать рендер</button></div>
+      </section>
+    </div>
+    <aside class="totals" aria-label="Итог">
+      <h2>Итог</h2>
+      <div class="trow cost"><span>Себестоимость<em>руководитель</em></span><b id="tCost"></b></div>
+      <div class="grouplist cost" id="tGroups"></div>
+      <div class="trow cost"><span>Производственная</span><b id="tProd"></b></div>
+      <div class="trow"><span>Розница</span><b id="tRetail"></b></div>
+      <div class="disc"><label for="disc">Скидка, %</label><input id="disc" type="number" min="0" max="30" step="1" value="5"></div>
+      <div class="trow"><span>Мебель со скидкой</span><b id="tAfter"></b></div>
+      <div class="hr"></div>
+      <div class="trow"><span>Доставка и монтаж 10 %<em>без скидки</em></span><b id="tDeliv"></b></div>
+      <div class="total"><span>Итого клиенту</span><b id="tTotal"></b></div>
+      <div class="trow cost"><span>Маржа</span><b id="tMargin"></b></div>
+      <button class="btn solid" type="button">Сохранить расчёт</button>
+      <a class="btn" href="#kp">Собрать КП</a>
+      <p class="foot">Пример: наценка производства ×2,4 только на своё (ЛДСП корпус, плитные фасады), розница ×1,9 на всё. ЛДСП: лист ÷ площадь × 1,2 + 150 ₽/м².</p>
+    </aside>
+  </div>
+</section>
+
+<!-- 3. СБОРКА КП -->
+<section class="view" id="v-kp" hidden>
+  <div class="crumbs">Клиенты / <b>Анна К. (пример)</b> / КП</div>
+  <div><div class="eyebrow">Собрать КП</div><h1>Одно предложение на весь заказ</h1></div>
+  <div class="kpgrid">
+    <div class="box"><h2>Расчёты клиента</h2><div id="kpCalcs"></div><p class="foot">Порядок в КП — как в списке.</p></div>
+    <div class="prev" id="kpPrev" aria-label="Превью КП"></div>
+    <div class="box">
+      <h2>Параметры</h2>
+      <label class="field" for="kpTerm">Срок изготовления<input id="kpTerm" value="45 рабочих дней"></label>
+      <label class="field" for="kpPay">Оплата<select id="kpPay"><option>70 % аванс, 30 % перед доставкой</option><option>50 % / 50 %</option><option>100 % при заключении</option></select></label>
+      <label class="field" for="kpValid">Действует до<input id="kpValid" value="10.11.2026"></label>
+      <button class="btn solid" type="button" id="kpMake">Сформировать КП</button>
+      <div id="kpMade"></div>
+    </div>
+  </div>
+</section>
+
+<!-- 4. СТРАНИЦА КЛИЕНТА -->
+<section class="view" id="v-client" hidden>
+  <div class="client-note"><span><b>Так клиент видит КП по ссылке.</b> Без входа, ссылка с длинным случайным ключом.</span><span id="viewInfo"></span></div>
+  <article class="land" id="land"></article>
+</section>
+
+<!-- 5. ПРАЙСЫ -->
+<section class="view" id="v-prices" hidden>
+  <div><div class="eyebrow">Прайсы и наценки</div><h1>Карта групп товаров</h1></div>
+  <p class="lead">Нажмите на категорию, затем на группу. Цены в каждой группе обновляются загрузкой файла поставщика, наценка задаётся в одном месте.</p>
+  <div class="mapwrap"><div class="map" id="map">
+    <svg class="lines" id="mapLines" aria-hidden="true"></svg>
+    <div class="col"><div class="node root">Прайс CULTURA</div></div>
+    <div class="col" id="mapCats"></div>
+    <div class="col" id="mapGroups"></div>
+    <div class="col"><div class="card" id="mapCard"></div></div>
+  </div></div>
+  <div class="two">
+    <div class="box"><h2>Как считается цена</h2>
+      <div class="chain"><span>Себестоимость</span><i>× наценка производства<br><small>только своё</small></i><span>Производственная</span><i>× розничная наценка</i><span>Розница</span></div>
+      <ol class="list">
+        <li><b>Себестоимость</b> — чистая цена материала. ЛДСП: лист ÷ площадь листа × 1,2 (отходы) + 150 ₽/м² (кромка).</li>
+        <li><b>Наценка производства</b> — одна на всё, что делаем сами: ЛДСП корпус и плитные фасады (пилим, кромим, присаживаем, собираем).</li>
+        <li><b>Розничная наценка</b> — одна на всё.</li>
+        <li><b>Доставка и монтаж</b> — 10 % отдельно, скидка на них не действует. Москва и Краснодар — одинаково.</li>
+      </ol></div>
+    <div class="box"><h2>Как менять цены без пересборки</h2>
+      <ol class="list">
+        <li>Получили новый прайс поставщика (Excel).</li>
+        <li>Прайсы → нужная группа → «Загрузить прайс».</li>
+        <li>Программа сама находит позиции по артикулу и показывает: что подорожало, что новое, что пропало.</li>
+        <li>«Применить». Новые расчёты считаются по новым ценам, отправленные КП не меняются.</li>
+        <li>Наценку меняет владелец в одном месте — она сразу действует для всех групп.</li>
+      </ol></div>
+  </div>
+</section>
+
+<!-- 6. НА ОБСУЖДЕНИЕ -->
+<section class="view" id="v-discuss" hidden>
+  <div><div class="eyebrow">На обсуждение</div><h1>Что решено и что обсудить</h1></div>
+  <div class="two">
+    <div class="box"><h2>Решено</h2><ul class="done">
+      <li>Экран расчёта «как в Excel», свободные строки в каждом блоке, несколько видов петель и ящиков</li>
+      <li>Количество из PRO100, менеджер может исправить</li>
+      <li>Декор убран, вместо него свободные строки; кромка заложена в +150 ₽/м² к ЛДСП</li>
+      <li>Себестоимость → наценка производства → розничная наценка; единые для Москвы и Краснодара</li>
+      <li>Доставка и монтаж 10 % отдельно, скидка на них не действует</li>
+      <li>Подсветка: одна лента 24 В 4000 K, паз в цене профиля, блок питания подбирается по мощности</li>
+      <li>Каждое КП — PDF и ссылка-презентация, видно открытие</li>
+      <li>Роли: владелец, руководитель города, менеджер; города Москва и Краснодар</li>
+      <li>Битрикс24 — на перспективу: изделие = сделка</li>
+      <li>Хостинг Timeweb, дизайн CULTURA GROUP</li>
+    </ul></div>
+    <div class="disc-grid" style="grid-template-columns:minmax(0,1fr)">
+      <div class="qa"><div class="t">1. Плитные фасады</div><p>AGT, ALVIC, Perfect Sense, Fenix — делаем сами или покупаем? От этого зависит, идёт ли на них наценка производства.</p></div>
+      <div class="qa"><div class="t">2. Значения наценок</div><p>Производство и розница. Подбираем на 3 реальных расчётах: портал покажет старый и новый итог рядом.</p></div>
+      <div class="qa"><div class="t">3. Поставщики ЛДСП</div><p>Egger, Кроношпан и третий — уточнить название. Размеры листов для каждого.</p></div>
+      <div class="qa"><div class="t">4. Цены</div><p>Фурнитура и блоки питания — дадите вы. Троя ×0,6 и Ботаника ×0,8 в книге — это наша закупка (скидка дилера)?</p></div>
+      <div class="qa"><div class="t">5. Страница КП для клиента</div><p>Что добавить: о компании, производство, гарантия, отзывы, этапы работы?</p></div>
+      <div class="qa"><div class="t">6. Спецификация</div><p>Берём образец салона и доводим под CULTURA: какие поля оставить.</p></div>
+    </div>
+  </div>
+</section>
+</main>
+
+<script>
+// ---------- прайс-пример (цены частично из книги 2026) ----------
+const G={
+  ldsp:{unit:'м²',own:true,items:[['w1000','Egger W1000 ST9 Белый премиум',6200,5.796],['u961','Egger U961 ST2 Графит',6800,5.796],['k101','Кроношпан 0101 PE Белый',4700,5.796]]},
+  facade:{unit:'м²',items:[['agt','AGT Supramat',5200,0,1],['alvic','ALVIC Luxe',6100,0,1],['ps','Egger Perfect Sense',4900,0,1],['fenix','Fenix NTM',11800,0,1],['bot','Ботаника МДФ, кат. 1',7656,0,0],['emal','Эмаль матовая',9800,0,0],['shpon','Шпон',14500,0,0],['massiv','Массив ясеня',24500,0,0],['glass','Стекло в алюминиевой рамке',8900,0,0]]},
+  hdf:{unit:'м²',items:[['hdf-w','ХДФ белый',400],['hdf-g','ХДФ серый',400],['hdf-b','ХДФ чёрный',400]]},
+  top:{unit:'м.п.',items:[['troya14','Троя 38 мм, гр. 1–4',2622],['troya9','Троя 38 мм, гр. 9',3940],['botds','Ботаника ДСП 38',3100]]},
+  panel:{unit:'м.п.',items:[['troyap','Троя стеновая, гр. 1–4',2346],['botp','Ботаника ДСП стеновая',1114]]},
+  plinth:{unit:'м.п.',items:[['pl-low','Плинтус низкий',500],['pl-high','Плинтус высокий',650]]},
+  hinge:{unit:'шт',items:[['blum','Петля Blum с доводчиком',450],['blumc','Петля Blum в угловой шкаф',590],['fx','Петля Firmax с доводчиком',180]]},
+  lift:{unit:'шт',items:[['hk','Aventos HK top',8800],['hf','Aventos HF',16085],['gas','Газлифт',250]]},
+  drawer:{unit:'компл',items:[['lgb','LEGRABOX Blum',9734],['tbx','TANDEMBOX antaro Blum',7027],['tbxi','Внутренний TANDEMBOX antaro',8798],['fxh','Firmax скрытого монтажа',1500]]},
+  gola:{unit:'м.п.',items:[['gb','Профиль Gola, чёрный',1500],['ga','Профиль Gola, алюминий',1500]]},
+  dry:{unit:'шт',items:[['su800','Сушка SU02/800',3808],['mira','Корзина-сушка MIRA 800',11250]]},
+  bottle:{unit:'шт',items:[['b150','Бутылочница Boyard 150',4989],['b200','Бутылочница Boyard 200',5855]]},
+  socle:{unit:'м.п.',items:[['s100','Цоколь 100 мм',475],['s150','Цоколь 150 мм',680]]}
+};
+const K_PROD=2.4,K_SHOP=1.9,EDGE=150,WASTE=1.2;
+const CG=['ЛДСП корпус','Фасады плитные','Фасады покупные','Столешницы и панели','Фурнитура','Подсветка','Свободные строки'];
+const L={tape:['Лента 24 В, 4000 K',890,14.4,10],
+  profs:[['vrez','Профиль врезной + рассеиватель',1350],['nakl','Профиль накладной + рассеиватель',780]],
+  psu:[[60,1500],[100,2100],[150,2700],[200,3300],[300,4600]],
+  sw:[['btn','Кнопка врезная',650],['sens','Сенсор на взмах',1200],['door','Датчик открывания двери',900]],reserve:1.3};
+const light={prof:'vrez',segs:[{name:'Под верхними шкафами',len:3.0,sw:'sens'},{name:'Внутри пенала',len:1.2,sw:'door'}]};
+const BLOCKS=[['up','Верхний блок',['ldsp','facade','hdf']],['low','Нижний блок',['ldsp','facade','hdf']],['top','Столешница, стеновая панель, плинтус',['top','panel','plinth']],['hw','Фурнитура',['hinge','lift','drawer','gola','dry','bottle','socle','hdf']],['light','Подсветка',[]],['free','Свободные строки',[]]];
+const rows=[
+  {b:'up',pro:'ЛДСП_верх',g:'ldsp',mat:'w1000',q:3.08},
+  {b:'up',pro:'Фасад_верх',g:'facade',mat:'agt',q:2.90},
+  {b:'low',pro:'ЛДСП_низ',g:'ldsp',mat:'w1000',q:5.87},
+  {b:'low',pro:'Фасад_низ',g:'facade',mat:'emal',q:3.48},
+  {b:'low',pro:'ХДФ',g:'hdf',mat:'hdf-w',q:0.65},
+  {b:'top',pro:'Столешница',g:'top',mat:'troya14',q:3.2},
+  {b:'top',pro:'Фартук',g:'panel',mat:'troyap',q:3.2},
+  {b:'top',pro:'Плинтус',g:'plinth',mat:'pl-low',q:3.2},
+  {b:'hw',pro:'Петли',g:'hinge',mat:'blum',q:16,pq:12},
+  {b:'hw',pro:null,g:'hinge',mat:'blumc',q:2},
+  {b:'hw',pro:'Подъемный_механизм',g:'lift',mat:'hk',q:1},
+  {b:'hw',pro:'Выкатной_механизм',g:'drawer',mat:'lgb',q:3},
+  {b:'hw',pro:null,g:'drawer',mat:'tbxi',q:1},
+  {b:'hw',pro:'Профиль_GOLA_G13',g:'gola',mat:'gb',q:4.2},
+  {b:'hw',pro:'Сушка',g:'dry',mat:'su800',q:1},
+  {b:'hw',pro:'Цоколь',g:'socle',mat:'s100',q:3.2},
+  {b:'free',own:true,name:'Карниз «Ника» H 86 мм, м.п.',q:3.2,price:2100}
+];
+rows.forEach(r=>{if(r.pq==null)r.pq=r.q});
+let unparsed=[['Евровинт','64 шт'],['Полкодержатель','16 шт'],['Ножка','12 шт']];
+const $=id=>document.getElementById(id);
+const rub=n=>Math.round(n).toLocaleString('ru-RU').replace(/\s/g,' ')+' ₽';
+const num=n=>(+n).toLocaleString('ru-RU',{maximumFractionDigits:2});
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const item=(g,id)=>G[g].items.find(i=>i[0]===id)||G[g].items[0];
+function unitCost(r){if(r.own||r.auto)return r.price;const it=item(r.g,r.mat);return r.g==='ldsp'?it[2]/it[3]*WASTE+EDGE:it[2]}
+function isOwn(r){if(r.own||r.auto)return false;if(r.g==='ldsp')return true;if(r.g==='facade')return !!item(r.g,r.mat)[4];return false}
+function cgOf(r){if(r.auto)return 'Подсветка';if(r.own)return 'Свободные строки';if(r.g==='ldsp')return 'ЛДСП корпус';if(r.g==='facade')return item(r.g,r.mat)[4]?'Фасады плитные':'Фасады покупные';if(['top','panel','plinth'].includes(r.g))return 'Столешницы и панели';return 'Фурнитура'}
+const cost=r=>r.q*unitCost(r),prod=r=>cost(r)*(isOwn(r)?K_PROD:1),retail=r=>prod(r)*K_SHOP;
+function opts(g,sel){
+  if(g==='facade'){const it=G.facade.items,o=(arr)=>arr.map(i=>`<option value="${i[0]}"${i[0]===sel?' selected':''}>${esc(i[1])}</option>`).join('');
+    return `<optgroup label="Плитные (своё производство)">${o(it.filter(i=>i[4]))}</optgroup><optgroup label="Покупные">${o(it.filter(i=>!i[4]))}</optgroup>`}
+  return G[g].items.map(i=>`<option value="${i[0]}"${i[0]===sel?' selected':''}>${esc(i[1])}</option>`).join('')}
+function groupOpts(b){return BLOCKS.find(x=>x[0]===b)[2].map(g=>G[g].items.map(i=>`<option value="${g}|${i[0]}">${esc(i[1])}</option>`).join('')).join('')}
+
+function lightCalc(){
+  const t=L.tape,p=L.profs.find(x=>x[0]===light.prof);
+  const len=light.segs.reduce((s,x)=>s+(+x.len||0),0),watt=len*t[2],need=watt*L.reserve;
+  let psu=L.psu.find(x=>x[0]>=need),n=1;if(!psu){psu=L.psu[L.psu.length-1];n=Math.ceil(need/psu[0])}
+  const out=[{b:'light',auto:true,name:t[0],unit:'м.п.',q:+len.toFixed(2),price:t[1]},{b:'light',auto:true,name:p[1]+' (паз включён)',unit:'м.п.',q:+len.toFixed(2),price:p[2]},
+    {b:'light',auto:true,name:`Блок питания 24 В, ${psu[0]} Вт`,unit:'шт',q:n,price:psu[1],psuNote:true}];
+  const sw={};light.segs.forEach(s=>sw[s.sw]=(sw[s.sw]||0)+1);
+  Object.entries(sw).forEach(([k,c])=>{const s=L.sw.find(x=>x[0]===k);out.push({b:'light',auto:true,name:s[1],unit:'шт',q:c,price:s[2]})});
+  const warn=light.segs.filter(s=>+s.len>t[3]).map(s=>`«${esc(s.name)}» ${num(s.len)} м длиннее ${t[3]} м: нужен второй ввод питания (значение уточнить у поставщика ленты).`);
+  return {out,len,watt,need,psu:psu[0],n,warn};
+}
+let ALL=[];
+function totalsData(){
+  const c=ALL.reduce((s,r)=>s+cost(r),0),p=ALL.reduce((s,r)=>s+prod(r),0),rt=ALL.reduce((s,r)=>s+retail(r),0);
+  const d=Math.min(30,Math.max(0,+$('disc').value||0))/100;return {c,p,rt,d,after:rt*(1-d),deliv:rt*0.10};
+}
+function renderLightInputs(){
+  $('lProf').innerHTML=L.profs.map(p=>`<option value="${p[0]}"${p[0]===light.prof?' selected':''}>${esc(p[1])}</option>`).join('');
+  $('segs').innerHTML=light.segs.map((s,i)=>`<div class="segrow"><input class="in" aria-label="Участок" data-s="${i}" data-k="name" value="${esc(s.name)}"><input class="in" type="number" min="0" step="0.1" aria-label="Длина, м" data-s="${i}" data-k="len" value="${s.len}"><select class="in" aria-label="Включение" data-s="${i}" data-k="sw">${L.sw.map(w=>`<option value="${w[0]}"${w[0]===s.sw?' selected':''}>${esc(w[1])}</option>`).join('')}</select><button class="x" type="button" aria-label="Удалить участок" data-del="${i}">×</button></div>`).join('');
+}
+function renderCalc(){
+  const lr=lightCalc();ALL=rows.filter(r=>r.b!=='light').concat(lr.out);
+  let html='';
+  BLOCKS.forEach(([b,title,gs])=>{
+    const rs=ALL.filter(r=>r.b===b);
+    html+=`<tr class="block"><td colspan="8">${title}<span>${rub(rs.reduce((s,r)=>s+retail(r),0))}</span></td></tr>`;
+    rs.forEach(r=>{
+      const i=rows.indexOf(r),edited=r.pro&&r.q!==r.pq;let label,mat,per;
+      const unit=r.auto?r.unit:(r.own?'шт':G[r.g].unit);
+      if(r.auto){label=`<span class="pro hand">авто</span>`;mat=`${esc(r.name)}<span class="sub">из расчёта подсветки${r.psuNote?' · цену задаёт владелец':''}</span>`}
+      else if(r.own){label=`<span class="pro hand">своя</span>`;mat=`<input class="in name" aria-label="Название" data-i="${i}" data-k="name" value="${esc(r.name)}">`}
+      else{label=r.pro?`<span class="pro">${esc(r.pro)}</span>`:`<span class="pro hand">добавлена</span>`;mat=`<select class="in" aria-label="Позиция" data-i="${i}" data-k="mat">${opts(r.g,r.mat)}</select>`}
+      if(r.own)per=`<input class="in qty" aria-label="Цена" data-i="${i}" data-k="price" value="${r.price}">`;
+      else{per=rub(unitCost(r));if(!r.auto&&r.g==='ldsp'){const it=item(r.g,r.mat);per+=`<span class="sub">лист ${rub(it[2])} ÷ ${num(it[3])} м² × 1,2 + 150</span>`}
+        else if(!r.auto)per+=`<span class="sub">${isOwn(r)?'своё производство':'покупное'}</span>`}
+      const q=r.auto?num(r.q):`<input class="in qty${edited?' edited':''}" type="number" step="0.01" min="0" aria-label="Количество" data-i="${i}" data-k="q" value="${r.q}">${edited?`<span class="sub mark">PRO100: ${num(r.pq)}</span>`:''}`;
+      const more=r.auto?'':(r.own?`<button class="x" type="button" aria-label="Удалить строку" data-rm="${i}">×</button>`:`<button class="link" type="button" data-dup="${i}">+ вид</button>${r.pro?'':` <button class="x" type="button" aria-label="Удалить строку" data-rm="${i}">×</button>`}`);
+      html+=`<tr><td>${label}</td><td>${mat}</td><td class="num">${q}</td><td>${unit}</td><td class="num cost">${per}</td><td class="num cost">${rub(cost(r))}</td><td class="num">${rub(retail(r))}</td><td class="num">${more}</td></tr>`;
+    });
+    if(b!=='light')html+=`<tr class="add"><td colspan="8">${gs.length?`<select class="in" style="width:auto;min-width:260px" aria-label="Добавить позицию: ${title}" data-addb="${b}"><option value="">+ добавить из прайса…</option>${groupOpts(b)}</select> `:''}<button class="link" type="button" data-own="${b}">+ своя строка</button></td></tr>`;
+  });
+  $('rows').innerHTML=html;
+  $('unparsed').innerHTML=unparsed.length?`<b>Не разобрано из PRO100:</b>`+unparsed.map((u,k)=>`<span class="chip">${esc(u[0])} · ${u[1]} <button class="link" type="button" data-u="${k}">не учитывать</button></span>`).join(''):`<span>Все строки PRO100 разобраны.</span>`;
+  $('lsum').innerHTML=`<span>Лента <b>${num(lr.len)} м</b></span><span>Мощность <b>${num(lr.watt.toFixed(1))} Вт</b></span><span>С запасом 30 % <b>${num(lr.need.toFixed(0))} Вт</b></span><span>Блок питания <b>${lr.n>1?lr.n+' × ':''}${lr.psu} Вт</b></span>`;
+  $('lwarn').innerHTML=lr.warn.map(w=>`<div class="warn">${w}</div>`).join('');
+  renderTotals();renderThumbs();
+}
+function renderTotals(){
+  const t=totalsData();
+  $('tCost').textContent=rub(t.c);$('tProd').textContent=rub(t.p);$('tRetail').textContent=rub(t.rt);
+  $('tAfter').textContent=rub(t.after);$('tDeliv').textContent=rub(t.deliv);$('tTotal').textContent=rub(t.after+t.deliv);$('tMargin').textContent=rub(t.after-t.c);
+  const by={};ALL.forEach(r=>{const k=cgOf(r);by[k]=(by[k]||0)+cost(r)});
+  $('tGroups').innerHTML=CG.filter(k=>by[k]).map(k=>`<div class="trow small"><span>${k}</span><b>${rub(by[k])}</b></div>`).join('');
+}
+const toNum=v=>Math.max(0,parseFloat(String(v).replace(',','.'))||0);
+$('rows').addEventListener('change',e=>{const t=e.target;
+  if(t.dataset.addb!=null){if(!t.value)return;const [g,m]=t.value.split('|');const at=rows.map(r=>r.b).lastIndexOf(t.dataset.addb);rows.splice(at<0?rows.length:at+1,0,{b:t.dataset.addb,pro:null,g,mat:m,q:1,pq:1});renderCalc();return}
+  const r=rows[t.dataset.i];if(!r)return;
+  if(t.dataset.k==='q'||t.dataset.k==='price')r[t.dataset.k]=toNum(t.value);else r[t.dataset.k]=t.value;renderCalc();});
+$('rows').addEventListener('click',e=>{const t=e.target.closest('button');if(!t)return;
+  if(t.dataset.dup!=null){const r=rows[+t.dataset.dup];rows.splice(+t.dataset.dup+1,0,{b:r.b,pro:null,g:r.g,mat:r.mat,q:1,pq:1})}
+  else if(t.dataset.rm!=null)rows.splice(+t.dataset.rm,1);
+  else if(t.dataset.own!=null){const at=rows.map(r=>r.b).lastIndexOf(t.dataset.own);rows.splice(at<0?rows.length:at+1,0,{b:t.dataset.own,own:true,name:'Новая позиция',q:1,price:0})}
+  else return;renderCalc();});
+$('unparsed').addEventListener('click',e=>{const k=e.target.dataset.u;if(k!=null){unparsed.splice(+k,1);renderCalc()}});
+$('lProf').onchange=e=>{light.prof=e.target.value;renderCalc()};
+$('segs').addEventListener('change',e=>{const t=e.target,s=light.segs[t.dataset.s];if(!s)return;s[t.dataset.k]=t.dataset.k==='len'?toNum(t.value):t.value;renderCalc()});
+$('segs').addEventListener('click',e=>{const d=e.target.dataset.del;if(d!=null){light.segs.splice(+d,1);renderLightInputs();renderCalc()}});
+$('addSeg').onclick=()=>{light.segs.push({name:'Новый участок',len:1,sw:'btn'});renderLightInputs();renderCalc()};
+$('disc').addEventListener('input',renderTotals);
+
+// ---------- картинки: эскиз и рендер (рисунок-схема) ----------
+const FCOL={agt:'#e8e4dc',alvic:'#cfc8bc',ps:'#3d3d3b',fenix:'#2f3433',bot:'#d9d2c4',emal:'#7d8a80',shpon:'#a07a55',massiv:'#b08c66',glass:'#9fb3b8'};
+function kitchenSVG(mode,variant){
+  const up=FCOL[(rows.find(r=>r.pro==='Фасад_верх')||{}).mat]||'#ddd',low=FCOL[(rows.find(r=>r.pro==='Фасад_низ')||{}).mat]||'#999';
+  const W=400,H=250;
+  if(mode==='sketch'){
+    let s=`<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Эскиз из PRO100"><rect width="${W}" height="${H}" fill="#f4f3f0"/><g fill="none" stroke="#555" stroke-width="1">`;
+    for(let i=0;i<5;i++)s+=`<rect x="${40+i*64}" y="30" width="62" height="70"/>`;
+    s+=`<rect x="36" y="150" width="328" height="8"/>`;
+    for(let i=0;i<5;i++){s+=`<rect x="${40+i*64}" y="160" width="62" height="62"/>`;if(i===2){s+=`<line x1="${40+i*64}" y1="181" x2="${102+i*64}" y2="181"/><line x1="${40+i*64}" y1="201" x2="${102+i*64}" y2="201"/>`}}
+    s+=`<line x1="20" y1="226" x2="380" y2="226"/></g><text x="12" y="16" font-size="10" fill="#777" font-family="sans-serif">PRO100 · вид спереди</text></svg>`;return s;}
+  const warm=variant%2?'#f2d9a6':'#f6e3bd';
+  let s=`<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Рендер кухни"><defs><linearGradient id="wall${variant}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${variant%2?'#d9d4cb':'#e6e1d8'}"/><stop offset="1" stop-color="#bfb8ad"/></linearGradient><linearGradient id="glow${variant}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${warm}" stop-opacity=".9"/><stop offset="1" stop-color="${warm}" stop-opacity="0"/></linearGradient></defs>
+  <rect width="${W}" height="${H}" fill="url(#wall${variant})"/><rect y="226" width="${W}" height="24" fill="#8a7d6c"/>
+  <rect x="36" y="102" width="328" height="46" fill="url(#glow${variant})"/>`;
+  for(let i=0;i<5;i++)s+=`<rect x="${40+i*64}" y="30" width="62" height="70" fill="${up}" stroke="rgba(0,0,0,.12)"/>`;
+  s+=`<rect x="34" y="148" width="332" height="10" fill="#efece6"/><rect x="34" y="158" width="332" height="2" fill="rgba(0,0,0,.25)"/>`;
+  for(let i=0;i<5;i++){s+=`<rect x="${40+i*64}" y="162" width="62" height="60" fill="${low}" stroke="rgba(0,0,0,.15)"/><rect x="${40+i*64}" y="162" width="62" height="3" fill="rgba(0,0,0,.35)"/>`;if(i===2)s+=`<rect x="${40+i*64}" y="182" width="62" height="2" fill="rgba(0,0,0,.35)"/><rect x="${40+i*64}" y="202" width="62" height="2" fill="rgba(0,0,0,.35)"/>`}
+  s+=`<rect x="36" y="222" width="328" height="4" fill="#2b2b2a"/></svg>`;return s;
+}
+const images=[{kind:'sketch',label:'Эскиз PRO100'},{kind:'render',label:'Рендер 1',v:1}];let selImg=1,rendering=false;
+function renderThumbs(){
+  $('thumbs').innerHTML=images.map((im,i)=>`<button type="button" class="thumb${i===selImg?' sel':''}${im.busy?' busy':''}" data-img="${i}" aria-pressed="${i===selImg}">${kitchenSVG(im.kind==='sketch'?'sketch':'render',im.v||0)}<span>${esc(im.label)}${i===selImg?' · в КП':''}${im.busy?' · делается…':''}</span></button>`).join('');
+}
+$('thumbs').addEventListener('click',e=>{const b=e.target.closest('[data-img]');if(!b)return;const i=+b.dataset.img;if(images[i].busy)return;selImg=i;renderThumbs()});
+$('doRender').onclick=()=>{if(rendering)return;rendering=true;const n=images.length;images.push({kind:'render',label:'Рендер '+n,v:n,busy:true});renderThumbs();$('doRender').disabled=true;
+  setTimeout(()=>{images[n].busy=false;rendering=false;$('doRender').disabled=false;selImg=n;renderThumbs()},1600)};
+
+// ---------- сборка КП ----------
+const kpCalcs=[{id:'k1',name:'Кухня угловая',sub:'расчёт № 2',live:true,on:true},{id:'k2',name:'Шкаф в прихожую',sub:'расчёт № 3',fixed:186400,on:true},{id:'k3',name:'Кухня угловая, вариант с эмалью',sub:'расчёт № 4',fixed:512000,on:false}];
+let kpMade=false,kpNo=14,kpVer=0;
+function calcPrice(c){if(c.live){const t=totalsData();return t.after}return c.fixed*(1-totalsData().d)}
+function whatsIn(){
+  const pick=p=>{const r=rows.find(x=>x.pro===p);return r?item(r.g,r.mat)[1]:null};
+  const hw=['hinge','drawer','lift'].map(g=>{const r=rows.find(x=>x.g===g);return r?item(r.g,r.mat)[1]:null}).filter(Boolean);
+  return [['Корпус',`ЛДСП ${pick('ЛДСП_низ')}, задняя стенка ${pick('ХДФ')}`],['Фасады верх',pick('Фасад_верх')],['Фасады низ',pick('Фасад_низ')],['Столешница',pick('Столешница')],['Стеновая панель',pick('Фартук')],['Фурнитура',hw.join(', ')],['Открывание','профиль Gola'],['Подсветка',`${L.tape[0]}, ${L.profs.find(p=>p[0]===light.prof)[1].toLowerCase()}`]].filter(x=>x[1]);
+}
+function renderKP(){
+  $('kpCalcs').innerHTML=kpCalcs.map(c=>`<label class="calc"><input type="checkbox" data-kp="${c.id}"${c.on?' checked':''}><span>${esc(c.name)}</span><small>${c.sub} · ${rub(calcPrice(c))}</small></label>`).join('');
+  const on=kpCalcs.filter(c=>c.on),t=totalsData();
+  const goods=on.reduce((s,c)=>s+calcPrice(c),0),deliv=on.reduce((s,c)=>s+(c.live?t.deliv:c.fixed*0.1),0);
+  $('kpPrev').innerHTML=`<div class="eyebrow" style="color:var(--p-label);margin:0">Превью · КП № ${kpNo}</div>`+
+    (on.length?on.map((c,i)=>`<div class="it"><div>${c.live?kitchenSVG(images[selImg].kind==='sketch'?'sketch':'render',images[selImg].v||0):kitchenSVG('render',7+i)}</div><div><span class="pro">0${i+1}</span><br><b>${esc(c.name)}</b><span class="sub">${c.live?'что входит — из расчёта':'из расчёта № 3'}</span></div><div class="num">${rub(calcPrice(c))}</div></div>`).join(''):`<p class="note">Отметьте хотя бы один расчёт.</p>`)+
+    `<div class="sum"><span>Мебель со скидкой ${Math.round(t.d*100)} %</span><span>${rub(goods)}</span></div><div class="sum"><span>Доставка и монтаж</span><span>${rub(deliv)}</span></div><div class="sum big"><span>Итого</span><span>${rub(goods+deliv)}</span></div>`;
+  $('kpMake').disabled=!on.length;
+  $('kpMade').innerHTML=kpMade?`<div class="made"><b>КП № ${kpNo} · версия ${kpVer} сформировано</b><code>kp.cultura-group.ru/8f3kq2v9xz</code><div class="actions"><button class="btn" type="button" id="copyLink">Скопировать ссылку</button></div><div class="actions"><button class="btn" type="button">WhatsApp</button><button class="btn" type="button">Telegram</button><button class="btn" type="button">PDF</button></div><a class="link" style="color:var(--rose)" href="#client">Открыть как клиент →</a><span class="views">Цены зафиксированы: изменение прайса это КП не меняет.</span></div>`:'';
+  renderLanding(on,goods,deliv);
+}
+$('kpCalcs').addEventListener('change',e=>{const c=kpCalcs.find(x=>x.id===e.target.dataset.kp);if(c){c.on=e.target.checked;renderKP()}});
+$('kpMake').onclick=()=>{kpMade=true;kpVer++;renderKP()};
+$('kpMade').addEventListener('click',e=>{if(e.target.id==='copyLink'){const b=e.target;const done=()=>{b.textContent='Ссылка скопирована'};try{navigator.clipboard.writeText('https://kp.cultura-group.ru/8f3kq2v9xz').then(done,done)}catch(_){done()}}});
+
+// ---------- страница клиента ----------
+function renderLanding(on,goods,deliv){
+  if(!on){on=kpCalcs.filter(c=>c.on);const t=totalsData();goods=on.reduce((s,c)=>s+calcPrice(c),0);deliv=on.reduce((s,c)=>s+(c.live?t.deliv:c.fixed*0.1),0)}
+  const hero=on[0]&&on[0].live?kitchenSVG('render',images[selImg].v||1):kitchenSVG('render',7);
+  $('viewInfo').innerHTML=kpMade?`Менеджер видит: <b>открыто 3 раза</b>, последний раз сегодня в 19:40`:`КП ещё не сформировано: это превью.`;
+  $('land').innerHTML=`<div class="hero">${hero}<div class="cap"><div class="eb">Коммерческое предложение № ${kpNo}</div><h2>Анна, ваша кухня<br>и шкаф в прихожую</h2></div></div>
+  <div class="body"><p class="lead2">Мы собрали проект по замерам и пожеланиям. Ниже — что входит в каждое изделие, материалы и стоимость. Цены действуют до ${esc($('kpValid').value)}.</p>
+  ${on.map((c,i)=>`<div class="prod"><div>${c.live?kitchenSVG(images[selImg].kind==='sketch'?'sketch':'render',images[selImg].v||0):kitchenSVG('render',7+i)}<div class="vis">Визуализация, возможны отличия</div></div><div><div class="no">0${i+1}</div><h3>${esc(c.name)}</h3>${c.live?`<dl>${whatsIn().map(([k,v])=>`<dt>${k}</dt><dd>${esc(v)}</dd>`).join('')}</dl>`:`<dl><dt>Корпус</dt><dd>ЛДСП Egger W1000 ST9</dd><dt>Фасады</dt><dd>AGT Supramat</dd><dt>Фурнитура</dt><dd>Петли Blum с доводчиком</dd></dl>`}<div class="price">${rub(calcPrice(c))}</div></div></div>`).join('')}
+  <div class="facts"><div><b>${esc($('kpTerm').value)}</b><span>срок изготовления</span></div><div><b>Своё производство</b><span>раскрой, кромка, присадка, сборка</span></div><div><b>Blum</b><span>фурнитура с доводчиками</span></div><div><b>${esc($('kpPay').value.split(',')[0])}</b><span>${esc($('kpPay').value.split(',')[1]||'оплата')}</span></div></div>
+  <div class="final"><div><small>Мебель ${rub(goods)} + доставка и монтаж ${rub(deliv)}</small><b>${rub(goods+deliv)}</b></div><div class="mgr">Ваш менеджер — Елена, Краснодар<br>+7 900 000-00-00</div><button class="btn solid" type="button">Обсудить проект</button></div></div>`;
+}
+['kpTerm','kpPay','kpValid'].forEach(id=>$(id).addEventListener('input',()=>renderKP()));
+
+// ---------- карта прайсов ----------
+const MAP=[
+  {cat:'ЛДСП корпус',tag:'own',groups:[['Egger','м²'],['Кроношпан','м²'],['Третий поставщик (уточнить)','м²']],how:'Лист ÷ площадь листа × 1,2 (отходы) + 150 ₽/м² (кромка)',prod:'да',upd:'Прайс поставщика на листы: артикул, декор, размер листа, цена',q:'Размер листа у каждого поставщика свой — хранится в прайсе.'},
+  {cat:'Фасады плитные',tag:'ask',groups:[['AGT','м²'],['ALVIC','м²'],['Egger Perfect Sense','м²'],['Fenix','м²'],['+ ещё категории','—']],how:'Цена плиты за м² (или лист ÷ площадь × отходы)',prod:'обсудить',upd:'Прайс поставщика плит',q:'Делаем сами или покупаем? Если сами — идёт наценка производства и правило как у ЛДСП.'},
+  {cat:'Фасады покупные',tag:'buy',groups:[['Ботаника','м²'],['Эмаль','м²'],['Шпон','м²'],['Шпон фрезерованный','м²'],['Массив','м²'],['Стекло в алюминиевой рамке','м²']],how:'Цена закупки за м² готового фасада',prod:'нет',upd:'Прайс фасадной фабрики',q:'В книге Ботаника ×0,8 от прайса — это скидка дилера?'},
+  {cat:'Столешницы',tag:'buy',groups:[['Троя 38 мм по группам','м.п.'],['Ботаника ДСП/ФНР','м.п.'],['Угловой сегмент','шт']],how:'Цена закупки за погонный метр',prod:'нет',upd:'Прайс поставщика',q:'В книге Троя ×0,6 от прайса — это скидка дилера?'},
+  {cat:'Стеновые панели',tag:'buy',groups:[['Троя стеновая','м.п.'],['Ботаника стеновая','м.п.']],how:'Цена закупки за погонный метр',prod:'нет',upd:'Прайс поставщика',q:''},
+  {cat:'Плинтус',tag:'buy',groups:[['Плинтус низкий','м.п.'],['Плинтус высокий','м.п.']],how:'Цена закупки за погонный метр',prod:'нет',upd:'Прайс поставщика',q:''},
+  {cat:'Фурнитура',tag:'buy',groups:[['Петли','шт'],['Подъёмники','шт'],['Ящики','компл'],['Профиль Gola','м.п.'],['ХДФ: белый, серый, чёрный','м²'],['Сушки','шт'],['Бутылочницы','шт'],['Цоколь','м.п.']],how:'Цена закупки за штуку (Blum, Hettich, Firmax)',prod:'нет',upd:'Цены даст владелец; дальше — прайс поставщика',q:'Цены фурнитуры — от владельца.'},
+  {cat:'Подсветка',tag:'buy',groups:[['Лента 24 В, 4000 K','м.п.'],['Профиль врезной / накладной','м.п.'],['Блоки питания 24 В','шт'],['Выключатели: кнопка, сенсор, датчик двери','шт']],how:'Считается сама по участкам; блок питания по мощности с запасом 30 %',prod:'нет',upd:'Цены задаёт владелец',q:'Цены блоков питания задаёт владелец.'},
+  {cat:'Услуги',tag:'svc',groups:[['Доставка и монтаж','10 %'],['Свободные строки','—']],how:'10 % от розницы мебели, без скидки',prod:'—',upd:'Настройки',q:''}
+];
+let mapCat=0,mapGrp=0;
+const TAGTXT={own:'своё',buy:'покупное',ask:'обсудить',svc:'услуга'};
+function renderMap(){
+  $('mapCats').innerHTML=MAP.map((m,i)=>`<button type="button" class="node${i===mapCat?' on':''}" data-cat="${i}"><span>${m.cat}</span><span class="tag ${m.tag}">${TAGTXT[m.tag]}</span></button>`).join('');
+  const m=MAP[mapCat];
+  $('mapGroups').innerHTML=m.groups.map((g,i)=>`<button type="button" class="node${i===mapGrp?' on':''}" data-grp="${i}"><span>${esc(g[0])}</span><small>${g[1]}</small></button>`).join('');
+  const g=m.groups[mapGrp]||m.groups[0];
+  $('mapCard').innerHTML=`<div class="eyebrow" style="margin:0">${m.cat}</div><h3>${esc(g[0])}</h3><dl><dt>Единица</dt><dd>${g[1]}</dd><dt>Производство</dt><dd>${TAGTXT[m.tag]}</dd><dt>Себестоимость</dt><dd>${m.how}</dd><dt>Наценка производства</dt><dd>${m.prod}</dd><dt>Как обновлять</dt><dd>${m.upd}</dd></dl>${m.q?`<div class="q">${m.q}</div>`:''}`;
+  requestAnimationFrame(drawLines);
+}
+function drawLines(){
+  const map=$('map'),svg=$('mapLines');if(!map||map.offsetParent===null)return;
+  const R=map.getBoundingClientRect(),root=map.querySelector('.root').getBoundingClientRect();
+  const pt=(r,side)=>[side==='r'?r.right-R.left:r.left-R.left,r.top-R.top+r.height/2];
+  const curve=(a,b)=>{const mx=(a[0]+b[0])/2;return `M${a[0]},${a[1]} C${mx},${a[1]} ${mx},${b[1]} ${b[0]},${b[1]}`};
+  let d='';const rp=pt(root,'r');
+  $('mapCats').querySelectorAll('.node').forEach(n=>{d+=`<path d="${curve(rp,pt(n.getBoundingClientRect(),'l'))}"/>`});
+  const cn=$('mapCats').querySelector('.node.on');
+  if(cn){const cp=pt(cn.getBoundingClientRect(),'r');$('mapGroups').querySelectorAll('.node').forEach(n=>{d+=`<path d="${curve(cp,pt(n.getBoundingClientRect(),'l'))}"/>`})}
+  const gn=$('mapGroups').querySelector('.node.on'),card=$('mapCard');
+  if(gn&&card){d+=`<path d="${curve(pt(gn.getBoundingClientRect(),'r'),pt(card.getBoundingClientRect(),'l'))}"/>`}
+  svg.setAttribute('viewBox',`0 0 ${R.width} ${R.height}`);svg.innerHTML=d;
+}
+$('mapCats').addEventListener('click',e=>{const b=e.target.closest('[data-cat]');if(b){mapCat=+b.dataset.cat;mapGrp=0;renderMap()}});
+$('mapGroups').addEventListener('click',e=>{const b=e.target.closest('[data-grp]');if(b){mapGrp=+b.dataset.grp;renderMap()}});
+window.addEventListener('resize',()=>requestAnimationFrame(drawLines));
+
+// ---------- вкладки, роли, тема ----------
+const VIEWS=['flow','calc','kp','client','prices','discuss'];
+function show(){const h=(location.hash||'#flow').slice(1),v=VIEWS.includes(h)?h:'flow';
+  VIEWS.forEach(x=>{$('v-'+x).hidden=x!==v});document.querySelectorAll('.tabs a').forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+v));
+  if(v==='kp'||v==='client')renderKP();if(v==='prices')requestAnimationFrame(drawLines);window.scrollTo(0,0)}
+window.addEventListener('hashchange',show);
+function setRole(boss){document.body.classList.toggle('mgr',!boss);$('rMgr').setAttribute('aria-pressed',!boss);$('rBoss').setAttribute('aria-pressed',boss)}
+function setTheme(t){document.documentElement.dataset.theme=t;$('tDark').setAttribute('aria-pressed',t==='dark');$('tLight').setAttribute('aria-pressed',t==='light')}
+$('rMgr').onclick=()=>setRole(false);$('rBoss').onclick=()=>setRole(true);
+$('tDark').onclick=()=>setTheme('dark');$('tLight').onclick=()=>setTheme('light');
+const dark=!(window.matchMedia&&matchMedia('(prefers-color-scheme: light)').matches);
+$('tDark').setAttribute('aria-pressed',dark);$('tLight').setAttribute('aria-pressed',!dark);
+renderLightInputs();renderCalc();renderMap();renderKP();setRole(true);show();
+</script>
