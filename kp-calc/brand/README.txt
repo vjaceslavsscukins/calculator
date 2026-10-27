@@ -9,3 +9,7 @@ texture/  stone.jpg — фактура «штукатурки» из фирме�
           На сайте: background: #3b3b3a url(stone.jpg) center/cover; background-blend-mode: lighten;
           края растворяются маской-градиентом в цвет фона (#232322).
 Цвета и правила — в DESIGN.md.
+
+Примечание (kp-calc): из присланного набора в fonts/ не было Prata (кириллица и латиница) и Golos Text латиница 500/600.
+Их взяли из npm-пакетов @fontsource/prata@5.2.5 и @fontsource/golos-text@5.2.5 (та же лицензия OFL, тексты лицензий рядом).
+Остальные файлы Golos Text — присланные с сайта. texture/stone.jpg пока нет (картинка пришла в чат только как превью).
