@@ -175,6 +175,7 @@ export function cleanSettings(raw: any): Settings {
     deliveryDefaultRub: pos(raw.deliveryDefaultRub, 'доставка по умолчанию', true),
     lightReserve: pos(raw.lightReserve, 'запас мощности', true),
     roundTo: pos(raw.roundTo, 'шаг округления'),
+    renderPrompt: str(raw.renderPrompt, 4000).trim(),
     light: {
       tape: {
         name: str(t.name) || 'Лента',

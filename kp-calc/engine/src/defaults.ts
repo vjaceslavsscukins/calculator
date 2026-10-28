@@ -5,6 +5,14 @@ import type { Settings } from './types.ts';
 /** Название варианта «без выключателя»; вариант есть всегда, цена 0, не редактируется. */
 export const SWITCH_NONE_NAME = 'Нет (подключение напрямую к слаботочке)';
 
+/** Базовый промт рендера по умолчанию. */
+export const DEFAULT_RENDER_PROMPT = [
+  'Преврати приложенный технический эскиз мебели из PRO100 (цвета на эскизе — цвета материалов) в фотореалистичную 3D-визуализацию интерьера.',
+  'Строго сохрани расстановку, пропорции, количество и размеры модулей и фасадов; ничего не добавляй и не убирай из мебели.',
+  'Цвета и материалы — как на эскизе и в списке материалов расчёта ниже.',
+  'Нейтральный современный интерьер, мягкий дневной свет, ракурс как на эскизе, без людей, без текста и водяных знаков.',
+].join(' ');
+
 export const DEFAULT_SETTINGS: Settings = {
   kProd: 1.8,
   kShop: 2,
@@ -30,6 +38,7 @@ export const DEFAULT_SETTINGS: Settings = {
       { id: 'door', name: 'Датчик открывания двери', price: 900 },
     ],
   },
+  renderPrompt: DEFAULT_RENDER_PROMPT,
 };
 
 const finite = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
@@ -48,6 +57,7 @@ export function normalizeSettings(raw: any): Settings {
     ...rest,
     montagePct: finite(src.montagePct) ? src.montagePct : finite(deliveryPct) ? deliveryPct : DEFAULT_SETTINGS.montagePct,
     deliveryDefaultRub: finite(src.deliveryDefaultRub) ? src.deliveryDefaultRub : DEFAULT_SETTINGS.deliveryDefaultRub,
+    renderPrompt: typeof src.renderPrompt === 'string' && src.renderPrompt.trim() ? src.renderPrompt : DEFAULT_RENDER_PROMPT,
     light: { ...light, switches: [{ id: SWITCH_NONE, name: SWITCH_NONE_NAME, price: 0 }, ...switches] },
   };
 }

@@ -5,6 +5,7 @@ import pg from 'pg';
 import { DEFAULT_SETTINGS } from '../../engine/src/index.ts';
 import type { Catalog } from '../../engine/src/index.ts';
 import { hashPassword } from './security.ts';
+import { DEFAULT_COMPANY } from './kpdata.ts';
 
 export type Pool = pg.Pool;
 export type Db = pg.Pool | pg.PoolClient;
@@ -15,6 +16,8 @@ export const CITIES = ['Москва', 'Краснодар'];
 
 // Любое число из базы приходит числом (int8 — счётчики, их хватает).
 pg.types.setTypeParser(20, (v: string) => Number(v));
+// Дата (date) — строкой ГГГГ-ММ-ДД, без сдвига часового пояса.
+pg.types.setTypeParser(1082, (v: string) => v);
 
 /**
  * TLS к PostgreSQL (облачная база Timeweb и т. п.): DATABASE_SSL=1/true или sslmode=require (prefer, verify-ca, verify-full)
@@ -105,6 +108,7 @@ export async function seed(pool: pg.Pool, env: SeedEnv, log: (m: string) => void
     }
 
     await c.query('insert into settings (id, data) values (1, $1) on conflict (id) do nothing', [JSON.stringify(DEFAULT_SETTINGS)]);
+    await c.query('insert into company (id, data) values (1, $1) on conflict (id) do nothing', [JSON.stringify(DEFAULT_COMPANY)]);
 
     const owners = await c.query(`select 1 from users where role = 'owner' limit 1`);
     if (!owners.rowCount) {

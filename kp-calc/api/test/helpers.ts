@@ -22,7 +22,8 @@ export async function setup(): Promise<Ctx> {
   const pool = createPool(DB as string, { options: `-c search_path=${schema}` });
   await migrate(pool);
   await seed(pool, { OWNER_EMAIL: OWNER.email, OWNER_PASSWORD: OWNER.password });
-  const app = await buildApp({ pool, publicUrl: 'https://kp.test' });
+  // без ключей нейросетей и S3: рендер — 503, картинки — в базе
+  const app = await buildApp({ pool, publicUrl: 'https://kp.test', env: {} });
   return {
     app, pool, schema,
     async close() {
@@ -33,24 +34,27 @@ export async function setup(): Promise<Ctx> {
   };
 }
 
-export interface Res { status: number; body: any; raw: string }
+export interface Res { status: number; body: any; raw: string; headers: Record<string, any>; bytes: Buffer }
 
 /** Клиент с cookie-сессией. */
 export function agent(app: FastifyInstance) {
   let cookie = '';
-  const call = async (method: string, url: string, payload?: unknown): Promise<Res> => {
-    const r = await app.inject({ method: method as any, url, payload: payload as any, headers: cookie ? { cookie } : {} });
+  const call = async (method: string, url: string, payload?: unknown, headers: Record<string, string> = {}): Promise<Res> => {
+    const r = await app.inject({ method: method as any, url, payload: payload as any, headers: { ...(cookie ? { cookie } : {}), ...headers } });
     const set = r.cookies.find((c) => c.name === 'kp_session');
     if (set) cookie = set.value ? `kp_session=${set.value}` : '';
     let body: any = r.body;
     try { body = JSON.parse(r.body); } catch { /* не JSON */ }
-    return { status: r.statusCode, body, raw: r.body };
+    return { status: r.statusCode, body, raw: r.body, headers: r.headers, bytes: r.rawPayload };
   };
   return {
     get: (u: string) => call('GET', u),
     post: (u: string, b: unknown = {}) => call('POST', u, b),
     put: (u: string, b: unknown) => call('PUT', u, b),
     patch: (u: string, b: unknown) => call('PATCH', u, b),
+    del: (u: string) => call('DELETE', u),
+    /** Тело как есть (картинка) с заголовками. */
+    upload: (u: string, data: Buffer, contentType: string, headers: Record<string, string> = {}) => call('POST', u, data, { 'content-type': contentType, ...headers }),
     async login(email: string, password: string) {
       const r = await call('POST', '/api/auth/login', { email, password });
       if (r.status !== 200) throw new Error(`вход ${email}: ${r.status} ${r.raw}`);

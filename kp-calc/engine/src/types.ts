@@ -55,6 +55,8 @@ export interface Settings {
   /** Шаг округления при выводе, ₽. */
   roundTo: number;
   light: LightPrices;
+  /** Базовый промт рендера по эскизу (правит владелец). К нему сервер добавляет материалы расчёта и комментарий менеджера. */
+  renderPrompt: string;
 }
 
 export type ProductKind = 'kitchen' | 'cabinet';

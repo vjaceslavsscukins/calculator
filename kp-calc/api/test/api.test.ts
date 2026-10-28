@@ -68,7 +68,7 @@ describe('сервер калькулятора КП', { skip: SKIP }, () => {
     assert.equal(bad.status, 401);
     assert.equal(bad.body.error, 'Неверная почта или пароль');
     const user = await a.login(OWNER.email.toUpperCase(), OWNER.password);
-    assert.deepEqual(Object.keys(user).sort(), ['cityId', 'cityName', 'email', 'firstName', 'id', 'lastName', 'role']);
+    assert.deepEqual(Object.keys(user).sort(), ['cityId', 'cityName', 'email', 'firstName', 'id', 'lastName', 'phone', 'position', 'role']);
     assert.equal(user.role, 'owner');
     assert.equal((await a.get('/api/auth/me')).body.user.email, OWNER.email);
     const { rows } = await ctx.pool.query('select token_hash from sessions');

@@ -9,6 +9,8 @@ import type pg from 'pg';
 import { BLOCKS, KIND_TITLES, applyPro100, compute, indexCatalog, mergePro100, normalizeSettings, parsePro100 } from '../../engine/src/index.ts';
 import type { CalcInput, Catalog, CatalogIndex, ProductKind, Settings } from '../../engine/src/index.ts';
 import { tx } from './db.ts';
+import { registerKp } from './kp.ts';
+import type { KpDeps } from './kp.ts';
 import { hashPassword, newToken, tokenHash, verifyPassword } from './security.ts';
 import {
   HttpError, KINDS, STATUSES, catalogFor, cleanInput, cleanSettings, cleanUnparsed, emptyInput, keepNoMarkup, parseKind, settingsFor, viewFor,
@@ -23,10 +25,14 @@ export interface AppOptions {
   /** Собранный интерфейс (web/dist) — отдаётся как SPA, если папка есть. */
   webDist?: string;
   logger?: boolean;
+  /** Ключи нейросетей, S3, LINK_PREVIEW_ALLOW_PRIVATE; по умолчанию process.env. */
+  env?: KpDeps['env'];
 }
 
 export interface User {
   id: string; firstName: string; lastName: string; email: string; role: Role; cityId: number | null; cityName: string | null;
+  /** Для КП: телефон и должность менеджера. */
+  phone: string; position: string;
 }
 
 declare module 'fastify' {
@@ -42,6 +48,7 @@ const ROLES: Role[] = ['owner', 'head', 'manager'];
 const fullName = (first: string, last: string) => `${first ?? ''} ${last ?? ''}`.trim();
 const userJson = (r: any): User => ({
   id: r.id, firstName: r.first_name, lastName: r.last_name, email: r.email, role: r.role, cityId: r.city_id ?? null, cityName: r.city_name ?? null,
+  phone: r.phone ?? '', position: r.position ?? '',
 });
 const text = (v: unknown, max = 300) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
 const likeArg = (q: string) => '%' + q.replace(/[\\%_]/g, (m) => '\\' + m) + '%';
@@ -67,7 +74,7 @@ const CALC_SQL = `
     join users m on m.id = cl.manager_id left join users ub on ub.id = k.updated_by`;
 
 /** Видимость клиентов (и их расчётов) по роли: менеджер — свои, руководитель — свой город, владелец — все. */
-function scope(u: User, params: unknown[]): string {
+export function scope(u: Pick<User, 'id' | 'role' | 'cityId'>, params: unknown[]): string {
   if (u.role === 'owner') return 'true';
   if (u.role === 'head') { params.push(u.cityId); return `cl.city_id = $${params.length}`; }
   params.push(u.id); return `cl.manager_id = $${params.length}`;
@@ -153,7 +160,7 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
   app.addHook('onSend', async (req, reply, payload) => {
     reply.header('x-content-type-options', 'nosniff');
     reply.header('referrer-policy', 'no-referrer');
-    if (req.url.startsWith('/api/')) reply.header('cache-control', 'no-store');
+    if (req.url.startsWith('/api/') && !reply.getHeader('cache-control')) reply.header('cache-control', 'no-store');
     return payload;
   });
 
@@ -315,8 +322,8 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
     return tx(pool, async (c) => {
       const cityId = b.cityId == null && b.role === 'owner' ? null : await cityExists(c, b.cityId);
       if ((await c.query('select 1 from users where lower(email) = $1', [email])).rowCount) throw new HttpError(409, 'Пользователь с такой почтой уже есть');
-      const { rows: [r] } = await c.query('insert into users (email, first_name, last_name, role, city_id) values ($1,$2,$3,$4,$5) returning id',
-        [email, firstName, lastName, b.role, cityId]);
+      const { rows: [r] } = await c.query('insert into users (email, first_name, last_name, role, city_id, phone, position) values ($1,$2,$3,$4,$5,$6,$7) returning id',
+        [email, firstName, lastName, b.role, cityId, text(b.phone, 40), text(b.position, 100)]);
       const token = await issueInvite(c, r.id);
       const { rows: [full] } = await c.query(`${USER_SQL} where u.id = $1`, [r.id]);
       await audit(c, u, 'Добавлен пользователь', 'Пользователи', { email, role: b.role, cityId });
@@ -331,7 +338,9 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
     return tx(pool, async (c) => {
       const { rows: [cur] } = await c.query('select * from users where id = $1 for update', [id]);
       if (!cur) throw notFound();
-      const next = { first_name: cur.first_name, last_name: cur.last_name, role: cur.role, city_id: cur.city_id, disabled: cur.disabled };
+      const next = { first_name: cur.first_name, last_name: cur.last_name, role: cur.role, city_id: cur.city_id, disabled: cur.disabled, phone: cur.phone, position: cur.position };
+      if (b.phone !== undefined) next.phone = text(b.phone, 40);
+      if (b.position !== undefined) next.position = text(b.position, 100);
       if (b.firstName !== undefined) { next.first_name = text(b.firstName, 100); if (!next.first_name) throw new HttpError(400, 'Укажите имя'); }
       if (b.lastName !== undefined) next.last_name = text(b.lastName, 100);
       if (b.role !== undefined) { if (!ROLES.includes(b.role)) throw new HttpError(400, 'Неизвестная роль'); next.role = b.role; }
@@ -339,8 +348,8 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
       if (b.disabled !== undefined) next.disabled = b.disabled === true;
       if (id === u.id && (next.disabled || next.role !== 'owner')) throw new HttpError(400, 'Нельзя отключить себя или снять с себя роль владельца');
       if (next.role !== 'owner' && next.city_id == null) throw new HttpError(400, 'Укажите город');
-      await c.query('update users set first_name = $1, last_name = $2, role = $3, city_id = $4, disabled = $5 where id = $6',
-        [next.first_name, next.last_name, next.role, next.city_id, next.disabled, id]);
+      await c.query('update users set first_name = $1, last_name = $2, role = $3, city_id = $4, disabled = $5, phone = $6, position = $7 where id = $8',
+        [next.first_name, next.last_name, next.role, next.city_id, next.disabled, next.phone, next.position, id]);
       if (next.disabled) await c.query('delete from sessions where user_id = $1', [id]);
       const changes: Record<string, unknown> = {};
       for (const k of Object.keys(next) as (keyof typeof next)[]) if (next[k] !== cur[k]) changes[k] = { before: cur[k], after: next[k] };
@@ -626,6 +635,11 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
     const limit = Math.min(1000, Math.max(1, parseInt(req.query?.limit, 10) || 200));
     const { rows } = await pool.query('select at, user_name, action, entity, details from audit_log order by at desc, id desc limit $1', [limit]);
     return { entries: rows.map((r) => ({ at: r.at, userName: r.user_name, action: r.action, entity: r.entity, details: r.details })) };
+  });
+
+  // ========== Этап 2: картинки, рендер, ссылки с сайтов, КП, страница по ссылке, уведомления ==========
+  await registerKp(app, {
+    pool, publicUrl: opts.publicUrl, env: opts.env ?? process.env, pricing, me, need, visibleCalc, visibleClient, scope,
   });
 
   // ========== Интерфейс (SPA) ==========
