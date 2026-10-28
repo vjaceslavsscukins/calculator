@@ -1,0 +1,11 @@
+# Сборка портала «Калькулятор КП» из корня: берём только kp-calc
+*
+!kp-calc
+kp-calc/**/node_modules
+kp-calc/**/dist
+kp-calc/**/.env
+kp-calc/mockups
+kp-calc/docs
+kp-calc/data/imports
+kp-calc/data/*.xlsx
+kp-calc/data/*.py
