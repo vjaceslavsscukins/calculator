@@ -11,7 +11,7 @@
 ## Где работаем
 
 - Репозиторий: `vjaceslavsscukins/calculator`, ветка **`claude/laughing-dirac-e54xbh`**.
-- Портал в интернете: **Timeweb Cloud App Platform**, приложение «Культура калькулятор», адрес `https://vjaceslavsscukins-calculator-1b77.twc1.net` (потом домен `kp.culturagroup.ru`). Собирается из корневого `Dockerfile` этой ветки.
+- Портал в интернете: **Timeweb Cloud App Platform**, приложение «Культура калькулятор», адрес **`https://kp.culturagroup.ru`** (с 29.10.2026; DNS домена culturagroup.ru — в Рег.ру, запись `A kp → 46.149.68.157`, запись `@` — основной сайт, не трогать). Технический адрес `https://vjaceslavsscukins-calculator-1b77.twc1.net` через VPN владельца не открывается. Собирается из корневого `Dockerfile` этой ветки.
 - База: **Timeweb PostgreSQL 18**, Москва, хост `c78032c34364548a01c22b05.twc1.net:5432`, база `default_db`, пользователь `gen_user`. Пароль — только в переменных Timeweb (в репозиторий не класть).
 - Из облачной сессии Claude Timeweb и `culturagroup.ru` по сети недоступны: проверка — по логам и скриншотам от владельца.
 
