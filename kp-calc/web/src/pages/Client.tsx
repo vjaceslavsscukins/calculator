@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { api, STATUS_TITLES, type CalcSummary, type Client, type ProductKind } from '../api.ts';
+import { api, STATUS_TITLES, type CalcSummary, type Client, type KpSummary, type ProductKind } from '../api.ts';
 import { useApp } from '../app.tsx';
 import { ErrorNote } from '../components/Layout.tsx';
 import { dateTime, errText, rub } from '../format.ts';
@@ -11,12 +11,14 @@ export function ClientPage() {
   const nav = useNavigate();
   const [client, setClient] = useState<Client | null>(null);
   const [calcs, setCalcs] = useState<CalcSummary[]>([]);
+  const [kps, setKps] = useState<KpSummary[] | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState(false);
 
   useEffect(() => {
     api.client(id).then((r) => { setClient(r.client); setCalcs(r.calculations); }).catch((x) => setErr(errText(x)));
+    api.clientKps(id).then((r) => setKps(r.kps)).catch(() => setKps([]));
   }, [id]);
 
   if (err && !client) return <section className="view"><div className="crumbs"><Link to="/clients">Клиенты</Link></div><ErrorNote text={err} /></section>;
@@ -31,6 +33,7 @@ export function ClientPage() {
         <div><div className="eyebrow">Клиент · {client.cityName}</div><h1>{client.name}</h1></div>
         <div className="actions">
           <button className="btn" type="button" onClick={() => setEditing((v) => !v)}>Изменить данные</button>
+          <button className="btn" type="button" disabled={!calcs.length} title={calcs.length ? '' : 'Сначала создайте расчёт'} onClick={() => nav(`/clients/${client.id}/kp/new`)}>Собрать КП</button>
           <button className="btn solid" type="button" onClick={() => setAdding((v) => !v)}>Новый расчёт</button>
         </div>
       </div>
@@ -60,6 +63,26 @@ export function ClientPage() {
               </tr>
             ))}
             {!calcs.length && <tr><td colSpan={6} className="empty">Расчётов пока нет. Нажмите «Новый расчёт».</td></tr>}
+          </tbody>
+        </table>
+      </div>
+      <div className="panel">
+        <h2>Коммерческие предложения</h2>
+        <table className="tab">
+          <thead><tr><th>Номер</th><th>Изделия</th><th className="num">Итого</th><th>Сформировано</th><th>Отправлено</th><th>Открыто клиентом</th><th>Действует до</th></tr></thead>
+          <tbody>
+            {kps?.map((k) => (
+              <tr key={k.id} className="click" onClick={() => nav(`/kp/${k.id}`)}>
+                <td><a href={`/kp/${k.id}`} onClick={(e) => e.preventDefault()}>{k.number}</a>{k.version > 1 && <span className="ver">версия {k.version}</span>}</td>
+                <td className="wrap">{k.items.map((i) => i.title).join(', ')}</td>
+                <td className="num">{rub(k.total, roundTo)}</td>
+                <td>{dateTime(k.createdAt)}</td>
+                <td>{k.sentAt ? dateTime(k.sentAt) : '—'}</td>
+                <td>{k.views ? `${k.views} раз, последний ${dateTime(k.lastViewedAt)}` : 'не открыто'}{k.approvedAt && <span className="pill ok-pill">утвердил</span>}</td>
+                <td>{k.validUntil.split('-').reverse().join('.')}</td>
+              </tr>
+            ))}
+            {kps && !kps.length && <tr><td colSpan={7} className="empty">КП пока нет. Нажмите «Собрать КП».</td></tr>}
           </tbody>
         </table>
       </div>

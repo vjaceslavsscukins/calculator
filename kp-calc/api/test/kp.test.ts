@@ -9,6 +9,7 @@ import { lookup } from 'node:dns/promises';
 import { compute, DEFAULT_SETTINGS, kpItemPrice, kpTotals } from '../../engine/src/index.ts';
 import type { CalcInput, Catalog } from '../../engine/src/index.ts';
 import { CATALOG_FILE } from '../src/db.ts';
+import { buildApp } from '../src/app.ts';
 import { checkUrl, isPrivateAddress, linkPreview, parsePrice, parseProductHtml } from '../src/linkpreview.ts';
 import { extractImage, RENDER_OFF } from '../src/ai.ts';
 import { OWNER, SKIP, agent, keysDeep, makeUser, setup } from './helpers.ts';
@@ -165,6 +166,46 @@ describe('КП: картинки, снимок, страница по ссылк
     assert.equal((await agent(ctx.app).post('/api/link-preview', { url: 'https://a.ru' })).status, 401);
   });
 
+  test('рендер через шлюз (локальная заглушка): эскиз + промт из настроек + «что поправить», «Рендер N», журнал', async () => {
+    let got: any = null;
+    const gw = createServer((req, res) => {
+      let body = '';
+      req.on('data', (c) => { body += c; });
+      req.on('end', () => {
+        got = { auth: req.headers.authorization, url: req.url, body: JSON.parse(body) };
+        res.writeHead(200, { 'content-type': 'application/json' });
+        res.end(JSON.stringify({ choices: [{ message: { content: 'ok', images: [{ type: 'image_url', image_url: { url: `data:image/png;base64,${PNG.toString('base64')}` } }] } }] }));
+      });
+    });
+    await new Promise<void>((r) => gw.listen(0, '127.0.0.1', r));
+    const app2 = await buildApp({ pool: ctx.pool, env: { RENDER_API_URL: `http://127.0.0.1:${(gw.address() as AddressInfo).port}/v1`, RENDER_API_KEY: 'test-key', RENDER_MODEL: 'img-model' } });
+    try {
+      const a = agent(app2);
+      await a.login('m1@kp.local', 'password-123');
+      const r1 = await a.post(`/api/calculations/${calcA}/render`, { imageId: sketch });
+      assert.equal(r1.status, 200, r1.raw);
+      assert.equal(r1.body.image.title, 'Рендер 1');
+      assert.equal(r1.body.image.kind, 'render');
+      assert.equal(got.url, '/v1/chat/completions');
+      assert.equal(got.auth, 'Bearer test-key');
+      assert.equal(got.body.model, 'img-model');
+      const parts = got.body.messages[0].content;
+      assert.match(parts[0].text, /PRO100/, 'базовый промт из настроек');
+      assert.match(parts[0].text, /Корпус/, 'материалы расчёта');
+      assert.equal(parts.length, 2);
+      const r2 = await a.post(`/api/calculations/${calcA}/render`, { imageId: sketch, previousId: r1.body.image.id, comment: 'фасады темнее, убрать окно' });
+      assert.equal(r2.body.image.title, 'Рендер 2');
+      assert.equal(got.body.messages[0].content.length, 3, 'эскиз + предыдущий рендер');
+      assert.match(got.body.messages[0].content[0].text, /Что поправить: фасады темнее, убрать окно/);
+      const audit = (await owner.get('/api/audit')).body.entries.filter((e: any) => e.entity === 'Рендер');
+      assert.deepEqual(audit.map((e: any) => e.action), ['Перегенерация рендера', 'Рендер по эскизу']);
+      assert.equal(audit[0].userName, 'Мария Петрова');
+      // рендеры в КП не отмечены сами: выбирает менеджер
+      await a.del(`/api/images/${r1.body.image.id}`);
+      await a.del(`/api/images/${r2.body.image.id}`);
+    } finally { await app2.close(); gw.close(); }
+  });
+
   let kp: any;
   test('сборка КП: черновик, текст по шаблону, снимок с ценами движка, статусы', async () => {
     const draft = await m1.get(`/api/clients/${client}/kp-draft`);
@@ -251,7 +292,7 @@ describe('КП: картинки, снимок, страница по ссылк
     assert.match(html, /Кухня с островом/);
     assert.match(html, /\+7 900 111-22-33/, 'телефон менеджера есть');
     assert.ok(!html.includes('916'), 'телефона клиента нет');
-    assert.ok(!/себестоим|unitCost|costByGroup|"cost"|margin|маржа/i.test(html), 'себестоимости нет');
+    assert.ok(!/себестоим|unitCost|costByGroup|"cost"|"margin"|маржа|kProd|наценк/i.test(html), 'себестоимости нет');
     assert.match(html, /data-kp="light"/);
     assert.match((await guest.get(`/p/${token}?theme=dark`)).raw, /data-kp="dark"/);
     assert.match(html, /Эскиз проекта/);

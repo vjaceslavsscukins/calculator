@@ -9,6 +9,7 @@ import {
 import { useApp } from '../app.tsx';
 import { ErrorNote } from '../components/Layout.tsx';
 import { NumInput } from '../components/NumInput.tsx';
+import { ImagesPanel } from '../components/Images.tsx';
 import { errText, num, rub, rubUnit, time } from '../format.ts';
 
 interface Doc { title: string; status: Status; input: CalcInput; unparsed: Pro100Line[] }
@@ -348,6 +349,7 @@ export function CalculationPage() {
 
             <LightEditor doc={doc} view={view} settings={settings} onChange={(light) => editInput((i) => ({ ...i, light }))} />
           </section>
+          <ImagesPanel calcId={calc.id} />
         </div>
 
         <aside className="totals" aria-label="Итог">
@@ -376,7 +378,10 @@ export function CalculationPage() {
           <div className="total"><span>Итого клиенту</span><b>{rub(view?.total, roundTo)}</b></div>
           {boss && view?.margin != null && <div className="trow"><span>Маржа<em>руководитель</em></span><b>{rub(view.margin, roundTo)}</b></div>}
           <button className="btn solid" type="button" onClick={saveNow} disabled={saveState === 'saving' || !!conflict}>Сохранить расчёт</button>
-          <button className="btn" type="button" disabled title="Сборка КП — следующий этап">Собрать КП · скоро</button>
+          <button className="btn" type="button" onClick={async () => {
+            if (verRef.current !== savedVerRef.current) await save();
+            nav(`/clients/${calc.clientId}/kp/new?calc=${calc.id}`);
+          }}>Собрать КП</button>
           {boss && settings && 'kProd' in settings && settings.kProd != null && (
             <p className="foot">Наценки: производство ×{num(settings.kProd)}, магазин ×{num(settings.kShop ?? 0)}, одни на всё.{user?.role === 'owner' && <> <Link to="/settings/coefficients">Изменить</Link></>}</p>
           )}
@@ -516,11 +521,31 @@ function WebRow({ row, vr, boss, roundTo, onChange, onRemove }: {
   const web = row.web ?? { url: '', name: '', price: 0, unit: 'шт' };
   const warn = vr?.warnings?.filter(Boolean) ?? [];
   const href = /^https?:\/\//i.test(web.url.trim()) ? web.url.trim() : '';
+  const [look, setLook] = useState<{ busy: boolean; msg: string | null; bad?: boolean; tried?: string }>({ busy: false, msg: null });
+  /** Подтянуть название и цену по ссылке (сервер скачивает страницу); менеджер потом правит. */
+  const fetchInfo = async (url: string) => {
+    const u = url.trim();
+    if (!/^https?:\/\//i.test(u) || look.tried === u) return;
+    setLook({ busy: true, msg: 'Смотрим страницу…', tried: u });
+    try {
+      const r = await api.linkPreview(u);
+      const cur = { ...web, url: u };
+      const patch: Partial<typeof web> = {};
+      if (!cur.name.trim() && r.name) patch.name = r.name;
+      if (!(cur.price > 0) && r.price && (!r.currency || r.currency === 'RUB' || r.currency === 'RUR')) patch.price = r.price;
+      onChange({ web: { ...cur, ...patch } });
+      const got = [patch.name ? 'название' : '', patch.price ? 'цену' : ''].filter(Boolean).join(' и ');
+      setLook({ busy: false, tried: u, msg: got ? `С сайта подставили ${got} — проверьте.` : r.price && r.currency && r.currency !== 'RUB' ? `На сайте цена в ${r.currency}: введите в рублях.` : 'На странице: ' + r.name + (r.price ? ` · ${r.price}` : '') });
+    } catch (x) { setLook({ busy: false, tried: u, bad: true, msg: `${errText(x)}. Введите название и цену вручную.` }); }
+  };
   return (
     <tr className={warn.length ? 'bad' : undefined}>
       <td>
         <div className="weburl">
-          <input className="in" aria-label="Ссылка на товар" placeholder="https://… ссылка на товар" value={web.url} onChange={(e) => onChange({ web: { ...web, url: e.target.value } })} />
+          <input className="in" aria-label="Ссылка на товар" placeholder="https://… вставьте ссылку — подтянем название и цену" value={web.url}
+            onChange={(e) => onChange({ web: { ...web, url: e.target.value } })}
+            onPaste={(e) => { const t = e.clipboardData.getData('text'); if (t) setTimeout(() => fetchInfo(t), 0); }}
+            onBlur={(e) => fetchInfo(e.target.value)} />
           {href
             ? <a className="open" href={href} target="_blank" rel="noopener noreferrer" aria-label="Открыть ссылку в новой вкладке" title="Открыть в новой вкладке">↗</a>
             : <span className="open off" aria-hidden="true">↗</span>}
@@ -529,6 +554,7 @@ function WebRow({ row, vr, boss, roundTo, onChange, onRemove }: {
           <input className="in" aria-label="Название товара" value={web.name} placeholder="Название" onChange={(e) => onChange({ web: { ...web, name: e.target.value } })} />
           <label className="own-price"><NumInput className="in" aria-label="Цена по ссылке за штуку, ₽" digits={2} value={web.price} onValue={(n) => onChange({ web: { ...web, price: Math.max(0, n) } })} /><span>₽ за шт</span></label>
         </div>
+        {look.msg && <span className={`sub${look.bad ? ' mark' : ''}`} role="status">{look.msg}</span>}
         {warn.length > 0 && <span className="sub mark">{warn.join(', ')}</span>}
       </td>
       <td className="num">
@@ -591,6 +617,9 @@ function LightEditor({ doc, view, settings, onChange }: {
   const switches = L?.switches ?? [];
   // по умолчанию — первый настоящий выключатель, а не «Нет (напрямую)»
   const firstSwitch = switches.find((w) => w.id !== 'none')?.id ?? switches[0]?.id ?? '';
+  // профиль выбирается у каждого участка; новый участок получает первый профиль из настроек
+  // (LightInput.profileId остаётся в данных только для старых расчётов)
+  const firstProfile = profiles[0]?.id ?? '';
   const lr = view?.light;
   const reserve = settings && 'lightReserve' in settings && typeof settings.lightReserve === 'number' ? settings.lightReserve : null;
   const setSeg = (k: number, p: Partial<CalcInput['light']['segments'][number]>) =>
@@ -604,21 +633,16 @@ function LightEditor({ doc, view, settings, onChange }: {
           <input type="checkbox" checked={light.enabled} onChange={(e) => onChange({
             ...light, enabled: e.target.checked,
             profileId: light.profileId || profiles[0]?.id || '',
-            segments: e.target.checked && !light.segments.length ? [{ name: 'Под верхними шкафами', lengthM: 0, switchId: firstSwitch, profileId: light.profileId || profiles[0]?.id || '' }] : light.segments,
+            segments: e.target.checked && !light.segments.length ? [{ name: 'Под верхними шкафами', lengthM: 0, switchId: firstSwitch, profileId: firstProfile }] : light.segments,
           })} />
           Есть подсветка
         </label>
       </div>
-      <p className="note">Вы задаёте участки: длину, профиль и включение. Мощность, блок питания и выключатели считаются сами; участки «Нет (напрямую к слаботочке)» — без выключателя и блока питания. Паз включён в цену профиля.</p>
+      <p className="note">Вы задаёте участки: длину, профиль и включение у каждого участка. Мощность, блок питания и выключатели считаются сами; участки «Нет (напрямую к слаботочке)» — без выключателя и блока питания. Паз включён в цену профиля.</p>
       {light.enabled && (
         <>
           <div className="lgrid">
             <label>Лента<span className="fixed">{L?.tape.name ?? '—'}</span></label>
-            <label>Профиль для новых участков
-              <select className="in" aria-label="Профиль для новых участков" value={light.profileId} onChange={(e) => onChange({ ...light, profileId: e.target.value })}>
-                {profiles.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-              </select>
-            </label>
           </div>
           <div className="seglist">
             <div className="segrow seghead"><span>Участок</span><span>Длина, м</span><span>Профиль</span><span>Включение</span><span /></div>
@@ -636,7 +660,7 @@ function LightEditor({ doc, view, settings, onChange }: {
               </div>
             ))}
           </div>
-          <button className="link" type="button" onClick={() => onChange({ ...light, segments: [...light.segments, { name: 'Новый участок', lengthM: 1, switchId: firstSwitch, profileId: light.profileId || profiles[0]?.id || '' }] })}>+ участок</button>
+          <button className="link" type="button" onClick={() => onChange({ ...light, segments: [...light.segments, { name: 'Новый участок', lengthM: 1, switchId: firstSwitch, profileId: firstProfile }] })}>+ участок</button>
           {lr && (
             <div className="lsum">
               <span>Лента <b>{num(lr.lengthM)} м</b></span>

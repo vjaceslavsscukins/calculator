@@ -3,8 +3,9 @@
 import type { CalcInput, CalcResult, RowResult, LightResult, Settings, ProductKind, Row } from '../../engine/src/types.ts';
 import type { BlockDef } from '../../engine/src/blocks.ts';
 import type { Pro100Line } from '../../engine/src/pro100.ts';
+import type { KpItemPrice, KpTotals, KpMaterial } from '../../engine/src/kp.ts';
 
-export type { CalcInput, Settings, ProductKind, Row, BlockDef, Pro100Line };
+export type { CalcInput, Settings, ProductKind, Row, BlockDef, Pro100Line, KpItemPrice, KpTotals, KpMaterial };
 
 export type Role = 'owner' | 'head' | 'manager';
 
@@ -17,6 +18,9 @@ export interface User {
   /** У владельца города может не быть. */
   cityId: number | null;
   cityName: string | null;
+  /** Для КП: телефон и должность (видит клиент на странице КП). */
+  phone: string;
+  position: string;
 }
 
 export interface UserAdmin extends User { disabled: boolean; invited: boolean }
@@ -115,6 +119,40 @@ export interface SettingsPublic {
 
 export interface AuditEntry { at: string; userName: string; action: string; entity: string; details: unknown }
 
+export interface ImageInfo { id: string; kind: 'sketch' | 'render' | 'cover'; title: string; mime: string; size: number; inKp: boolean; createdAt: string; url: string }
+
+export interface KpDraftItem {
+  calculationId: string; kind: ProductKind; calcTitle: string; status: Status;
+  title: string; dims: string; about: string; materials: KpMaterial[]; benefits: string[];
+  images: ImageInfo[]; imageId: string | null; price: KpItemPrice;
+}
+export interface KpDraft {
+  client: { id: string; name: string; cityName: string };
+  items: KpDraftItem[];
+  base: { id: string; number: string; version: number; theme: 'dark' | 'light'; items: { calculationId: string; title: string; dims: string; about: string; materials: KpMaterial[]; benefits: string[]; imageId: string | null }[] } | null;
+  validUntil: string;
+  aiText: boolean;
+}
+export interface KpSummary {
+  id: string; number: string; version: number; clientId: string; clientName: string; url: string; total: number; theme: 'dark' | 'light';
+  validUntil: string; createdAt: string; createdBy: string | null; sentAt: string | null; views: number;
+  firstViewedAt: string | null; lastViewedAt: string | null; approvedAt: string | null; items: { calculationId: string; title: string }[];
+}
+export interface KpSnapshotView {
+  number: string; version: number; validUntil: string; roundTo: number; client: { name: string; city: string };
+  items: { calculationId: string; title: string; dims: string; price: KpItemPrice; image: { id: string; kind: string } | null }[];
+  totals: KpTotals;
+}
+export interface KpDetail { kp: KpSummary; snapshot: KpSnapshotView; clientPhone: string; events: { type: string; message: string; at: string }[]; versions: KpSummary[] }
+export interface KpItemBody { calculationId: string; title: string; dims: string; about: string; materials: KpMaterial[]; benefits: string[]; imageId: string | null }
+export interface Notice { id: number; type: string; text: string; kpId: string | null; clientId: string | null; createdAt: string; read: boolean }
+export interface Company {
+  name: string; coverTitle: string; addresses: { city: string; lines: string }[]; phone: string; lead: string;
+  facts: { big: string; text: string }[]; boxes: { title: string; text: string }[]; includes: string[]; extra: string[]; notIncluded: string;
+  warrantyBig: string; warrantyText: string; terms: string[]; payment: string[]; fix: string; steps: string[]; coverImageId: string | null;
+}
+export interface LinkInfo { name: string; price?: number; currency?: string; image?: string }
+
 export class ApiError extends Error {
   status: number;
   body: Record<string, unknown>;
@@ -157,6 +195,23 @@ async function request<T>(method: string, url: string, body?: unknown, opts: { q
   return data as T;
 }
 
+/** Загрузка картинки телом запроса (PNG, JPG, WebP до 10 МБ). */
+async function uploadFile<T>(url: string, file: File): Promise<T> {
+  let res: Response;
+  try {
+    res = await fetch(url, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': file.type || 'application/octet-stream', 'X-File-Name': encodeURIComponent(file.name) }, body: file });
+  } catch {
+    throw new ApiError(0, 'Сервер не отвечает. Проверьте подключение и повторите.', {});
+  }
+  let data: Record<string, unknown> = {};
+  try { data = JSON.parse(await res.text()); } catch { /* не JSON */ }
+  if (!res.ok) {
+    if (res.status === 401 && onUnauthorized) onUnauthorized();
+    throw new ApiError(res.status, typeof data.error === 'string' ? data.error : res.status === 413 ? 'Картинка больше 10 МБ.' : 'Не удалось загрузить картинку.', data);
+  }
+  return data as T;
+}
+
 const enc = encodeURIComponent;
 const qs = (p: Record<string, string | undefined>) => {
   const s = Object.entries(p).filter(([, v]) => v).map(([k, v]) => `${k}=${enc(v!)}`).join('&');
@@ -178,9 +233,9 @@ export const api = {
 
   // пользователи
   users: () => request<{ users: UserAdmin[] }>('GET', '/api/users'),
-  createUser: (u: { firstName: string; lastName: string; email: string; role: Role; cityId: number }) =>
+  createUser: (u: { firstName: string; lastName: string; email: string; role: Role; cityId: number; phone?: string; position?: string }) =>
     request<{ user: UserAdmin; inviteUrl: string }>('POST', '/api/users', u),
-  patchUser: (id: string, patch: Partial<{ firstName: string; lastName: string; role: Role; cityId: number; disabled: boolean }>) =>
+  patchUser: (id: string, patch: Partial<{ firstName: string; lastName: string; role: Role; cityId: number; disabled: boolean; phone: string; position: string }>) =>
     request<{ user: UserAdmin }>('PATCH', `/api/users/${enc(id)}`, patch),
   newInvite: (id: string) => request<{ inviteUrl: string }>('POST', `/api/users/${enc(id)}/invite`),
 
@@ -209,6 +264,37 @@ export const api = {
     request<{ item: CatalogItemView }>('PATCH', `/api/catalog/items/${enc(id)}`, patch),
   addItem: (groupId: string, name: string, price: number) =>
     request<{ item: CatalogItemView }>('POST', `/api/catalog/groups/${enc(groupId)}/items`, { name, price }),
+
+  // картинки и рендер
+  images: (calcId: string) => request<{ images: ImageInfo[]; renderEnabled: boolean }>('GET', `/api/calculations/${enc(calcId)}/images`),
+  uploadImage: (calcId: string, file: File) => uploadFile<{ image: ImageInfo }>(`/api/calculations/${enc(calcId)}/images`, file),
+  patchImage: (id: string, patch: { inKp?: boolean; title?: string }) => request<{ image: ImageInfo }>('PATCH', `/api/images/${enc(id)}`, patch),
+  deleteImage: (id: string) => request<object>('DELETE', `/api/images/${enc(id)}`),
+  render: (calcId: string, body: { imageId: string; previousId?: string; comment?: string }) =>
+    request<{ image: ImageInfo }>('POST', `/api/calculations/${enc(calcId)}/render`, body),
+  linkPreview: (url: string) => request<LinkInfo>('POST', '/api/link-preview', { url }),
+
+  // КП
+  kpDraft: (clientId: string, base?: string) => request<KpDraft>('GET', `/api/clients/${enc(clientId)}/kp-draft${qs({ base })}`),
+  kpText: (calcId: string, body: { title: string; dims: string; materials: KpMaterial[]; benefits: string[] }) =>
+    request<{ text: string; source: 'ai' | 'template'; note?: string }>('POST', `/api/calculations/${enc(calcId)}/kp-text`, body),
+  kpPreview: (clientId: string, calculationIds: string[]) =>
+    request<{ items: { calculationId: string; price: KpItemPrice }[]; totals: KpTotals }>('POST', '/api/kp/preview', { clientId, calculationIds }),
+  createKp: (body: { clientId: string; baseKpId?: string; theme: 'dark' | 'light'; validUntil: string; items: KpItemBody[] }) =>
+    request<{ kp: KpSummary }>('POST', '/api/kp', body),
+  clientKps: (clientId: string) => request<{ kps: KpSummary[] }>('GET', `/api/clients/${enc(clientId)}/kps`),
+  kp: (id: string) => request<KpDetail>('GET', `/api/kp/${enc(id)}`),
+  kpSent: (id: string, channel: 'link' | 'whatsapp' | 'telegram' | 'pdf') => request<{ kp: KpSummary }>('POST', `/api/kp/${enc(id)}/sent`, { channel }),
+
+  // уведомления
+  notifications: () => request<{ items: Notice[]; unread: number }>('GET', '/api/notifications'),
+  readNotifications: (ids?: number[]) => request<object>('POST', '/api/notifications/read', ids ? { ids } : {}),
+
+  // компания (постоянная часть КП)
+  company: () => request<{ company: Company; rev: number; coverUrl: string | null }>('GET', '/api/company'),
+  saveCompany: (rev: number, company: Company) => request<{ company: Company; rev: number; coverUrl: string | null }>('PUT', '/api/company', { rev, company }),
+  uploadCover: (file: File) => uploadFile<{ company: Company; rev: number; coverUrl: string | null }>('/api/company/cover', file),
+  deleteCover: () => request<{ company: Company; rev: number; coverUrl: string | null }>('DELETE', '/api/company/cover'),
 
   // журнал
   audit: (limit = 200) => request<{ entries: AuditEntry[] }>('GET', `/api/audit?limit=${limit}`),
