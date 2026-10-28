@@ -90,8 +90,10 @@ export function Layout() {
         </div>
       </header>
       <nav className="side" aria-label="Разделы">
+        {boss && <NavLink to="/dashboard">Панель</NavLink>}
         <NavLink to="/clients">Клиенты</NavLink>
         <NavLink to="/calculations">Расчёты</NavLink>
+        <NavLink to="/kps">КП</NavLink>
         {boss && <NavLink to="/prices">Прайсы</NavLink>}
         {boss && <NavLink to="/audit">Журнал</NavLink>}
         {user.role === 'owner' && (

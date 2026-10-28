@@ -11,6 +11,7 @@ import type { CalcInput, Catalog, CatalogIndex, ProductKind, Settings } from '..
 import { tx } from './db.ts';
 import { registerKp } from './kp.ts';
 import { registerSpec } from './spec.ts';
+import { registerBoard } from './board.ts';
 import type { KpDeps } from './kp.ts';
 import { hashPassword, newToken, tokenHash, verifyPassword } from './security.ts';
 import {
@@ -70,7 +71,8 @@ const CLIENT_SQL = `
 
 const CALC_SQL = `
   select k.*, cl.name as client_name, cl.manager_id, cl.city_id, ci.name as city_name,
-         m.first_name as m_first, m.last_name as m_last, ub.first_name as ub_first, ub.last_name as ub_last
+         m.first_name as m_first, m.last_name as m_last, ub.first_name as ub_first, ub.last_name as ub_last,
+         (select s.updated_at from specs s where s.calculation_id = k.id) as spec_at
     from calculations k join clients cl on cl.id = k.client_id join cities ci on ci.id = cl.city_id
     join users m on m.id = cl.manager_id left join users ub on ub.id = k.updated_by`;
 
@@ -87,7 +89,7 @@ const clientJson = (r: any) => ({
 });
 const calcSummary = (r: any) => ({
   id: r.id, clientId: r.client_id, clientName: r.client_name, title: r.title, kind: r.kind, status: r.status, total: r.total,
-  managerName: fullName(r.m_first, r.m_last), cityName: r.city_name, updatedAt: r.updated_at,
+  managerName: fullName(r.m_first, r.m_last), cityName: r.city_name, updatedAt: r.updated_at, specAt: r.spec_at ?? null,
 });
 const calcJson = (r: any) => ({
   id: r.id, clientId: r.client_id, clientName: r.client_name, title: r.title, kind: r.kind, status: r.status, rev: r.rev,
@@ -645,6 +647,8 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
   });
   // ========== Спецификация к договору ==========
   await registerSpec(app, { pool, pricing, me, visibleCalc });
+  // ========== Реестр КП и приборная панель ==========
+  await registerBoard(app, { pool, me, need, scope });
 
   // ========== Интерфейс (SPA) ==========
   const spa = opts.production && opts.webDist && existsSync(opts.webDist);

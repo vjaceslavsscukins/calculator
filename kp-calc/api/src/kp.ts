@@ -387,7 +387,7 @@ export async function registerKp(app: FastifyInstance, d: KpDeps): Promise<void>
   app.post('/api/kp/:id/sent', async (req: any) => {
     const u = d.me(req);
     const r = await visibleKp(u, uuid(req.params.id));
-    const channel = ['link', 'whatsapp', 'telegram', 'pdf'].includes(req.body?.channel) ? req.body.channel : 'link';
+    const channel = ['link', 'whatsapp', 'telegram', 'max', 'pdf'].includes(req.body?.channel) ? req.body.channel : 'link';
     await tx(pool, async (db) => {
       await db.query('update kps set sent_at = coalesce(sent_at, now()) where id = $1', [r.id]);
       await db.query(`insert into kp_events (kp_id, type, message) values ($1, 'sent', $2)`, [r.id, channel]);
@@ -398,8 +398,16 @@ export async function registerKp(app: FastifyInstance, d: KpDeps): Promise<void>
   });
 
   // ========== Уведомления ==========
+  /** Уведомление менеджеру клиента; утверждение и вопрос — ещё владельцам и руководителю города клиента. */
   async function notify(db: pg.Pool | pg.PoolClient, kp: any, type: string, text: string) {
     await db.query('insert into notifications (user_id, kp_id, type, text) values ($1,$2,$3,$4)', [kp.manager_id, kp.id, type, text]);
+    if (type !== 'approve' && type !== 'question') return;
+    const { rows: [m] } = await db.query('select first_name, last_name from users where id = $1', [kp.manager_id]);
+    await db.query(
+      `insert into notifications (user_id, kp_id, type, text)
+         select id, $2, $3, $4 from users
+          where not disabled and id <> $1 and (role = 'owner' or (role = 'head' and city_id = $5))`,
+      [kp.manager_id, kp.id, type, `${text} · менеджер ${fullName(m?.first_name, m?.last_name)}`, kp.city_id]);
   }
 
   app.get('/api/notifications', async (req: any) => {
@@ -460,7 +468,7 @@ export async function registerKp(app: FastifyInstance, d: KpDeps): Promise<void>
   // ========== Страница КП по ссылке (без входа) ==========
   async function kpByToken(token: unknown) {
     if (typeof token !== 'string' || !TOKEN.test(token)) return null;
-    const { rows: [r] } = await pool.query('select k.*, cl.manager_id, cl.name as client_name from kps k join clients cl on cl.id = k.client_id where k.token = $1', [token]);
+    const { rows: [r] } = await pool.query('select k.*, cl.manager_id, cl.city_id, cl.name as client_name, cl.phone as client_phone from kps k join clients cl on cl.id = k.client_id where k.token = $1', [token]);
     return r ?? null;
   }
   const publicHeaders = (reply: FastifyReply) => {
@@ -526,6 +534,11 @@ export async function registerKp(app: FastifyInstance, d: KpDeps): Promise<void>
     const num = `${kpNumber(r.number)}${r.version > 1 ? ` (версия ${r.version})` : ''}`;
     await tx(pool, async (db) => {
       await db.query('insert into kp_events (kp_id, type, message) values ($1,$2,$3)', [r.id, type, message]);
+      // очередь для Битрикс24: уйдёт в сделку, когда подключат вебхук
+      await db.query('insert into bitrix_outbox (kind, kp_id, client_id, payload) values ($1,$2,$3,$4)', [
+        type === 'approve' ? 'kp_approve' : 'kp_question', r.id, r.client_id,
+        JSON.stringify({ kp: kpNumber(r.number), version: r.version, total: r.total, client: r.client_name, phone: r.client_phone, message }),
+      ]);
       if (type === 'approve') {
         await db.query('update kps set approved_at = coalesce(approved_at, now()) where id = $1', [r.id]);
         await notify(db, r, 'approve', `${r.client_name} нажал(а) «Утвердить проект» в ${num}`);

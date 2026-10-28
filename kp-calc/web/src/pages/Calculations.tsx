@@ -53,7 +53,7 @@ export function CalculationsPage() {
                 <td><span className="pill">{STATUS_TITLES[c.status] ?? c.status}</span></td>
                 <td className="num">{rub(c.total, roundTo)}</td>
                 <td>{c.managerName}</td><td>{c.cityName}</td><td>{dateTime(c.updatedAt)}</td>
-                <td className="nowrap"><DocsMenu calcId={c.id} /></td>
+                <td className="nowrap"><DocsMenu calcId={c.id} specAt={c.specAt} /></td>
               </tr>
             ))}
             {list && !list.length && <tr><td colSpan={9} className="empty">Ничего не нашли.</td></tr>}

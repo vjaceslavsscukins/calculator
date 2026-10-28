@@ -30,6 +30,7 @@ export function SpecPage() {
   const [err, setErr] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [tried, setTried] = useState(false);
+  const [preview, setPreview] = useState(false);
 
   useEffect(() => {
     api.spec(id).then((r) => { setRes(r); setData(r.spec?.data ?? r.draft); }).catch((x) => setErr(errText(x)));
@@ -59,14 +60,17 @@ export function SpecPage() {
     try {
       const r = await api.saveSpec(id, { rev: res.spec?.rev ?? 0, data, refreshTotal: refresh });
       setRes(r); setData(r.spec!.data); setDirty(false); setRefresh(false);
-      setMsg(`Спецификация сохранена · ${dateTime(r.spec!.updatedAt)}`);
+      setMsg(`Спецификация сохранена ${dateTime(r.spec!.updatedAt)}. Она хранится у расчёта: карточка клиента → строка расчёта → «Документы» → «Спецификация».`);
+      setPreview(true);
+      window.scrollTo({ top: 0 });
     } catch (x) { setErr(errText(x)); } finally { setBusy(false); }
   };
 
   const print = () => {
     setTried(true);
-    if (missing.length) { setErr(`Перед печатью заполните: ${missing.join(', ')}.`); return; }
+    if (missing.length) { setPreview(false); setErr(`Перед печатью заполните: ${missing.join(', ')}.`); return; }
     if (dirty) { setErr('Сначала сохраните спецификацию — печатается сохранённый вариант.'); return; }
+    setErr(null);
     window.print();
   };
 
@@ -81,16 +85,31 @@ export function SpecPage() {
         <div className="head">
           <div><div className="eyebrow">Документы · Приложение №2 к договору</div><h1>Спецификация</h1></div>
           <div className="actions">
-            <button className="btn" type="button" onClick={fromCalc}>Обновить из расчёта</button>
-            <button className="btn" type="button" onClick={print}>Печать / PDF</button>
-            <button className="btn solid" type="button" disabled={busy || (!dirty && !!res.spec)} onClick={save}>
-              {busy ? 'Сохраняю…' : !dirty && res.spec ? 'Сохранено ✓' : 'Сохранить спецификацию'}
-            </button>
+            {preview ? (
+              <>
+                <button className="btn" type="button" onClick={() => setPreview(false)}>← Вернуться к правке</button>
+                <button className="btn solid" type="button" onClick={print}>Печать / Сохранить PDF</button>
+              </>
+            ) : (
+              <>
+                <button className="btn" type="button" onClick={fromCalc}>Обновить из расчёта</button>
+                <button className="btn" type="button" onClick={() => { setPreview(true); window.scrollTo({ top: 0 }); }}>Просмотр</button>
+                <button className="btn solid" type="button" disabled={busy || (!dirty && !!res.spec)} onClick={save}>
+                  {busy ? 'Сохраняю…' : !dirty && res.spec ? 'Сохранено ✓' : 'Сохранить спецификацию'}
+                </button>
+              </>
+            )}
           </div>
         </div>
         <ErrorNote text={err} />
         {msg && <div className="ok" role="status">{msg}</div>}
-        {!res.spec && <div className="ok">Черновик заполнен из расчёта. Проверьте, допишите и сохраните.</div>}
+        {!res.spec && !msg && <div className="ok">Черновик заполнен из расчёта. Проверьте, допишите и сохраните.</div>}
+        {preview && dirty && <div className="err">Есть несохранённые правки: так спецификация будет выглядеть после сохранения. Печать — после сохранения.</div>}
+        {preview && !dirty && missing.length > 0 && <div className="err">Перед печатью заполните: {missing.join(', ')}.</div>}
+        {preview && !dirty && !missing.length && <p className="foot">Так спецификация будет выглядеть на бумаге (A4). В окне печати выберите принтер или «Сохранить как PDF».</p>}
+      </div>
+
+      <div className={`no-print${preview ? ' hidden' : ''}`}>
         {totalDiffers && <div className="err">Расчёт изменился: сейчас {rub(res.calcTotal, roundTo)}, в спецификации {rub(res.spec!.total, roundTo)}. Чтобы взять новую стоимость, нажмите «Обновить из расчёта» и сохраните.</div>}
 
         <div className="box">
@@ -141,16 +160,16 @@ export function SpecPage() {
         </div>
       </div>
 
-      <SpecPrint data={data} total={total} roundTo={roundTo} />
+      <SpecPrint data={data} total={total} roundTo={roundTo} preview={preview} />
     </section>
   );
 }
 
 /** Лист A4 для печати: виден только при печати. */
-function SpecPrint({ data, total, roundTo }: { data: SpecData; total: number; roundTo: number }) {
+function SpecPrint({ data, total, roundTo, preview }: { data: SpecData; total: number; roundTo: number; preview: boolean }) {
   const h = data.header;
   return (
-    <article className="spec-print" aria-hidden="true">
+    <article className={`spec-print${preview ? ' preview' : ''}`} aria-hidden={!preview}>
       <header className="sp-top">
         <img src="/logo/cultura-group-logo-gray.svg" alt="cultura group" />
         <div>

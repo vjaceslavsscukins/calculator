@@ -61,6 +61,8 @@ export interface CalcSummary {
   managerName: string;
   cityName: string;
   updatedAt: string;
+  /** Когда сохранена спецификация (null — ещё нет). */
+  specAt: string | null;
 }
 
 export interface Calculation {
@@ -286,7 +288,7 @@ export const api = {
     request<{ kp: KpSummary }>('POST', '/api/kp', body),
   clientKps: (clientId: string) => request<{ kps: KpSummary[] }>('GET', `/api/clients/${enc(clientId)}/kps`),
   kp: (id: string) => request<KpDetail>('GET', `/api/kp/${enc(id)}`),
-  kpSent: (id: string, channel: 'link' | 'whatsapp' | 'telegram' | 'pdf') => request<{ kp: KpSummary }>('POST', `/api/kp/${enc(id)}/sent`, { channel }),
+  kpSent: (id: string, channel: 'link' | 'whatsapp' | 'telegram' | 'max' | 'pdf') => request<{ kp: KpSummary }>('POST', `/api/kp/${enc(id)}/sent`, { channel }),
 
   // уведомления
   notifications: () => request<{ items: Notice[]; unread: number }>('GET', '/api/notifications'),
@@ -303,9 +305,36 @@ export const api = {
   saveSpec: (calcId: string, body: { rev: number; data: SpecData; refreshTotal?: boolean }) =>
     request<SpecResponse>('PUT', `/api/calculations/${enc(calcId)}/spec`, body),
 
+  // реестр КП и приборная панель
+  kps: (f: { q?: string; state?: string; managerId?: string } = {}) => request<{ kps: KpListItem[] }>('GET', `/api/kps${qs(f)}`),
+  dashboard: (from?: string, to?: string) => request<Dashboard>('GET', `/api/dashboard${qs({ from, to })}`),
+
   // журнал
   audit: (limit = 200) => request<{ entries: AuditEntry[] }>('GET', `/api/audit?limit=${limit}`),
 };
+
+export type KpState = 'approved' | 'question' | 'opened' | 'sent' | 'created' | 'expired';
+export const KP_STATE_TITLES: Record<KpState, string> = {
+  approved: 'Утверждено', question: 'Есть вопрос', opened: 'Открыто клиентом', sent: 'Отправлено, не открыто', created: 'Не отправлено', expired: 'Срок истёк',
+};
+export interface KpListItem {
+  id: string; number: string; version: number; clientId: string; clientName: string; managerId: string; managerName: string; cityName: string;
+  items: string[]; total: number; validUntil: string; createdAt: string; sentAt: string | null; views: number; lastViewedAt: string | null;
+  approvedAt: string | null; questions: number; lastQuestion: string | null; lastQuestionAt: string | null; state: KpState;
+}
+export interface DashboardManager {
+  managerId: string; managerName: string; calcs: number; calcSum: number; margin: number; kps: number; sent: number; opened: number;
+  approved: number; sentSum: number; approvedSum: number; questions: number;
+}
+export interface Dashboard {
+  from: string; to: string;
+  totals: {
+    calcs: number; calcSum: number; margin: number; kps: number; sent: number; opened: number; approved: number; questions: number;
+    sentSum: number; approvedSum: number; avgCheck: number | null; openRate: number | null; approveRate: number | null;
+  };
+  managers: DashboardManager[];
+  attention: (KpListItem & { reason: string })[];
+}
 
 export interface SpecResponse {
   calculation: { id: string; title: string; kind: ProductKind; clientId: string; clientName: string };

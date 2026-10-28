@@ -8,7 +8,7 @@ import { ErrorNote } from '../components/Layout.tsx';
 import { dateTime, errText, rub } from '../format.ts';
 
 const EVENT_TITLES: Record<string, string> = { open: 'Клиент открыл КП', approve: 'Клиент нажал «Утвердить проект»', question: 'Клиент задал вопрос', sent: 'Отправлено' };
-const CHANNELS: Record<string, string> = { link: 'ссылка скопирована', whatsapp: 'WhatsApp', telegram: 'Telegram', pdf: 'PDF' };
+const CHANNELS: Record<string, string> = { link: 'ссылка скопирована', whatsapp: 'WhatsApp', telegram: 'Telegram', max: 'Max', pdf: 'PDF' };
 const dmy = (iso: string) => iso.slice(0, 10).split('-').reverse().join('.');
 
 /** Номер для wa.me: только цифры, 8XXXXXXXXXX → 7XXXXXXXXXX. */
@@ -33,7 +33,7 @@ export function KpPage() {
   const k = d.kp;
   const firstName = k.clientName.split(/\s+/)[0];
   const text = `Здравствуйте, ${firstName}! Подготовили для вас коммерческое предложение ${k.number}. Цена зафиксирована до ${dmy(k.validUntil)}.`;
-  const mark = async (channel: 'link' | 'whatsapp' | 'telegram' | 'pdf') => {
+  const mark = async (channel: 'link' | 'whatsapp' | 'telegram' | 'max' | 'pdf') => {
     try { await api.kpSent(k.id, channel); load(); } catch (x) { setErr(errText(x)); }
   };
   const copy = async () => {
@@ -43,6 +43,14 @@ export function KpPage() {
       try { document.execCommand('copy'); setMsg('Ссылка скопирована.'); } catch { setMsg('Выделите ссылку и скопируйте вручную.'); }
     }
     mark('link');
+  };
+  /** Max: готовой ссылки «написать по номеру» у мессенджера нет — копируем текст со ссылкой и открываем веб-версию. */
+  const toMax = async () => {
+    const full = `${text}\n${k.url}`;
+    try { await navigator.clipboard.writeText(full); setMsg('Текст со ссылкой скопирован. В открывшемся Max найдите чат клиента и вставьте (Ctrl+V / ⌘V).'); }
+    catch { setMsg('Скопируйте ссылку вручную и отправьте клиенту в Max.'); }
+    window.open('https://web.max.ru/', '_blank', 'noopener');
+    mark('max');
   };
   const wa = waPhone(d.clientPhone);
   const waUrl = `https://wa.me/${wa}?text=${encodeURIComponent(`${text}\n${k.url}`)}`;
@@ -71,9 +79,10 @@ export function KpPage() {
             <button className="btn solid" type="button" onClick={copy}>Скопировать ссылку</button>
             <a className="btn" href={waUrl} target="_blank" rel="noopener noreferrer" onClick={() => mark('whatsapp')} aria-disabled={!wa}>Отправить в WhatsApp</a>
             <a className="btn" href={tgUrl} target="_blank" rel="noopener noreferrer" onClick={() => mark('telegram')}>Отправить в Telegram</a>
+            <button className="btn" type="button" onClick={toMax}>Отправить в Max</button>
           </div>
           {msg && <div className="ok" role="status">{msg}</div>}
-          <p className="foot">WhatsApp откроется с номером клиента {d.clientPhone} и готовым текстом. В Telegram выберите чат клиента. Ссылка длинная и случайная: открыть КП можно только по ней.</p>
+          <p className="foot">WhatsApp откроется с номером клиента {d.clientPhone} и готовым текстом. В Telegram выберите чат клиента. Для Max текст со ссылкой копируется — вставьте его в чат клиента. Сообщение уходит с того аккаунта, под которым менеджер вошёл в мессенджер на этом компьютере или телефоне. Ссылка длинная и случайная: открыть КП можно только по ней.</p>
           <div className="stats">
             <span>Отправлено <b>{k.sentAt ? dateTime(k.sentAt) : 'ещё нет'}</b></span>
             <span>Открыто <b>{k.views ? `${k.views} раз, последний раз ${dateTime(k.lastViewedAt)}` : 'ещё не открывали'}</b></span>

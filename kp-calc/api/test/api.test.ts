@@ -196,7 +196,7 @@ describe('сервер калькулятора КП', { skip: SKIP }, () => {
     // реестр: итог хранится, видимость как у клиентов
     const list = (await m1.get('/api/calculations')).body.calculations;
     assert.equal(list.length, 1);
-    assert.deepEqual(Object.keys(list[0]).sort(), ['cityName', 'clientId', 'clientName', 'id', 'kind', 'managerName', 'status', 'title', 'total', 'updatedAt']);
+    assert.deepEqual(Object.keys(list[0]).sort(), ['cityName', 'clientId', 'clientName', 'id', 'kind', 'managerName', 'specAt', 'status', 'title', 'total', 'updatedAt']);
     assert.equal(list[0].total, expected);
     assert.equal(list[0].clientName, 'Анна Смирнова');
     assert.equal((await m2.get('/api/calculations')).body.calculations.length, 0);

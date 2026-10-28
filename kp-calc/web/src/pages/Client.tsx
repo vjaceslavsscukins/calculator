@@ -61,7 +61,7 @@ export function ClientPage() {
                 <td><span className="pill">{STATUS_TITLES[c.status] ?? c.status}</span></td>
                 <td className="num">{rub(c.total, roundTo)}</td>
                 <td>{c.managerName}</td><td>{dateTime(c.updatedAt)}</td>
-                <td className="nowrap"><DocsMenu calcId={c.id} /></td>
+                <td className="nowrap"><DocsMenu calcId={c.id} specAt={c.specAt} /></td>
               </tr>
             ))}
             {!calcs.length && <tr><td colSpan={7} className="empty">Расчётов пока нет. Нажмите «Новый расчёт».</td></tr>}
