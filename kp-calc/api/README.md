@@ -29,6 +29,7 @@ npm start            # http://localhost:8787, /healthz → ok
 | Переменная | Что это |
 |---|---|
 | `DATABASE_URL` | строка подключения к PostgreSQL (обязательно) |
+| `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` | подключение к базе по частям вместо `DATABASE_URL` (пароль со спецсимволами кодировать не нужно) |
 | `DATABASE_SSL` | `1` или `true` — подключаться к PostgreSQL по TLS (облачная база Timeweb). Сертификат сервера не проверяется (`rejectUnauthorized: false`). По умолчанию выключено. TLS включается и сам, если в `DATABASE_URL` есть `sslmode=require` |
 | `OWNER_EMAIL`, `OWNER_PASSWORD` | первый владелец, если в базе нет ни одного (пароль ≥ 8 символов) |
 | `PUBLIC_URL` | адрес портала для ссылок-приглашений (`<PUBLIC_URL>/invite/<token>`); без него — адрес запроса |
