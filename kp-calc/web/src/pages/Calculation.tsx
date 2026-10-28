@@ -200,7 +200,7 @@ export function CalculationPage() {
     : saveState === 'dirty' ? 'есть несохранённые правки'
     : saveState === 'error' ? 'не сохранено'
     : savedAt ? `сохранено ${time(savedAt)}` : 'сохранено';
-  const cols = boss ? 8 : 6;
+  const cols = boss ? 6 : 4;
   const lightRows = view?.light?.rows ?? [];
 
   return (
@@ -244,15 +244,15 @@ export function CalculationPage() {
             <p className="note">Количество пришло из PRO100, его можно исправить. В каждом блоке — строка из прайса или своя; «+ вид» добавляет ещё одну позицию того же типа.</p>
             <table className="calc-table">
               <colgroup>
-                <col style={{ width: '13%' }} /><col />
-                <col style={{ width: 96 }} /><col style={{ width: 64 }} />
-                {boss && <col style={{ width: 130 }} />}{boss && <col style={{ width: 112 }} />}
-                <col style={{ width: 112 }} /><col style={{ width: 84 }} />
+                <col />
+                <col style={{ width: 134 }} />
+                {boss && <col style={{ width: 92 }} />}{boss && <col style={{ width: 98 }} />}
+                <col style={{ width: 98 }} /><col style={{ width: 66 }} />
               </colgroup>
               <thead>
                 <tr>
-                  <th>Строка</th><th>Материал / позиция</th><th className="num">Кол-во</th><th>Ед.</th>
-                  {boss && <th className="num">Себест. за ед.</th>}{boss && <th className="num">Себестоимость</th>}
+                  <th>Строка PRO100 · материал / позиция</th><th className="num">Кол-во, ед.</th>
+                  {boss && <th className="num">Себест. за ед.</th>}{boss && <th className="num">Себест.</th>}
                   <th className="num">Розница</th><th />
                 </tr>
               </thead>
@@ -387,7 +387,7 @@ function CalcRow({ row, vr, groups, boss, roundTo, onChange, onDup, onRemove }: 
   let label: ReactNode, mat: ReactNode, unit: ReactNode;
   if (row.own) {
     const own = row.own;
-    label = <span className="pro hand">своя</span>;
+    label = <span className="pro hand">своя строка</span>;
     mat = (
       <div className="own">
         <input className="in" aria-label="Название" value={own.name} placeholder="Название" onChange={(e) => onChange({ own: { ...own, name: e.target.value } })} />
@@ -396,7 +396,7 @@ function CalcRow({ row, vr, groups, boss, roundTo, onChange, onDup, onRemove }: 
     );
     unit = <input className="in unit" aria-label="Единица" value={own.unit} onChange={(e) => onChange({ own: { ...own, unit: e.target.value } })} />;
   } else {
-    label = row.pro100 ? <span className="pro">{row.pro100}</span> : <span className="pro hand">добавлена</span>;
+    label = row.pro100 ? <span className="pro">{row.pro100}</span> : null;
     mat = (
       <>
         <ItemSelect value={row.itemId} groups={groups} label="Позиция прайса" onChange={(itemId) => onChange({ itemId: itemId || null })} />
@@ -410,18 +410,23 @@ function CalcRow({ row, vr, groups, boss, roundTo, onChange, onDup, onRemove }: 
         )}
       </>
     );
-    unit = vr?.unit ?? '';
+    unit = <span className="unit-t">{vr?.unit ?? ''}</span>;
   }
   return (
     <tr className={warn.length ? 'bad' : undefined}>
-      <td>{label}</td>
-      <td>{mat}{warn.length > 0 && <span className="sub mark">{warn.join(', ')}</span>}</td>
+      <td>
+        {label && <div className="rowlabel">{label}</div>}{mat}
+        {boss && vr?.costNote && <span className="sub">себестоимость м²: {vr.costNote}</span>}
+        {warn.length > 0 && <span className="sub mark">{warn.join(', ')}</span>}
+      </td>
       <td className="num">
-        <NumInput className={`in qty${edited ? ' edited' : ''}`} aria-label="Количество" value={row.qty} onValue={(qty) => onChange({ qty: Math.max(0, qty) })} />
+        <span className="qtybox">
+          <NumInput className={`in qty${edited ? ' edited' : ''}`} aria-label="Количество" value={row.qty} onValue={(qty) => onChange({ qty: Math.max(0, qty) })} />
+          {unit}
+        </span>
         {edited && <span className="sub mark">PRO100: {num(row.qtyPro100)}</span>}
       </td>
-      <td>{unit}</td>
-      {boss && <td className="num">{vr?.unitCost != null ? rubUnit(vr.unitCost) : '—'}{vr?.costNote && <span className="sub">{vr.costNote}</span>}</td>}
+      {boss && <td className="num">{vr?.unitCost != null ? rubUnit(vr.unitCost) : '—'}</td>}
       {boss && <td className="num">{vr?.cost != null ? rub(vr.cost, roundTo) : '—'}</td>}
       <td className="num">{vr ? rub(vr.retail, roundTo) : '—'}</td>
       <td className="num nowrap">
@@ -435,10 +440,8 @@ function CalcRow({ row, vr, groups, boss, roundTo, onChange, onDup, onRemove }: 
 function LightRow({ r, boss, roundTo }: { r: ViewRow; boss: boolean; roundTo: number }) {
   return (
     <tr className={r.warnings?.length ? 'bad' : undefined}>
-      <td><span className="pro hand">авто</span></td>
-      <td>{r.name}<span className="sub">из расчёта подсветки{r.warnings?.length ? ` · ${r.warnings.join(', ')}` : ''}</span></td>
-      <td className="num">{num(r.qty)}</td>
-      <td>{r.unit}</td>
+      <td><div className="rowlabel"><span className="pro hand">авто</span></div>{r.name}<span className="sub">из расчёта подсветки{r.warnings?.length ? ` · ${r.warnings.join(', ')}` : ''}</span></td>
+      <td className="num">{num(r.qty)} <span className="unit-t">{r.unit}</span></td>
       {boss && <td className="num">{r.unitCost != null ? rubUnit(r.unitCost) : '—'}</td>}
       {boss && <td className="num">{r.cost != null ? rub(r.cost, roundTo) : '—'}</td>}
       <td className="num">{rub(r.retail, roundTo)}</td>

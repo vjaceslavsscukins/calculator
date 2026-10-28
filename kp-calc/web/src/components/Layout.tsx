@@ -36,7 +36,7 @@ export function Layout() {
         <span className="top-title">Калькулятор КП</span>
         <div className="top-tools">
           <ThemeSwitch />
-          <span className="who">{user.firstName} {user.lastName}<small>{ROLE_TITLES[user.role]} · {user.cityName}</small></span>
+          <span className="who">{user.firstName} {user.lastName}<small>{ROLE_TITLES[user.role]}{user.cityName ? ` · ${user.cityName}` : ''}</small></span>
           <button type="button" className="btn small" onClick={logout}>Выйти</button>
         </div>
       </header>

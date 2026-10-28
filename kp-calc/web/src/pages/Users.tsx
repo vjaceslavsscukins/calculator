@@ -55,7 +55,7 @@ export function UsersPage() {
       <div className="adm">
         <div className="box">
           <h2>Добавить пользователя</h2>
-          <NewUser cities={meta?.cities ?? []} defaultCity={me?.cityId ?? 0} onCreated={(u, url) => { setInvite({ url, who: `${u.firstName} ${u.lastName}`.trim() }); load(); }} />
+          <NewUser cities={meta?.cities ?? []} defaultCity={me?.cityId ?? meta?.cities[0]?.id ?? 0} onCreated={(u, url) => { setInvite({ url, who: `${u.firstName} ${u.lastName}`.trim() }); load(); }} />
           {invite && <InviteLink url={invite.url} who={invite.who} />}
         </div>
       </div>
@@ -76,7 +76,8 @@ export function UsersPage() {
                     </select>
                   </td>
                   <td>
-                    <select className="cell" value={u.cityId} aria-label="Город" onChange={(e) => patch(u, { cityId: Number(e.target.value) })}>
+                    <select className="cell" value={u.cityId ?? ''} aria-label="Город" onChange={(e) => patch(u, { cityId: Number(e.target.value) })}>
+                      {u.cityId == null && <option value="">—</option>}
                       {(meta?.cities ?? []).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                     </select>
                   </td>
@@ -104,10 +105,12 @@ function NewUser({ cities, defaultCity, onCreated }: { cities: { id: number; nam
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   useEffect(() => { if (!f.cityId && defaultCity) setF((x) => ({ ...x, cityId: defaultCity })); }, [defaultCity, f.cityId]);
+  const cityMissing = !f.cityId;
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     if (!f.firstName.trim() || !f.email.trim()) { setErr('Укажите имя и почту.'); return; }
+    if (cityMissing) { setErr('Выберите город.'); return; }
     setBusy(true); setErr(null);
     try {
       const r = await api.createUser({ ...f, firstName: f.firstName.trim(), lastName: f.lastName.trim(), email: f.email.trim() });

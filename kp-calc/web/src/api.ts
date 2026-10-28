@@ -14,8 +14,9 @@ export interface User {
   lastName: string;
   email: string;
   role: Role;
-  cityId: number;
-  cityName: string;
+  /** У владельца города может не быть. */
+  cityId: number | null;
+  cityName: string | null;
 }
 
 export interface UserAdmin extends User { disabled: boolean; invited: boolean }

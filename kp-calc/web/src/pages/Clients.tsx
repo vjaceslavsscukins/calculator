@@ -26,7 +26,7 @@ export function ClientsPage() {
         <div><div className="eyebrow">Работа идёт от клиента</div><h1>Клиенты</h1></div>
         <div className="actions"><button className="btn solid" type="button" onClick={() => setAdding((v) => !v)}>Новый клиент</button></div>
       </div>
-      {adding && user && <NewClientForm defaultCityId={user.cityId} cities={meta?.cities ?? []} onDone={(c) => nav(`/clients/${c.id}`)} onCancel={() => setAdding(false)} />}
+      {adding && user && <NewClientForm defaultCityId={user.cityId ?? meta?.cities[0]?.id ?? 0} cities={meta?.cities ?? []} onDone={(c) => nav(`/clients/${c.id}`)} onCancel={() => setAdding(false)} />}
       <label className="field narrow">Поиск по имени или телефону
         <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Анна или +7 918…" />
       </label>
