@@ -1,0 +1,19 @@
+{
+  "name": "@kp-calc/api",
+  "private": true,
+  "type": "module",
+  "description": "Сервер портала «Калькулятор КП»: вход, роли, клиенты, расчёты, прайс. Цена считается только в engine.",
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "start": "node src/server.ts",
+    "test": "node --test --test-concurrency=1 test/*.test.ts"
+  },
+  "dependencies": {
+    "@fastify/cookie": "^11.1.5",
+    "@fastify/static": "^10.1.8",
+    "fastify": "^5.12.7",
+    "pg": "^8.23.1"
+  }
+}
