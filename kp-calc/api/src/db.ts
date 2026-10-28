@@ -93,7 +93,10 @@ export async function loadCatalog(c: Db, catalog: Catalog): Promise<void> {
     [JSON.stringify(catalog.version ?? 1)]);
 }
 
-export interface SeedEnv { OWNER_EMAIL?: string; OWNER_PASSWORD?: string }
+export interface SeedEnv { OWNER_EMAIL?: string; OWNER_PASSWORD?: string; OWNER_RESET?: string }
+
+/** Значение переменной без пробелов и обрамляющих кавычек: в панели хостинга их легко вставить вместе со значением. */
+const envValue = (v?: string) => (v ?? '').trim().replace(/^(["'])(.*)\1$/, '$2');
 
 export async function seed(pool: pg.Pool, env: SeedEnv, log: (m: string) => void = () => {}): Promise<void> {
   await tx(pool, async (c) => {
@@ -110,17 +113,31 @@ export async function seed(pool: pg.Pool, env: SeedEnv, log: (m: string) => void
     await c.query('insert into settings (id, data) values (1, $1) on conflict (id) do nothing', [JSON.stringify(DEFAULT_SETTINGS)]);
     await c.query('insert into company (id, data) values (1, $1) on conflict (id) do nothing', [JSON.stringify(DEFAULT_COMPANY)]);
 
-    const owners = await c.query(`select 1 from users where role = 'owner' limit 1`);
+    const email = envValue(env.OWNER_EMAIL).toLowerCase();
+    const password = envValue(env.OWNER_PASSWORD);
+    const valid = !!email && password.length >= 8;
+    const owners = await c.query(`select email from users where role = 'owner' order by created_at`);
+    // OWNER_RESET=1: аварийный вход — пароль из OWNER_PASSWORD для OWNER_EMAIL (пользователь становится владельцем, старые сессии сбрасываются).
+    if (/^(1|true|yes|on)$/i.test(envValue(env.OWNER_RESET)) && owners.rowCount) {
+      if (!valid) { log('OWNER_RESET: задайте OWNER_EMAIL и OWNER_PASSWORD (не короче 8 символов).'); return; }
+      const hash = await hashPassword(password);
+      const { rows: [u] } = await c.query(
+        `update users set password_hash = $2, role = 'owner', disabled = false where lower(email) = $1 returning id`, [email, hash]);
+      if (u) await c.query('delete from sessions where user_id = $1', [u.id]);
+      else await c.query(`insert into users (email, first_name, last_name, role, password_hash) values ($1, 'Владелец', '', 'owner', $2)`, [email, hash]);
+      log(`OWNER_RESET: пароль владельца ${email} задан из OWNER_PASSWORD. Уберите OWNER_RESET из переменных.`);
+      return;
+    }
     if (!owners.rowCount) {
-      const email = env.OWNER_EMAIL?.trim().toLowerCase();
-      const password = env.OWNER_PASSWORD ?? '';
-      if (!email || password.length < 8) {
+      if (!valid) {
         log('Владельца нет: задайте OWNER_EMAIL и OWNER_PASSWORD (не короче 8 символов) и перезапустите сервер.');
         return;
       }
       await c.query(`insert into users (email, first_name, last_name, role, password_hash) values ($1, 'Владелец', '', 'owner', $2)`,
         [email, await hashPassword(password)]);
       log(`Создан владелец ${email}`);
+    } else {
+      log(`Владелец уже есть: ${owners.rows.map((r) => r.email).join(', ')} (OWNER_EMAIL и OWNER_PASSWORD больше не применяются; сброс пароля — OWNER_RESET=1)`);
     }
   });
 }
