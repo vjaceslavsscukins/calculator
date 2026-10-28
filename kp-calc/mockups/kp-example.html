@@ -10,19 +10,33 @@
   --accent:#7d1e2b; --accent-hover:#9a3246; --accent-soft:#f3e6e6; --graphite:#232322; --on-dark:#f1f0ed; --on-dark-muted:#a9a8a3; --rose:#e0aab6;
   --f-head:"Prata","Times New Roman",Georgia,serif;
   --f-body:"Golos Text",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  --pic:#fff; --logo:#545452; --body:#e9e6e0; --notebg:#f2efe9;
   color-scheme:light;
 }
+/* тёмное КП — как сайт */
+:root[data-kp="dark"]{
+  --paper:#232322; --card:#2b2b2a; --ink:#f1f0ed; --muted:#a9a8a3; --line:rgba(241,240,237,.18);
+  --accent:#c4405a; --accent-soft:rgba(179,45,71,.18); --pic:#2f2f2e; --logo:#f1f0ed; --body:#171716; --notebg:#232322;
+  color-scheme:dark;
+}
+:root[data-kp="dark"] .page{border:1px solid rgba(241,240,237,.12)}
+:root[data-kp="dark"] .cover,:root[data-kp="dark"] .final{background:#1d1d1c}
+:root[data-kp="dark"] .btn.solid{background:#7d1e2b;border-color:#7d1e2b}
+:root[data-kp="dark"] .btn.solid:hover{background:#9a3246}
+.kpt{display:inline-flex;border:1px solid #b9b6ae;margin-left:10px;vertical-align:middle}
+.kpt button{background:transparent;border:0;padding:5px 10px;cursor:pointer;color:inherit;font:inherit;font-size:12px}
+.kpt button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
-body{margin:0;background:#e9e6e0;color:var(--ink);font:15px/1.55 var(--f-body)}
+body{margin:0;background:var(--body);color:var(--ink);font:15px/1.55 var(--f-body)}
 .doc{display:flex;flex-direction:column;gap:22px;padding-block:22px 60px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
-.note{max-width:1120px;margin-inline:auto;width:100%;font-size:13px;color:var(--muted);border:1px dashed #b9b6ae;padding:10px 14px;background:#f2efe9}
+.note{max-width:1120px;margin-inline:auto;width:100%;font-size:13px;color:var(--muted);border:1px dashed #b9b6ae;padding:10px 14px;background:var(--notebg)}
 .note b{color:var(--ink);font-weight:500}
 .page{max-width:1120px;width:100%;margin-inline:auto;background:var(--paper);padding:clamp(20px,4vw,48px);display:flex;flex-direction:column;gap:22px;box-shadow:0 1px 0 rgba(0,0,0,.06)}
 .ph{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;border-bottom:1px solid var(--accent);padding-bottom:14px}
 .ph h2{font:400 clamp(24px,3vw,36px)/1.15 var(--f-head);margin:0;text-wrap:balance}
 .ph .sub{font-size:13px;color:var(--muted);margin-top:6px}
-.ph .lg{height:26px;width:auto;color:#545452;flex:none}
+.ph .lg{height:26px;width:auto;color:var(--logo);flex:none}
 .foot{display:flex;justify-content:space-between;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#a3a09a;margin-top:auto}
 .eb{font:500 12px/1 var(--f-body);letter-spacing:.16em;text-transform:uppercase;color:var(--accent)}
 /* обложка */
@@ -46,7 +60,7 @@ body{margin:0;background:#e9e6e0;color:var(--ink);font:15px/1.55 var(--f-body)}
 .chk{font-size:12px;color:var(--accent);border:1px dashed var(--accent);padding:2px 6px;margin-left:6px;white-space:nowrap;font-family:var(--f-body)}
 /* изделие */
 .prod{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:22px;align-items:start}
-.pic{background:#fff;border:1px solid var(--line);border-radius:4px;padding:18px;display:flex;flex-direction:column;gap:8px}
+.pic{background:var(--pic);border:1px solid var(--line);border-radius:4px;padding:18px;display:flex;flex-direction:column;gap:8px}
 .pic svg{width:100%;height:auto;display:block}
 .pic small{font-size:11px;color:var(--muted)}
 .card{background:var(--card);border:1px solid var(--line);border-radius:4px;padding:22px;display:flex;flex-direction:column;gap:14px}
@@ -54,7 +68,7 @@ body{margin:0;background:#e9e6e0;color:var(--ink);font:15px/1.55 var(--f-body)}
 .about{margin:0;font-size:15px}
 .ai{font-size:11px;color:var(--muted)}
 .mat{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:7px;font-size:14px}
-.mat li{display:grid;grid-template-columns:150px minmax(0,1fr);gap:10px;border-bottom:1px solid #ecebe6;padding-bottom:6px}
+.mat li{display:grid;grid-template-columns:150px minmax(0,1fr);gap:10px;border-bottom:1px solid var(--line);padding-bottom:6px}
 .mat li span{color:var(--muted)}
 .gets{display:flex;flex-wrap:wrap;gap:8px}
 .gets span{background:var(--accent-soft);color:var(--accent);font-size:13px;padding:6px 10px;border-radius:2px}
@@ -104,7 +118,7 @@ body{margin:0;background:#e9e6e0;color:var(--ink);font:15px/1.55 var(--f-body)}
 </style>
 
 <div class="doc">
-  <div class="note"><b>Пример КП (страница по ссылке; PDF — те же листы A4).</b> Клиент, менеджер, телефон и цены — пример. Факты о компании — из подтверждённых владельцем заметок сайта (brand-notes). Текст «Об изделии» пишет нейросеть по расчёту, менеджер проверяет.</div>
+  <div class="note"><b>Пример КП (страница по ссылке; PDF — те же листы A4).</b> Клиент, менеджер, телефон и цены — пример. Факты о компании — из подтверждённых владельцем заметок сайта (brand-notes). Текст «Об изделии» пишет нейросеть по расчёту, менеджер проверяет. <span class="kpt" role="group" aria-label="Вид КП"><button type="button" id="kpLight" aria-pressed="true">Светлое</button><button type="button" id="kpDark" aria-pressed="false">Тёмное</button></span></div>
 
   <!-- 1. Обложка (постоянная) -->
   <section class="page cover" aria-label="Обложка">
@@ -227,6 +241,9 @@ const goods=P.reduce((s,p)=>s+p.retail,0),disc=goods*DISC,deliv=goods*DELIV,tota
 document.getElementById('sumRows').innerHTML=P.map(p=>`<tr><td>${esc(p.name)}</td><td class="n">${rub(p.retail)}</td></tr>`).join('')+
  `<tr class="disc"><td>Скидка ${DISC*100} %</td><td class="n">−${rub(disc)}</td></tr><tr><td>Мебель со скидкой</td><td class="n">${rub(goods-disc)}</td></tr><tr><td>Доставка и монтаж</td><td class="n">${rub(deliv)}</td></tr><tr class="tot"><td>Итого</td><td class="n">${rub(total)}</td></tr>`;
 document.getElementById('totDark').textContent=rub(total);
+function kpTheme(t){document.documentElement.dataset.kp=t;document.getElementById('kpLight').setAttribute('aria-pressed',t!=='dark');document.getElementById('kpDark').setAttribute('aria-pressed',t==='dark')}
+document.getElementById('kpLight').onclick=()=>kpTheme('light');document.getElementById('kpDark').onclick=()=>kpTheme('dark');
+if(location.hash==='#dark')kpTheme('dark');
 document.getElementById('ctaGo').onclick=()=>{document.getElementById('ctaMsg').textContent='Спасибо! Менеджер свяжется с вами, чтобы договориться о замере. (В портале здесь уходит уведомление менеджеру.)'};
 document.getElementById('ctaAsk').onclick=()=>{document.getElementById('ctaMsg').textContent='Менеджер получил ваш вопрос и перезвонит. (В портале — уведомление и запись в карточке клиента.)'};
 </script>
