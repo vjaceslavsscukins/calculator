@@ -14,6 +14,9 @@ import { PricesPage } from './pages/Prices.tsx';
 import { CoefficientsPage } from './pages/Coefficients.tsx';
 import { UsersPage } from './pages/Users.tsx';
 import { AuditPage } from './pages/Audit.tsx';
+import { KpBuildPage } from './pages/KpBuild.tsx';
+import { KpPage } from './pages/Kp.tsx';
+import { CompanyPage } from './pages/Company.tsx';
 import type { Role } from './api.ts';
 
 function Guard({ roles, children }: { roles?: Role[]; children: JSX.Element }) {
@@ -33,6 +36,8 @@ function AppRoutes() {
       <Route element={<Guard><Layout /></Guard>}>
         <Route path="/clients" element={<ClientsPage />} />
         <Route path="/clients/:id" element={<ClientPage />} />
+        <Route path="/clients/:id/kp/new" element={<KpBuildPage />} />
+        <Route path="/kp/:id" element={<KpPage />} />
         <Route path="/calculations" element={<CalculationsPage />} />
         <Route path="/calculations/:id" element={<CalculationPage />} />
         <Route path="/prices" element={<Guard roles={['owner', 'head']}><PricesPage /></Guard>} />
@@ -40,6 +45,7 @@ function AppRoutes() {
         <Route path="/settings" element={<Navigate to="/settings/coefficients" replace />} />
         <Route path="/settings/coefficients" element={<Guard roles={['owner']}><CoefficientsPage /></Guard>} />
         <Route path="/settings/users" element={<Guard roles={['owner']}><UsersPage /></Guard>} />
+        <Route path="/settings/company" element={<Guard roles={['owner']}><CompanyPage /></Guard>} />
       </Route>
       <Route path="*" element={<Navigate to={user ? '/clients' : '/login'} replace />} />
     </Routes>

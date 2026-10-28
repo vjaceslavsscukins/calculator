@@ -62,7 +62,7 @@ export function UsersPage() {
       <div className="box">
         <h2>Сотрудники</h2>
         <table className="utab">
-          <thead><tr><th>Имя</th><th>Почта</th><th>Роль</th><th>Город</th><th>Состояние</th><th /></tr></thead>
+          <thead><tr><th>Имя</th><th>Почта</th><th>Должность в КП</th><th>Телефон в КП</th><th>Роль</th><th>Город</th><th>Состояние</th><th /></tr></thead>
           <tbody>
             {users?.map((u) => {
               const self = u.id === me?.id;
@@ -70,6 +70,8 @@ export function UsersPage() {
                 <tr key={u.id} className={u.disabled ? 'off' : undefined}>
                   <td>{u.firstName} {u.lastName}</td>
                   <td>{u.email}</td>
+                  <td><BlurInput label="Должность" value={u.position} placeholder="Менеджер салона" onSave={(v) => patch(u, { position: v })} /></td>
+                  <td><BlurInput label="Телефон" value={u.phone} placeholder="+7 900 000-00-00" onSave={(v) => patch(u, { phone: v })} /></td>
                   <td>
                     <select className="cell" value={u.role} disabled={self} aria-label="Роль" onChange={(e) => patch(u, { role: e.target.value as Role })}>
                       {(Object.keys(ROLE_TITLES) as Role[]).map((r) => <option key={r} value={r}>{ROLE_TITLES[r]}</option>)}
@@ -91,10 +93,10 @@ export function UsersPage() {
                 </tr>
               );
             })}
-            {!users && !err && <tr><td colSpan={6} className="empty">Загружаем…</td></tr>}
+            {!users && !err && <tr><td colSpan={8} className="empty">Загружаем…</td></tr>}
           </tbody>
         </table>
-        <p className="foot">«Новая ссылка» — сброс пароля: старый пароль перестаёт действовать, человек задаёт новый по ссылке.</p>
+        <p className="foot">Должность и телефон видит клиент на странице КП в блоке «Ваш персональный менеджер». «Новая ссылка» — сброс пароля: старый пароль перестаёт действовать, человек задаёт новый по ссылке.</p>
       </div>
     </section>
   );
@@ -141,4 +143,12 @@ function NewUser({ cities, defaultCity, onCreated }: { cities: { id: number; nam
       <p className="foot">Писем пока не отправляем: после добавления появится ссылка-приглашение, перешлите её человеку.</p>
     </form>
   );
+}
+
+/** Поле, которое сохраняется при уходе с него (и по Enter), если значение изменилось. */
+function BlurInput({ label, value, placeholder, onSave }: { label: string; value: string; placeholder?: string; onSave: (v: string) => void }) {
+  const [v, setV] = useState(value);
+  useEffect(() => setV(value), [value]);
+  const commit = () => { if (v.trim() !== value) onSave(v.trim()); };
+  return <input className="cell" aria-label={label} value={v} placeholder={placeholder} onChange={(e) => setV(e.target.value)} onBlur={commit} onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }} />;
 }

@@ -145,6 +145,14 @@ export function CoefficientsPage() {
           </table>
           <button className="link" type="button" onClick={() => setL({ switches: [...s.light.switches, { id: `s${Date.now().toString(36)}`, name: 'Новый выключатель', price: 0 }] })}>+ выключатель</button>
         </div>
+
+        <div className="box">
+          <h2>Рендер по эскизу</h2>
+          <label className="field">Базовый промт для нейросети
+            <textarea className="area-d" rows={8} value={s.renderPrompt ?? ''} onChange={(e) => set({ renderPrompt: e.target.value })} aria-label="Базовый промт рендера" />
+          </label>
+          <p className="foot">К промту сервер добавляет название изделия, «Материалы и комплектация» из расчёта и комментарий менеджера «Что поправить». Пустое поле — промт по умолчанию. Ключ нейросети задаётся только в настройках сервера.</p>
+        </div>
       </div>
       <p className="foot">Коэффициенты одни на всё и одинаковы для Москвы и Краснодара. Каждое изменение пишется в журнал.</p>
     </section>

@@ -8,7 +8,7 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 5173,
-    proxy: { '/api': API, '/healthz': API },
+    proxy: { '/api': API, '/healthz': API, '/p/': API },
     fs: { allow: ['..'] },
   },
   build: { outDir: 'dist', emptyOutDir: true },
