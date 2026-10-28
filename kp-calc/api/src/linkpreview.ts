@@ -111,7 +111,8 @@ function fetchOnce(u: URL, opts: Required<LinkPreviewOptions>, deadline: number)
       method: 'GET',
       lookup,
       headers: {
-        'user-agent': 'Mozilla/5.0 (compatible; CulturaKP/1.0; +link-preview)',
+        // как обычный браузер: часть магазинов отдаёт роботам пустую страницу или ошибку
+        'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
         accept: 'text/html,application/xhtml+xml;q=0.9,*/*;q=0.5',
         'accept-language': 'ru,en;q=0.8',
         'accept-encoding': 'gzip, deflate, br',
@@ -169,7 +170,9 @@ export async function linkPreview(raw: string, options: LinkPreviewOptions = {})
     if (r.status >= 400) throw new LinkPreviewError(502, `Сайт ответил ошибкой ${r.status}`);
     const ct = String(r.headers['content-type'] ?? '');
     if (ct && !/html|xml/i.test(ct)) throw new LinkPreviewError(400, 'По ссылке не страница, а файл');
-    const parsed = parseProductHtml(decodeBody(r.body, ct), u.toString());
+    const html = decodeBody(r.body, ct);
+    if (isBotCheck(html, u)) throw new LinkPreviewError(422, 'Сайт закрыл страницу проверкой «я не робот»: введите название и цену вручную');
+    const parsed = parseProductHtml(html, u.toString());
     if (!parsed.name) throw new LinkPreviewError(422, 'Не нашли название на странице: введите его вручную');
     return { url: u.toString(), ...parsed };
   }
@@ -255,6 +258,28 @@ function absImage(src: string | undefined, base: string): string | undefined {
   } catch { return undefined; }
 }
 
+/** Страница-заглушка защиты от роботов (Яндекс SmartCaptcha, DDoS-Guard, Cloudflare и т. п.) вместо товара. */
+export function isBotCheck(html: string, u?: URL): boolean {
+  if (u && /showcaptcha|captcha/i.test(u.pathname)) return true;
+  const title = clean(/<title[^>]*>([\s\S]*?)<\/title>/i.exec(html)?.[1]);
+  if (/^(Яндекс|Вы не робот\??|Ой!|Just a moment\.*|Attention Required!.*|DDoS-Guard|Доступ ограничен|Access denied)$/i.test(title)) return true;
+  return /smartcaptcha|showcaptcha|captcha\.yandex|ddos-guard\.net\/|cf-chl-|challenge-platform|Подтвердите, что запросы отправляли вы/i.test(html.slice(0, 200_000));
+}
+
+/**
+ * Название товара без SEO-хвоста магазина: «Органайзер … — Купить в интернет-магазине MAKMART в Москве…» → «Органайзер …».
+ * Срезаем только хвост после разделителя или слова «купить», само название не трогаем.
+ */
+export function tidyName(name: string): string {
+  let n = name;
+  n = n.replace(/\s*[—–|:]\s*(купить|заказать|цена|цены|продажа|доставка|отзывы|характеристики|в интернет-магазине|интернет-магазин|официальный)\b.*$/i, '');
+  n = n.replace(/\s+-\s+(купить|заказать|цена|цены|продажа|доставка|в интернет-магазине|интернет-магазин)\b.*$/i, '');
+  n = n.replace(/\s+(купить|заказать)\s+(в|по|с|онлайн|недорого|оптом|со)\s.*$/i, '');
+  n = n.replace(/\s+(—|–|\|)\s+[^—–|]{1,60}$/, (m) => (/[a-zа-я]/i.test(m) && n.length - m.length >= 8 ? '' : m));
+  n = n.replace(/[\s.,;:—–|-]+$/, '').trim();
+  return n || name;
+}
+
 /** Разбор страницы товара: JSON-LD Product (name, offers.price), og:title / og:image / product:price:amount, <title>. */
 export function parseProductHtml(html: string, baseUrl: string): Omit<LinkPreview, 'url'> {
   let product: any = null;
@@ -274,8 +299,10 @@ export function parseProductHtml(html: string, baseUrl: string): Omit<LinkPrevie
   const ip = /<[^>]+itemprop\s*=\s*["']price["'][^>]*>/i.exec(html);
   if (ip && meta.price == null) { const a = attrs(ip[0]); if (a.content) meta.price = a.content; }
   const title = /<title[^>]*>([\s\S]*?)<\/title>/i.exec(html)?.[1];
+  // <h1> обычно и есть название товара, без хвоста «купить в …»
+  const h1 = /<h1\b[^>]*>([\s\S]*?)<\/h1>/i.exec(html)?.[1]?.replace(/<[^>]+>/g, ' ');
 
-  const name = clean(product?.name) || clean(meta['og:title']) || clean(meta['twitter:title']) || clean(title);
+  const name = tidyName(clean(product?.name) || clean(h1) || clean(meta['og:title']) || clean(meta['twitter:title']) || clean(title));
   const offer = product ? offerOf(product) : {};
   const price = offer.price ?? parsePrice(meta['product:price:amount']) ?? parsePrice(meta['og:price:amount']) ?? parsePrice(meta.price);
   const currency = offer.currency || clean(meta['product:price:currency'] ?? meta['og:price:currency'] ?? meta.pricecurrency, 10) || undefined;

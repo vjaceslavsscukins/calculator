@@ -10,7 +10,7 @@ import { compute, DEFAULT_SETTINGS, kpItemPrice, kpTotals } from '../../engine/s
 import type { CalcInput, Catalog } from '../../engine/src/index.ts';
 import { CATALOG_FILE } from '../src/db.ts';
 import { buildApp } from '../src/app.ts';
-import { checkUrl, isPrivateAddress, linkPreview, parsePrice, parseProductHtml } from '../src/linkpreview.ts';
+import { checkUrl, isBotCheck, isPrivateAddress, linkPreview, parsePrice, parseProductHtml, tidyName } from '../src/linkpreview.ts';
 import { extractImage, RENDER_OFF } from '../src/ai.ts';
 import { OWNER, SKIP, agent, keysDeep, makeUser, setup } from './helpers.ts';
 import type { Agent, Ctx } from './helpers.ts';
@@ -29,6 +29,22 @@ describe('ссылки с сайтов: разбор страницы и защ�
     const html = '<html><head><meta content="Стул &laquo;Оскар&raquo;" property="og:title"><meta property="product:price:amount" content="12990.50"><meta property="og:image" content="/i/1.webp"><title>x</title></head></html>';
     assert.deepEqual(parseProductHtml(html, 'https://a.ru/p/1'), { name: 'Стул «Оскар»', price: 12990.5, image: 'https://a.ru/i/1.webp' });
     assert.deepEqual(parseProductHtml('<title>  Лампа\n Arte </title>', 'https://a.ru/'), { name: 'Лампа Arte' });
+  });
+  test('название без SEO-хвоста магазина; <h1> важнее <title>', () => {
+    assert.equal(tidyName('Органайзер для тарелок с 7 держателями, цвет орион серый (MKS.DH.01V7.1247.OG) — Купить в интернет-магазине MAKMART в Москве и России. Мебельная фурнитура.'),
+      'Органайзер для тарелок с 7 держателями, цвет орион серый (MKS.DH.01V7.1247.OG)');
+    assert.equal(tidyName('Ручка-скоба RS-192 чёрная купить в Москве по выгодной цене'), 'Ручка-скоба RS-192 чёрная');
+    assert.equal(tidyName('Профиль-ручка 192 мм | МДМ-Комплект'), 'Профиль-ручка 192 мм');
+    assert.equal(tidyName('Петля Blum CLIP top — цена, отзывы'), 'Петля Blum CLIP top');
+    assert.equal(tidyName('Мойка Blanco Subline 500-U'), 'Мойка Blanco Subline 500-U');
+    assert.equal(tidyName('Стол 120–160 см'), 'Стол 120–160 см');
+    assert.deepEqual(parseProductHtml('<title>Ручка — купить в магазине</title><h1 class="t"> Ручка <span>RS-192</span></h1>', 'https://a.ru/'), { name: 'Ручка RS-192' });
+  });
+  test('страница проверки «я не робот» вместо товара', () => {
+    assert.equal(isBotCheck('<html><head><title>Вы не робот?</title></head><body>SmartCaptcha</body></html>'), true);
+    assert.equal(isBotCheck('<title>Яндекс</title>'), true);
+    assert.equal(isBotCheck('<title>x</title>', new URL('https://a.ru/showcaptcha?retpath=1')), true);
+    assert.equal(isBotCheck('<title>Профиль-ручка 192 мм</title><h1>Профиль-ручка</h1>'), false);
   });
   test('цены в разных записях', () => {
     assert.equal(parsePrice('12 990 ₽'), 12990);
