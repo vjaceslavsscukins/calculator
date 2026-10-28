@@ -9,11 +9,24 @@ if (!env.DATABASE_URL) {
   process.exit(1);
 }
 const production = env.NODE_ENV === 'production';
-const pool = createPool(env.DATABASE_URL);
+const pool = createPool(env.DATABASE_URL, { connectionTimeoutMillis: 15000 });
 
-const applied = await migrate(pool);
-if (applied.length) console.log(`Миграции применены: ${applied.join(', ')}`);
-await seed(pool, env, (m) => console.log(m));
+// Пишем в журнал каждый шаг запуска: если база недоступна, причина видна в логах платформы, а не «зависший» старт.
+let dbHost = '?';
+try { dbHost = new URL(env.DATABASE_URL).host; } catch { /* строка не URL — pg разберёт сам */ }
+console.log(`Подключение к базе ${dbHost}…`);
+try {
+  await pool.query('select 1');
+  console.log('База доступна, применяю миграции…');
+  const applied = await migrate(pool);
+  if (applied.length) console.log(`Миграции применены: ${applied.join(', ')}`);
+  await seed(pool, env, (m) => console.log(m));
+} catch (e) {
+  const err = e as Error & { code?: string };
+  console.error(`Не удалось подготовить базу (${dbHost}): ${err.code ? err.code + ' ' : ''}${err.message}`);
+  console.error('Проверьте DATABASE_URL (пользователь, пароль, хост, имя базы), DATABASE_SSL и доступ к базе из интернета.');
+  process.exit(1);
+}
 
 const app = await buildApp({
   pool,
