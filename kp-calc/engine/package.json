@@ -1,0 +1,9 @@
+{
+  "name": "@kp-calc/engine",
+  "private": true,
+  "type": "module",
+  "description": "Движок расчёта калькулятора КП: чистые функции без сети и базы. Единственное место, где считается цена.",
+  "exports": "./src/index.ts",
+  "engines": { "node": ">=22.18" },
+  "scripts": { "test": "node --test test/*.test.ts" }
+}
