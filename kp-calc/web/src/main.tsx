@@ -17,6 +17,7 @@ import { AuditPage } from './pages/Audit.tsx';
 import { KpBuildPage } from './pages/KpBuild.tsx';
 import { KpPage } from './pages/Kp.tsx';
 import { CompanyPage } from './pages/Company.tsx';
+import { SpecPage } from './pages/Spec.tsx';
 import type { Role } from './api.ts';
 
 function Guard({ roles, children }: { roles?: Role[]; children: JSX.Element }) {
@@ -40,6 +41,7 @@ function AppRoutes() {
         <Route path="/kp/:id" element={<KpPage />} />
         <Route path="/calculations" element={<CalculationsPage />} />
         <Route path="/calculations/:id" element={<CalculationPage />} />
+        <Route path="/calculations/:id/spec" element={<SpecPage />} />
         <Route path="/prices" element={<Guard roles={['owner', 'head']}><PricesPage /></Guard>} />
         <Route path="/audit" element={<Guard roles={['owner', 'head']}><AuditPage /></Guard>} />
         <Route path="/settings" element={<Navigate to="/settings/coefficients" replace />} />

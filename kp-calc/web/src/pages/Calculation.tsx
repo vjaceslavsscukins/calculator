@@ -245,6 +245,7 @@ export function CalculationPage() {
           </label>
           <button className="btn" type="button" onClick={() => setPasteOpen(true)}>Вставить из PRO100</button>
           <button className="btn" type="button" onClick={copy} disabled={busyCopy}>Скопировать расчёт</button>
+          <Link className="btn" to={`/calculations/${id}/spec`}>Спецификация</Link>
         </div>
       </div>
 

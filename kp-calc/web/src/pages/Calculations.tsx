@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { api, STATUS_TITLES, type CalcSummary, type Status } from '../api.ts';
 import { useApp } from '../app.tsx';
 import { ErrorNote } from '../components/Layout.tsx';
+import { DocsMenu } from '../components/DocsMenu.tsx';
 import { dateTime, errText, rub } from '../format.ts';
 
 export function CalculationsPage() {
@@ -42,7 +43,7 @@ export function CalculationsPage() {
       <ErrorNote text={err} />
       <div className="panel">
         <table className="tab">
-          <thead><tr><th>Клиент</th><th>Расчёт</th><th>Изделие</th><th>Статус</th><th className="num">Итого клиенту</th><th>Менеджер</th><th>Город</th><th>Изменён</th></tr></thead>
+          <thead><tr><th>Клиент</th><th>Расчёт</th><th>Изделие</th><th>Статус</th><th className="num">Итого клиенту</th><th>Менеджер</th><th>Город</th><th>Изменён</th><th /></tr></thead>
           <tbody>
             {list?.map((c) => (
               <tr key={c.id} className="click" onClick={() => nav(`/calculations/${c.id}`)}>
@@ -52,10 +53,11 @@ export function CalculationsPage() {
                 <td><span className="pill">{STATUS_TITLES[c.status] ?? c.status}</span></td>
                 <td className="num">{rub(c.total, roundTo)}</td>
                 <td>{c.managerName}</td><td>{c.cityName}</td><td>{dateTime(c.updatedAt)}</td>
+                <td className="nowrap"><DocsMenu calcId={c.id} /></td>
               </tr>
             ))}
-            {list && !list.length && <tr><td colSpan={8} className="empty">Ничего не нашли.</td></tr>}
-            {!list && !err && <tr><td colSpan={8} className="empty">Загружаем…</td></tr>}
+            {list && !list.length && <tr><td colSpan={9} className="empty">Ничего не нашли.</td></tr>}
+            {!list && !err && <tr><td colSpan={9} className="empty">Загружаем…</td></tr>}
           </tbody>
         </table>
       </div>

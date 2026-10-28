@@ -349,3 +349,54 @@ select.cell option{color:#262625;background:#f7f6f3}
 .addr-row,.pair{display:grid;grid-template-columns:150px minmax(0,1fr) 30px;gap:8px;align-items:start;margin-bottom:6px}
 .addr-row input,.pair input{height:38px;border:1px solid var(--line-strong);background:transparent;color:var(--text);padding:0 10px;border-radius:var(--r)}
 .pair2{display:grid;grid-template-columns:140px minmax(0,1fr);gap:10px}
+
+/* ===== Документы в строке расчёта ===== */
+.docs{position:relative;display:inline-block}
+.docs summary{list-style:none;cursor:pointer;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--p-label);text-decoration:underline;text-underline-offset:3px}
+.docs summary::-webkit-details-marker{display:none}
+.docs-list{position:absolute;right:0;top:calc(100% + 6px);z-index:10;background:var(--p-bg);border:1px solid var(--p-line);box-shadow:0 6px 20px rgba(0,0,0,.25);display:flex;flex-direction:column;min-width:200px}
+.docs-list a,.docs-list .off{padding:9px 14px;font-size:14px;text-decoration:none;color:var(--p-text)}
+.docs-list a:hover{background:var(--p-row)}
+.docs-list .off{color:var(--p-muted);cursor:default}
+
+/* ===== Спецификация ===== */
+.spec-view .box{margin-top:14px}
+.spec-head{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.spec-head .field.wide{grid-column:span 2}
+.spec-head .field input{height:38px}
+.spec-head .field.bad input{border-color:var(--accent-bright);box-shadow:0 0 0 1px var(--accent-bright)}
+.req{color:var(--accent-bright)}
+.spec-fields{display:flex;flex-direction:column;gap:6px}
+.spec-field{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,5fr) auto;gap:6px;align-items:start}
+.spec-field textarea.in,.spec-view textarea.in{height:auto;min-height:32px;padding:6px;resize:vertical;font:inherit;line-height:1.4}
+.spec-view .field textarea.in{width:100%}
+.spec-print{display:none}
+
+@media print{
+  @page{size:A4 portrait;margin:14mm 14mm 16mm}
+  :root,:root[data-theme]{color-scheme:light;--bg:#fff;--bg2:#fff}
+  html,body{background:#fff!important;color:#1d1d1c!important;min-width:0!important}
+  .top,.side,.no-print{display:none!important}
+  .shell{display:block!important}
+  .main{padding:0!important}
+  .spec-print{display:block;font:10.5pt/1.4 var(--f-body);color:#1d1d1c}
+  .sp-top{display:flex;justify-content:space-between;align-items:flex-start;gap:24px;border-bottom:1px solid #8f8f8a;padding-bottom:10px}
+  .sp-top img{height:34px}
+  .sp-top > div{text-align:right;max-width:70%}
+  .sp-eyebrow{font:500 8.5pt/1 var(--f-body);letter-spacing:.16em;text-transform:uppercase;color:#7d1e2b}
+  .sp-sub{font-size:9pt;color:#555;margin-top:4px}
+  .sp-title{font:400 17pt/1.15 var(--f-head);text-transform:uppercase;margin:14px 0 10px;color:#1d1d1c}
+  .spec-print table{width:100%;border-collapse:collapse}
+  .spec-print th,.spec-print td{border:1px solid #c9c6bf;padding:4px 7px;text-align:left;vertical-align:top;font-weight:400}
+  .spec-print th{width:36%;color:#555;background:#f3f2ef}
+  .sp-meta th{width:16%}
+  .sp-meta td{width:34%}
+  .sp-sec{margin-top:10px;break-inside:avoid}
+  .sp-sec h2{font:500 9pt/1 var(--f-body);letter-spacing:.14em;text-transform:uppercase;color:#7d1e2b;margin:0 0 5px}
+  .sp-sec p{margin:0;white-space:pre-wrap}
+  .sp-terms{font-size:9pt;color:#555;margin:12px 0 0}
+  .sp-total{display:flex;justify-content:space-between;align-items:baseline;border-top:1px solid #1d1d1c;border-bottom:1px solid #1d1d1c;padding:7px 0;margin-top:10px;font-size:11pt}
+  .sp-total b{font:400 15pt/1 var(--f-head)}
+  .sp-sign{display:grid;grid-template-columns:1fr 1fr;gap:28px;margin-top:22px;font-size:9.5pt;break-inside:avoid}
+  .sp-sign .line{display:block;border-bottom:1px solid #1d1d1c;height:26px;margin-bottom:4px}
+}

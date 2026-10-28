@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api, STATUS_TITLES, type CalcSummary, type Client, type KpSummary, type ProductKind } from '../api.ts';
 import { useApp } from '../app.tsx';
 import { ErrorNote } from '../components/Layout.tsx';
+import { DocsMenu } from '../components/DocsMenu.tsx';
 import { dateTime, errText, rub } from '../format.ts';
 
 export function ClientPage() {
@@ -51,7 +52,7 @@ export function ClientPage() {
       <div className="panel">
         <h2>Расчёты</h2>
         <table className="tab">
-          <thead><tr><th>Название</th><th>Изделие</th><th>Статус</th><th className="num">Итого клиенту</th><th>Менеджер</th><th>Изменён</th></tr></thead>
+          <thead><tr><th>Название</th><th>Изделие</th><th>Статус</th><th className="num">Итого клиенту</th><th>Менеджер</th><th>Изменён</th><th /></tr></thead>
           <tbody>
             {calcs.map((c) => (
               <tr key={c.id} className="click" onClick={() => nav(`/calculations/${c.id}`)}>
@@ -60,9 +61,10 @@ export function ClientPage() {
                 <td><span className="pill">{STATUS_TITLES[c.status] ?? c.status}</span></td>
                 <td className="num">{rub(c.total, roundTo)}</td>
                 <td>{c.managerName}</td><td>{dateTime(c.updatedAt)}</td>
+                <td className="nowrap"><DocsMenu calcId={c.id} /></td>
               </tr>
             ))}
-            {!calcs.length && <tr><td colSpan={6} className="empty">Расчётов пока нет. Нажмите «Новый расчёт».</td></tr>}
+            {!calcs.length && <tr><td colSpan={7} className="empty">Расчётов пока нет. Нажмите «Новый расчёт».</td></tr>}
           </tbody>
         </table>
       </div>

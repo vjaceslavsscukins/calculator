@@ -10,6 +10,7 @@ import { BLOCKS, KIND_TITLES, applyPro100, compute, indexCatalog, mergePro100, n
 import type { CalcInput, Catalog, CatalogIndex, ProductKind, Settings } from '../../engine/src/index.ts';
 import { tx } from './db.ts';
 import { registerKp } from './kp.ts';
+import { registerSpec } from './spec.ts';
 import type { KpDeps } from './kp.ts';
 import { hashPassword, newToken, tokenHash, verifyPassword } from './security.ts';
 import {
@@ -642,6 +643,8 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
   await registerKp(app, {
     pool, publicUrl: opts.publicUrl, env: opts.env ?? process.env, pricing, me, need, visibleCalc, visibleClient, scope,
   });
+  // ========== Спецификация к договору ==========
+  await registerSpec(app, { pool, pricing, me, visibleCalc });
 
   // ========== Интерфейс (SPA) ==========
   const spa = opts.production && opts.webDist && existsSync(opts.webDist);

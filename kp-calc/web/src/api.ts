@@ -4,6 +4,8 @@ import type { CalcInput, CalcResult, RowResult, LightResult, Settings, ProductKi
 import type { BlockDef } from '../../engine/src/blocks.ts';
 import type { Pro100Line } from '../../engine/src/pro100.ts';
 import type { KpItemPrice, KpTotals, KpMaterial } from '../../engine/src/kp.ts';
+import type { SpecData, SpecHeader, SpecSection, SpecField } from '../../engine/src/spec.ts';
+export type { SpecData, SpecHeader, SpecSection, SpecField };
 
 export type { CalcInput, Settings, ProductKind, Row, BlockDef, Pro100Line, KpItemPrice, KpTotals, KpMaterial };
 
@@ -296,9 +298,24 @@ export const api = {
   uploadCover: (file: File) => uploadFile<{ company: Company; rev: number; coverUrl: string | null }>('/api/company/cover', file),
   deleteCover: () => request<{ company: Company; rev: number; coverUrl: string | null }>('DELETE', '/api/company/cover'),
 
+  // спецификация к договору
+  spec: (calcId: string) => request<SpecResponse>('GET', `/api/calculations/${enc(calcId)}/spec`),
+  saveSpec: (calcId: string, body: { rev: number; data: SpecData; refreshTotal?: boolean }) =>
+    request<SpecResponse>('PUT', `/api/calculations/${enc(calcId)}/spec`, body),
+
   // журнал
   audit: (limit = 200) => request<{ entries: AuditEntry[] }>('GET', `/api/audit?limit=${limit}`),
 };
+
+export interface SpecResponse {
+  calculation: { id: string; title: string; kind: ProductKind; clientId: string; clientName: string };
+  /** Сохранённая спецификация (снимок): total не меняется вместе с расчётом. */
+  spec: { data: SpecData; total: number; rev: number; updatedAt: string; updatedBy: string; missing: string[] } | null;
+  /** Свежий черновик из расчёта. */
+  draft: SpecData;
+  /** Стоимость расчёта сейчас. */
+  calcTotal: number;
+}
 
 export const STATUS_TITLES: Record<Status, string> = {
   draft: 'Черновик',

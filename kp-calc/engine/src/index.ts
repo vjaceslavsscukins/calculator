@@ -5,3 +5,4 @@ export * from './light.ts';
 export * from './pro100.ts';
 export * from './defaults.ts';
 export * from './kp.ts';
+export * from './spec.ts';
