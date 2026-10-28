@@ -470,7 +470,8 @@ describe('сервер калькулятора КП', { skip: SKIP }, () => {
       assert.equal((await app.inject({ url: '/assets/app.js' })).body, 'console.log(1)');
       assert.equal((await app.inject({ url: '/assets/none.js' })).statusCode, 404);
       const api = await app.inject({ url: '/api/nope' });
-      assert.equal(api.statusCode, 401);
+      assert.equal(api.statusCode, 404, 'несуществующий /api — JSON 404, не страница интерфейса');
+      assert.equal(api.json().error, 'Не найдено');
       const login = await app.inject({ method: 'POST', url: '/api/auth/login', payload: { email: OWNER.email, password: OWNER.password } });
       assert.match(String(login.headers['set-cookie']), /HttpOnly; Secure; SameSite=Lax/);
     } finally {

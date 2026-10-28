@@ -24,7 +24,7 @@ pg.types.setTypeParser(1082, (v: string) => v);
  * в строке подключения → ssl { rejectUnauthorized: false }. По умолчанию TLS выключен (локальная база, docker compose).
  * sslmode убирается из строки: иначе pg подставит свою проверку сертификата поверх нашей.
  */
-export function pgConnection(url: string, sslFlag: string | undefined = process.env.DATABASE_SSL): pg.PoolConfig {
+export function pgConnection(url: string, sslFlag: string | undefined = process.env.DATABASE_SSL, caPem: string | undefined = process.env.DATABASE_CA): pg.PoolConfig {
   const flag = /^(1|true|yes|on)$/i.test((sslFlag ?? '').trim());
   let connectionString = url, mode = '';
   try {
@@ -36,6 +36,10 @@ export function pgConnection(url: string, sslFlag: string | undefined = process.
     }
   } catch { /* не URL (например, key=value) — оставляем как есть */ }
   const ssl = flag || ['require', 'prefer', 'verify-ca', 'verify-full'].includes(mode);
+  // DATABASE_CA — корневой сертификат базы (PEM, можно с \n вместо переносов): тогда сертификат и имя сервера проверяются,
+  // подменить базу «посередине» нельзя. Без него соединение шифруется, но сертификат не проверяется.
+  const ca = (caPem ?? '').trim().replace(/\\n/g, '\n');
+  if (ssl && ca.startsWith('-----BEGIN')) return { connectionString, ssl: { ca, rejectUnauthorized: true } };
   return ssl ? { connectionString, ssl: { rejectUnauthorized: false } } : { connectionString };
 }
 

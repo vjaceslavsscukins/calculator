@@ -302,7 +302,8 @@ export function renderKpPage(k: KpSnapshot, o: KpPageOptions): string {
   const script = `(function(){
   var base=${JSON.stringify(base)},preview=${o.preview ? 'true' : 'false'};
   var msg=document.getElementById('ctaMsg');
-  function post(path,body){return fetch(base+path,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body||{})}).then(function(r){if(!r.ok)throw r;return r.json()})}
+  function post(path,body){return fetch(base+path,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body||{})}).then(function(r){if(!r.ok)return r.json().catch(function(){return {}}).then(function(j){throw new Error(j.error||'')});return r.json()})}
+  function fail(e){return (e&&e.message)||'Не получилось отправить. Позвоните менеджеру или попробуйте ещё раз.'}
   if(!preview)post('/open').catch(function(){});
   document.getElementById('pdf').onclick=function(){window.print()};
   var go=document.getElementById('ctaGo'),ask=document.getElementById('ctaAsk'),form=document.getElementById('askForm');
@@ -310,7 +311,7 @@ export function renderKpPage(k: KpSnapshot, o: KpPageOptions): string {
     if(preview){msg.textContent='Просмотр менеджера: клиент увидит здесь подтверждение, а вы получите уведомление.';return}
     go.disabled=true;
     post('/action',{type:'approve'}).then(function(){msg.textContent='Спасибо! Менеджер получил ваше подтверждение и свяжется с вами, чтобы договориться о замере.'})
-      .catch(function(){go.disabled=false;msg.textContent='Не получилось отправить. Позвоните менеджеру или попробуйте ещё раз.'});
+      .catch(function(e){go.disabled=false;msg.textContent=fail(e)});
   };
   ask.onclick=function(){form.hidden=!form.hidden;if(!form.hidden)document.getElementById('askText').focus()};
   form.onsubmit=function(e){
@@ -319,7 +320,7 @@ export function renderKpPage(k: KpSnapshot, o: KpPageOptions): string {
     if(!t){msg.textContent='Напишите вопрос, чтобы менеджер мог ответить по существу.';return}
     if(preview){msg.textContent='Просмотр менеджера: вопрос клиента придёт вам уведомлением.';return}
     post('/action',{type:'question',message:t}).then(function(){form.hidden=true;msg.textContent='Менеджер получил ваш вопрос и свяжется с вами.'})
-      .catch(function(){msg.textContent='Не получилось отправить. Позвоните менеджеру или попробуйте ещё раз.'});
+      .catch(function(e){msg.textContent=fail(e)});
   };
   ${o.print ? "window.addEventListener('load',function(){setTimeout(function(){window.print()},400)});" : ''}
 })();`;

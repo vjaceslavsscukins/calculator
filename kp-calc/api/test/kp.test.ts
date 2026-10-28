@@ -329,7 +329,9 @@ describe('КП: картинки, снимок, страница по ссылк
     const token = kp.url.split('/p/')[1];
     const guest = agent(ctx.app);
     assert.equal((await guest.post(`/p/${token}/open`)).status, 200);
-    assert.equal((await guest.post(`/p/${token}/open`)).status, 200);
+    assert.equal((await guest.post(`/p/${token}/open`)).status, 200, 'повтор сразу же не считается');
+    await ctx.pool.query(`update kps set last_viewed_at = now() - interval '11 minutes' where id = $1`, [kp.id]);
+    assert.equal((await guest.post(`/p/${token}/open`)).status, 200, 'через 10 минут — новый просмотр');
     const det = (await m1.get(`/api/kp/${kp.id}`)).body;
     assert.equal(det.kp.views, 2);
     assert.ok(det.kp.firstViewedAt && det.kp.lastViewedAt);

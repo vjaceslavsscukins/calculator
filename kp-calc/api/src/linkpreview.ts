@@ -132,14 +132,15 @@ function fetchOnce(u: URL, opts: Required<LinkPreviewOptions>, deadline: number)
       let size = 0;
       stream.on('data', (c: Buffer) => {
         size += c.length;
-        if (size > opts.maxBytes) { req.destroy(); reject(new LinkPreviewError(400, 'Страница слишком большая (больше 2 МБ)')); return; }
+        if (size > opts.maxBytes) { (stream as any).destroy?.(); req.destroy(); reject(new LinkPreviewError(400, 'Страница слишком большая (больше 2 МБ)')); return; }
         chunks.push(c);
       });
       stream.on('end', () => resolve({ status, headers: res.headers, body: Buffer.concat(chunks) }));
       stream.on('error', () => reject(new LinkPreviewError(502, 'Не удалось прочитать страницу')));
     });
-    const timer = setTimeout(() => { req.destroy(new LinkPreviewError(504, 'Сайт не ответил за 8 секунд')); }, Math.max(1, deadline - Date.now()));
-    req.on('timeout', () => req.destroy(new LinkPreviewError(504, 'Сайт не ответил за 8 секунд')));
+    const late = () => new LinkPreviewError(504, `Сайт не ответил за ${Math.round(opts.timeoutMs / 1000)} секунд`);
+    const timer = setTimeout(() => { req.destroy(late()); }, Math.max(1, deadline - Date.now()));
+    req.on('timeout', () => req.destroy(late()));
     req.on('error', (e) => reject(e instanceof LinkPreviewError ? e : new LinkPreviewError(502, 'Не удалось открыть сайт')));
     req.on('close', () => clearTimeout(timer));
     req.end();
@@ -153,6 +154,28 @@ function decodeBody(body: Buffer, contentType: string): string {
     charset = /<meta[^>]+charset=["']?([\w-]+)/i.exec(head)?.[1];
   }
   try { return new TextDecoder((charset || 'utf-8').toLowerCase()).decode(body); } catch { return new TextDecoder('utf-8').decode(body); }
+}
+
+/**
+ * Скачать файл по внешней ссылке с той же защитой от SSRF (DNS-проверка каждого адреса и редиректа, частные сети запрещены),
+ * с пределом размера и времени. Для картинок от нейросети.
+ */
+export async function fetchPublic(raw: string, options: LinkPreviewOptions = {}): Promise<{ body: Buffer; contentType: string }> {
+  const opts: Required<LinkPreviewOptions> = { allowPrivate: false, timeoutMs: 60_000, maxBytes: 20 * 1024 * 1024, ...options };
+  const deadline = Date.now() + opts.timeoutMs;
+  let u = checkUrl(raw, opts.allowPrivate);
+  for (let hop = 0; hop <= 4; hop++) {
+    const r = await fetchOnce(u, opts, deadline);
+    if (r.status >= 300 && r.status < 400) {
+      const loc = r.headers.location;
+      if (!loc || hop === 4) throw new LinkPreviewError(502, 'Слишком много перенаправлений');
+      u = checkUrl(new URL(loc, u).toString(), opts.allowPrivate);
+      continue;
+    }
+    if (r.status >= 400) throw new LinkPreviewError(502, `Сайт ответил ошибкой ${r.status}`);
+    return { body: r.body, contentType: String(r.headers['content-type'] ?? '').split(';')[0].trim() };
+  }
+  throw new LinkPreviewError(502, 'Слишком много перенаправлений');
 }
 
 export async function linkPreview(raw: string, options: LinkPreviewOptions = {}): Promise<LinkPreview> {

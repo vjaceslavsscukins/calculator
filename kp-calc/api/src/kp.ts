@@ -55,7 +55,8 @@ export async function registerKp(app: FastifyInstance, d: KpDeps): Promise<void>
   const origin = (req: FastifyRequest) => (d.publicUrl || `${req.protocol}://${req.host}`).replace(/\/$/, '');
 
   // картинки приходят телом запроса как есть (image/png, image/jpeg, image/webp) — без multipart и нативных зависимостей
-  app.addContentTypeParser(['image/png', 'image/jpeg', 'image/webp', 'application/octet-stream'], { parseAs: 'buffer', bodyLimit: MAX_IMAGE },
+  // предел 10 МБ — только у маршрутов загрузки (bodyLimit маршрута); остальные, включая публичные, — общий 1 МБ
+  app.addContentTypeParser(['image/png', 'image/jpeg', 'image/webp', 'application/octet-stream'], { parseAs: 'buffer' },
     (req, body, done) => done(null, body));
 
   async function saveImage(db: pg.Pool | pg.PoolClient, data: Buffer, o: { calcId: string | null; kind: 'sketch' | 'render' | 'cover'; title: string; userId: string; inKp?: boolean; sourceId?: string }) {
@@ -168,7 +169,7 @@ export async function registerKp(app: FastifyInstance, d: KpDeps): Promise<void>
     });
     let out: { mime: string; data: Buffer };
     try {
-      out = await renderImage(env, [{ mime: src.img.mime, data: src.data }, ...(prev ? [{ mime: prev.img.mime, data: prev.data }] : [])], prompt);
+      out = await renderImage(env, [{ mime: src.img.mime, data: src.data }, ...(prev ? [{ mime: prev.img.mime, data: prev.data }] : [])], prompt, { allowPrivate });
     } catch (e) {
       if (e instanceof AiError) throw new HttpError(e.status, e.message);
       throw e;
@@ -513,8 +514,11 @@ export async function registerKp(app: FastifyInstance, d: KpDeps): Promise<void>
     const r = await kpByToken(req.params.token);
     if (!r) throw notFound();
     await tx(pool, async (db) => {
+      // просмотр считаем не чаще раза в 10 минут: обновления страницы и повторы запроса не накручивают счётчик
       const { rows: [k] } = await db.query(
-        `update kps set views = views + 1, first_viewed_at = coalesce(first_viewed_at, now()), last_viewed_at = now() where id = $1 returning views`, [r.id]);
+        `update kps set views = views + 1, first_viewed_at = coalesce(first_viewed_at, now()), last_viewed_at = now()
+          where id = $1 and (last_viewed_at is null or last_viewed_at < now() - interval '10 minutes') returning views`, [r.id]);
+      if (!k) return;
       await db.query(`insert into kp_events (kp_id, type) values ($1, 'open')`, [r.id]);
       if (k.views === 1) await notify(db, r, 'open', `${r.client_name} впервые открыл(а) ${kpNumber(r.number)}${r.version > 1 ? ` (версия ${r.version})` : ''}`);
     });
@@ -528,11 +532,18 @@ export async function registerKp(app: FastifyInstance, d: KpDeps): Promise<void>
     if (type !== 'approve' && type !== 'question') throw new HttpError(400, 'Неизвестное действие');
     const message = type === 'question' ? str(req.body?.message, 1000) : '';
     if (type === 'question' && !message) throw new HttpError(400, 'Напишите вопрос');
-    const { rows: [{ n }] } = await pool.query(
-      `select count(*)::int as n from kp_events where kp_id = $1 and type in ('approve','question') and created_at > now() - interval '1 hour'`, [r.id]);
-    if (n >= 20) throw new HttpError(429, 'Слишком много сообщений. Позвоните менеджеру');
+    if (String(r.valid_until).slice(0, 10) < new Date().toISOString().slice(0, 10) && !(type === 'approve' && r.approved_at)) {
+      throw new HttpError(410, 'Срок действия КП истёк. Позвоните менеджеру — он обновит предложение');
+    }
     const num = `${kpNumber(r.number)}${r.version > 1 ? ` (версия ${r.version})` : ''}`;
     await tx(pool, async (db) => {
+      // счёт и запись под блокировкой этого КП: параллельные запросы не обходят предел
+      await db.query('select pg_advisory_xact_lock(482200, hashtext($1))', [r.id]);
+      const { rows: [{ n }] } = await db.query(
+        `select count(*)::int as n from kp_events where kp_id = $1 and type in ('approve','question') and created_at > now() - interval '1 hour'`, [r.id]);
+      if (n >= 20) throw new HttpError(429, 'Слишком много сообщений. Позвоните менеджеру');
+      // повторное «Утвердить» ничего не делает: одно событие, одно уведомление, одна запись для Битрикс24
+      if (type === 'approve' && !(await db.query('update kps set approved_at = now() where id = $1 and approved_at is null returning id', [r.id])).rowCount) return;
       await db.query('insert into kp_events (kp_id, type, message) values ($1,$2,$3)', [r.id, type, message]);
       // очередь для Битрикс24: уйдёт в сделку, когда подключат вебхук
       await db.query('insert into bitrix_outbox (kind, kp_id, client_id, payload) values ($1,$2,$3,$4)', [
@@ -540,7 +551,6 @@ export async function registerKp(app: FastifyInstance, d: KpDeps): Promise<void>
         JSON.stringify({ kp: kpNumber(r.number), version: r.version, total: r.total, client: r.client_name, phone: r.client_phone, message }),
       ]);
       if (type === 'approve') {
-        await db.query('update kps set approved_at = coalesce(approved_at, now()) where id = $1', [r.id]);
         await notify(db, r, 'approve', `${r.client_name} нажал(а) «Утвердить проект» в ${num}`);
       } else {
         await notify(db, r, 'question', `${r.client_name} задал(а) вопрос по ${num}: «${message.length > 160 ? `${message.slice(0, 160)}…` : message}»`);

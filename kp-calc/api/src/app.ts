@@ -103,12 +103,15 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
     trustProxy: true,
     logger: opts.logger ? {
       // в журнал — только путь: в строке запроса бывают имя и телефон клиента (152-ФЗ)
-      serializers: { req: (req: any) => ({ method: req.method, url: String(req.url).split('?')[0] }) },
+      // ссылка КП /p/<токен> — ключ доступа к КП, в журнал её не пишем
+      serializers: { req: (req: any) => ({ method: req.method, url: String(req.url).split('?')[0].replace(/^\/p\/[^/]+/, '/p/***').replace(/\/invite\/[^/]+/, '/invite/***') }) },
     } : false,
   });
   await app.register(cookie);
   // пустое тело с Content-Type: application/json считаем {}
   app.removeContentTypeParser('application/json');
+  // text/plain не принимаем: «простой» запрос с чужого сайта не дойдёт до обработчиков
+  app.removeContentTypeParser('text/plain');
   app.addContentTypeParser('application/json', { parseAs: 'string' }, (req, body, done) => {
     if (!body || !String(body).trim()) return done(null, {});
     try { done(null, JSON.parse(String(body))); } catch { done(Object.assign(new Error('bad json'), { statusCode: 400 }), undefined); }
@@ -177,29 +180,62 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
         where s.token_hash = $1 and s.expires_at > now() and not u.disabled`, [tokenHash(token)]);
     return r ? userJson(r) : null;
   }
-  const PUBLIC = new Set(['/api/auth/login', '/api/auth/logout', '/api/auth/invite/accept']);
+  // Проверка по найденному маршруту, а не по строке адреса: «/%61pi/…» роутер раскодирует в «/api/…»
+  const PUBLIC = new Set(['/api/auth/login', '/api/auth/logout', '/api/auth/invite/accept', '/api/auth/invite/:token']);
+  const WRITE = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+  const hostOf = (v: string) => { try { return new URL(v).host; } catch { return ''; } };
+  const sameOrigin = (req: FastifyRequest, origin: string) => {
+    const h = hostOf(origin);
+    return !!h && [hostOf(`${req.protocol}://${req.host}`), opts.publicUrl ? hostOf(opts.publicUrl) : ''].includes(h);
+  };
   app.addHook('preHandler', async (req) => {
-    const path = req.url.split('?')[0];
-    if (!path.startsWith('/api/') || PUBLIC.has(path) || path.startsWith('/api/auth/invite/')) return;
+    const route = req.routeOptions?.url ?? '';
+    if (!route.startsWith('/api/')) return;
+    // защита от подделки запроса с чужого сайта. Браузер сам ставит Sec-Fetch-Site (сайт не может его подделать):
+    // принимаем только «same-origin» (и «none» — ввод адреса). Старые браузеры без него — сверяем Origin с адресом портала.
+    if (WRITE.has(req.method)) {
+      const site = req.headers['sec-fetch-site'];
+      if (site ? site !== 'same-origin' && site !== 'none' : !!req.headers.origin && !sameOrigin(req, String(req.headers.origin))) {
+        throw new HttpError(403, 'Запрос с чужого сайта отклонён');
+      }
+    }
+    if (PUBLIC.has(route)) return;
     req.user = await sessionUser(req);
     if (!req.user) throw new HttpError(401, 'Войдите в систему');
   });
-  const me = (req: FastifyRequest): User => req.user as User;
+  const me = (req: FastifyRequest): User => {
+    if (!req.user) throw new HttpError(401, 'Войдите в систему');
+    return req.user as User;
+  };
   const need = (req: FastifyRequest, ...roles: Role[]) => { if (!roles.includes(me(req).role)) throw forbid(); return me(req); };
 
   async function startSession(reply: FastifyReply, userId: string) {
     const token = newToken();
     await pool.query(`insert into sessions (token_hash, user_id, expires_at) values ($1, $2, now() + interval '${SESSION_DAYS} days')`, [tokenHash(token), userId]);
-    reply.setCookie(COOKIE, token, { path: '/', httpOnly: true, sameSite: 'lax', secure: !!opts.production, maxAge: SESSION_DAYS * 86400 });
+    // secure — в production и всегда, если запрос пришёл по https (даже без NODE_ENV)
+    reply.setCookie(COOKIE, token, { path: '/', httpOnly: true, sameSite: 'lax', secure: !!opts.production || reply.request.protocol === 'https', maxAge: SESSION_DAYS * 86400 });
+    await pool.query('delete from sessions where expires_at < now()');
   }
   const loadUser = async (id: string) => {
     const { rows: [r] } = await pool.query(`${USER_SQL} where u.id = $1`, [id]);
     return r ? userJson(r) : null;
   };
 
-  // простая защита от перебора паролей: 10 неудач за 15 минут на почту
+  // защита от перебора паролей: 10 попыток за 15 минут на почту и 50 — с одного адреса.
+  // Попытка засчитывается ДО проверки пароля (параллельные запросы не проскочат); при переполнении удаляются самые старые записи.
   const fails = new Map<string, { n: number; until: number }>();
+  const ipFails = new Map<string, { n: number; until: number }>();
   const WINDOW = 15 * 60 * 1000;
+  const take = (map: Map<string, { n: number; until: number }>, key: string, limit: number) => {
+    const now = Date.now();
+    let f = map.get(key);
+    if (!f || f.until <= now) f = { n: 0, until: now + WINDOW };
+    if (f.n >= limit) return false;
+    f.n++;
+    map.delete(key); map.set(key, f);
+    while (map.size > 20000) map.delete(map.keys().next().value as string);
+    return true;
+  };
 
   app.get('/healthz', async (req, reply) => reply.type('text/plain').send('ok'));
 
@@ -207,16 +243,10 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
   app.post('/api/auth/login', async (req: any, reply) => {
     const email = text(req.body?.email, 200).toLowerCase();
     const password = typeof req.body?.password === 'string' ? req.body.password.slice(0, 500) : '';
-    const f = fails.get(email);
-    if (f && f.until > Date.now() && f.n >= 10) throw new HttpError(429, 'Слишком много попыток входа. Попробуйте через 15 минут');
+    if (!take(ipFails, req.ip, 50) || !take(fails, email, 10)) throw new HttpError(429, 'Слишком много попыток входа. Попробуйте через 15 минут');
     const { rows: [r] } = await pool.query(`${USER_SQL} where lower(u.email) = $1`, [email]);
     const ok = await verifyPassword(password, r?.password_hash);
-    if (!ok || !r || r.disabled) {
-      const cur = f && f.until > Date.now() ? f : { n: 0, until: Date.now() + WINDOW };
-      cur.n++; fails.set(email, cur);
-      if (fails.size > 10000) fails.clear();
-      throw new HttpError(401, 'Неверная почта или пароль');
-    }
+    if (!ok || !r || r.disabled) throw new HttpError(401, 'Неверная почта или пароль');
     fails.delete(email);
     await startSession(reply, r.id);
     return { user: userJson(r) };
@@ -635,9 +665,15 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
 
   // ========== Журнал ==========
   app.get('/api/audit', async (req: any) => {
-    need(req, 'owner', 'head');
+    const u = need(req, 'owner', 'head');
     const limit = Math.min(1000, Math.max(1, parseInt(req.query?.limit, 10) || 200));
-    const { rows } = await pool.query('select at, user_name, action, entity, details from audit_log order by at desc, id desc limit $1', [limit]);
+    // руководитель: прайс и коэффициенты; рендеры — только по клиентам своего города; пользователи (почты, телефоны) — только владельцу
+    const { rows } = await pool.query(
+      `select a.at, a.user_name, a.action, a.entity, a.details from audit_log a
+        where $2 = 'owner' or a.entity in ('Прайс', 'Коэффициенты')
+           or (a.entity = 'Рендер' and exists (select 1 from calculations k join clients cl on cl.id = k.client_id
+                                                where k.id::text = a.details->>'calculationId' and cl.city_id = $3))
+        order by a.at desc, a.id desc limit $1`, [limit, u.role, u.cityId]);
     return { entries: rows.map((r) => ({ at: r.at, userName: r.user_name, action: r.action, entity: r.entity, details: r.details })) };
   });
 

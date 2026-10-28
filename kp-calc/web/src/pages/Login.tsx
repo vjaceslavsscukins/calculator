@@ -20,7 +20,9 @@ export function LoginPage() {
     try {
       const r = await api.login(email.trim(), password);
       setUser(r.user);
-      nav(loc.state?.from && loc.state.from !== '/login' ? loc.state.from : '/clients', { replace: true });
+      // возвращаем только на свою страницу: «//чужой-сайт» и полные адреса не принимаем
+      const from = typeof loc.state?.from === 'string' ? loc.state.from : '';
+      nav(/^\/(?![\/\\])/.test(from) && from !== '/login' ? from : '/clients', { replace: true });
     } catch (x) {
       setErr(errText(x));
     } finally {

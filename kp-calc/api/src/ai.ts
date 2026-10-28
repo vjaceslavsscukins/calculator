@@ -1,4 +1,6 @@
 // Нейросети через OpenAI-совместимый шлюз (AITunnel, OpenRouter и т. п.): рендер по эскизу и текст «Об изделии».
+import { fetchPublic } from './linkpreview.ts';
+
 // Ключи только в окружении сервера: RENDER_PROVIDER, RENDER_API_URL, RENDER_API_KEY, RENDER_MODEL;
 // AI_TEXT_API_URL, AI_TEXT_API_KEY, AI_TEXT_MODEL. Без ключа — понятная ошибка (рендер) или шаблонный текст.
 
@@ -116,7 +118,7 @@ async function postJson(url: string, key: string, body: unknown, timeoutMs: numb
 }
 
 /** Рендер: эскиз + промт → картинка. */
-export async function renderImage(env: AiEnv, images: { mime: string; data: Buffer }[], prompt: string): Promise<{ mime: string; data: Buffer }> {
+export async function renderImage(env: AiEnv, images: { mime: string; data: Buffer }[], prompt: string, opts: { allowPrivate?: boolean } = {}): Promise<{ mime: string; data: Buffer }> {
   if (!renderConfigured(env)) throw new AiError(503, RENDER_OFF);
   const json = await postJson(completionsUrl(env.RENDER_API_URL as string), env.RENDER_API_KEY as string, {
     model: env.RENDER_MODEL,
@@ -135,14 +137,11 @@ export async function renderImage(env: AiEnv, images: { mime: string; data: Buff
     throw new AiError(502, `Нейросеть не вернула картинку${typeof said === 'string' && said.trim() ? `: «${said.trim().slice(0, 160)}»` : ''}`);
   }
   if (img.kind === 'data') return { mime: img.mime, data: img.data };
-  // ссылка на картинку у провайдера: скачиваем (только https, до 20 МБ)
+  // ссылка на картинку у провайдера: скачиваем только https, через проверку адресов (не во внутреннюю сеть), до 20 МБ
   if (!img.url.startsWith('https://')) throw new AiError(502, 'Нейросеть вернула ссылку не по https');
-  let res: Response;
-  try { res = await fetch(img.url, { signal: AbortSignal.timeout(60_000) }); } catch { throw new AiError(502, 'Не удалось скачать картинку нейросети'); }
-  if (!res.ok) throw new AiError(502, 'Не удалось скачать картинку нейросети');
-  const buf = Buffer.from(await res.arrayBuffer());
-  if (buf.length > 20 * 1024 * 1024) throw new AiError(502, 'Картинка нейросети слишком большая');
-  return { mime: res.headers.get('content-type')?.split(';')[0] || 'image/png', data: buf };
+  let got: { body: Buffer; contentType: string };
+  try { got = await fetchPublic(img.url, { allowPrivate: !!opts.allowPrivate }); } catch { throw new AiError(502, 'Не удалось скачать картинку нейросети'); }
+  return { mime: got.contentType || 'image/png', data: got.body };
 }
 
 /** Текст «Об изделии» нейросетью в стиле DESIGN.md §8. */
