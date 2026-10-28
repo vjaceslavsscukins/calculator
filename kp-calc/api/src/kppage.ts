@@ -130,7 +130,7 @@ body{font:15px/1.55 var(--f-body);-webkit-print-color-adjust:exact;print-color-a
 .tot-dark{font:400 clamp(34px,4.5vw,58px)/1 var(--f-head);font-variant-numeric:lining-nums}
 .ok{font-size:13px;color:var(--on-dark-muted)}
 .print-only{display:none}
-@media (max-width:820px){.cover,.prod{grid-template-columns:minmax(0,1fr)}.mat li{grid-template-columns:minmax(0,1fr)}.mgr{grid-template-columns:minmax(0,1fr)}.mgr .tel{text-align:left}}
+@media screen and (max-width:820px){.cover,.prod{grid-template-columns:minmax(0,1fr)}.mat li{grid-template-columns:minmax(0,1fr)}.mgr{grid-template-columns:minmax(0,1fr)}.mgr .tel{text-align:left}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 @page{size:A4 landscape;margin:0}
 @media print{

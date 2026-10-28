@@ -240,7 +240,7 @@ function ItemEditor({ n, it, e, price, roundTo, aiText, onChange }: {
       <div className="chips">
         {e.benefits.map((b, k) => (
           <span className="chip" key={k}>
-            <input className="in" aria-label="Плашка" value={b} onChange={(x) => onChange({ benefits: e.benefits.map((v, j) => (j === k ? x.target.value : v)) })} />
+            <input className="in" aria-label="Плашка" size={Math.max(14, b.length + 1)} value={b} onChange={(x) => onChange({ benefits: e.benefits.map((v, j) => (j === k ? x.target.value : v)) })} />
             <button className="x" type="button" aria-label="Убрать плашку" onClick={() => onChange({ benefits: e.benefits.filter((_, j) => j !== k) })}>×</button>
           </span>
         ))}

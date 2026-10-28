@@ -314,7 +314,7 @@ select.cell option{color:#262625;background:#f7f6f3}
 .mat-row .in{width:100%}
 .chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 .chips .chip{padding:2px 4px 2px 2px;gap:2px}
-.chips .chip .in{border:0;background:transparent;width:230px}
+.chips .chip .in{border:0;background:transparent;width:auto;max-width:420px}
 .kpb-side{gap:10px}
 .kpb-side .field input{height:36px}
 .kpb-side .seg{align-self:flex-start;margin-top:4px}

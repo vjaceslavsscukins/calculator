@@ -177,7 +177,8 @@ export async function aboutText(env: AiEnv, data: { kindTitle: string; title: st
 /** Шаблонный текст «Об изделии», если нейросеть не подключена. Только факты из расчёта. */
 export function templateAbout(kind: 'kitchen' | 'cabinet', title: string, materials: Material[]): string {
   const get = (re: RegExp) => materials.filter((m) => re.test(m.role)).map((m) => m.value);
-  const lc = (s: string) => s.charAt(0).toLowerCase() + s.slice(1);
+  // «Эмаль» → «эмаль», но аббревиатуры и бренды (ЛДСП, AGT, Blum) не трогаем
+  const lc = (s: string) => (/^[А-ЯЁA-Z][а-яёa-z]/.test(s) && !/^(Blum|Hettich|Egger|Salice|Firmax|Boyard|Gola)/.test(s) ? s.charAt(0).toLowerCase() + s.slice(1) : s);
   const parts: string[] = [];
   const body = get(/^Корпус/), fronts = get(/^Фасады/), top = get(/^Столешница/);
   const name = title.trim() || (kind === 'kitchen' ? 'Кухня' : 'Изделие');
