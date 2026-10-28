@@ -155,6 +155,7 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
       return reply.code(err.statusCode).send({ error: msg });
     }
     req.log.error({ err: { message: err.message, code: err.code } }, 'ошибка сервера');
+    if (process.env.KP_DEBUG) console.error(err);
     return reply.code(500).send({ error: 'Ошибка сервера, попробуйте ещё раз' });
   });
   app.addHook('onSend', async (req, reply, payload) => {

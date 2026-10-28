@@ -200,7 +200,7 @@ export function parsePrice(v: unknown): number | undefined {
   if (!s) return undefined;
   if (s.includes(',') && s.includes('.')) s = s.lastIndexOf(',') > s.lastIndexOf('.') ? s.replace(/\./g, '').replace(',', '.') : s.replace(/,/g, '');
   else if (s.includes(',')) s = /,\d{1,2}$/.test(s) ? s.replace(/,(?=\d{1,2}$)/, '.').replace(/,/g, '') : s.replace(/,/g, '');
-  else if ((s.match(/\./g) ?? []).length > 1) s = s.replace(/\.(?=.*\.)/g, '');
+  else if ((s.match(/\./g) ?? []).length > 1) s = s.replace(/\./g, '');
   const n = Number(s);
   return Number.isFinite(n) && n > 0 ? n : undefined;
 }

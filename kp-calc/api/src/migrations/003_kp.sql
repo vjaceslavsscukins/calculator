@@ -25,8 +25,9 @@ create table images (
 );
 create index images_calc_idx on images (calculation_id);
 
+-- без внешнего ключа: содержимое пишется до записи в images (как и в S3), чтобы в списке не было картинок без содержимого
 create table image_blobs (
-  image_id uuid primary key references images(id) on delete cascade,
+  image_id uuid primary key,
   data bytea not null
 );
 

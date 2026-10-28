@@ -142,24 +142,44 @@ export async function registerKp(app: FastifyInstance, d: KpDeps): Promise<void>
     return kpMaterials(input, p.idx, p.settings);
   }
 
+  /**
+   * Рендер: эскиз + базовый промт из настроек + материалы + «что поправить». previousId — предыдущий рендер (перегенерация):
+   * прикладывается вторым изображением. Каждая генерация — новая картинка «Рендер N»; в журнал — кто и что генерировал.
+   */
   app.post('/api/calculations/:id/render', async (req: any) => {
     const u = d.me(req);
     const c = await d.visibleCalc(u, uuid(req.params.id));
     if (!renderConfigured(env)) throw new HttpError(503, RENDER_OFF);
-    const imageId = uuid(req.body?.imageId, 'Выберите эскиз для рендера');
-    const { rows: [src] } = await pool.query('select * from images where id = $1 and calculation_id = $2 and deleted_at is null', [imageId, c.id]);
-    if (!src) throw new HttpError(404, 'Эскиз не найден');
-    const data = await storage.get(src.id, src.storage);
-    if (!data) throw new HttpError(404, 'Эскиз не найден');
-    const prompt = renderPrompt(KIND_TITLES[c.kind as ProductKind] ?? 'Мебель', c.title, await materialsOf(c.input));
+    const b = req.body ?? {};
+    const imageId = uuid(b.imageId, 'Выберите эскиз для рендера');
+    const load = async (id: string, what: string) => {
+      const { rows: [img] } = await pool.query('select * from images where id = $1 and calculation_id = $2 and deleted_at is null', [id, c.id]);
+      const data = img ? await storage.get(img.id, img.storage) : null;
+      if (!img || !data) throw new HttpError(404, `${what} не найден`);
+      return { img, data };
+    };
+    const src = await load(imageId, 'Эскиз');
+    const prev = b.previousId ? await load(uuid(b.previousId, 'Предыдущий рендер не найден'), 'Предыдущий рендер') : null;
+    const comment = str(b.comment, 1000);
+    const p = await d.pricing();
+    const prompt = renderPrompt({
+      base: p.settings.renderPrompt, kindTitle: KIND_TITLES[c.kind as ProductKind] ?? 'Мебель', title: c.title,
+      materials: kpMaterials(c.input, p.idx, p.settings), comment, withPrevious: !!prev,
+    });
     let out: { mime: string; data: Buffer };
-    try { out = await renderImage(env, { mime: src.mime, data }, prompt); } catch (e) {
+    try {
+      out = await renderImage(env, [{ mime: src.img.mime, data: src.data }, ...(prev ? [{ mime: prev.img.mime, data: prev.data }] : [])], prompt);
+    } catch (e) {
       if (e instanceof AiError) throw new HttpError(e.status, e.message);
       throw e;
     }
     if (!sniffImage(out.data)) throw new HttpError(502, 'Нейросеть вернула не картинку');
     const { rows: [{ n }] } = await pool.query(`select count(*)::int as n from images where calculation_id = $1 and kind = 'render'`, [c.id]);
-    const r = await saveImage(pool, out.data, { calcId: c.id, kind: 'render', title: `Рендер ${n + 1}`, userId: u.id, inKp: true, sourceId: src.id });
+    const r = await saveImage(pool, out.data, { calcId: c.id, kind: 'render', title: `Рендер ${n + 1}`, userId: u.id, inKp: false, sourceId: src.img.id });
+    await pool.query('insert into audit_log (user_id, user_name, action, entity, details) values ($1,$2,$3,$4,$5)', [
+      u.id, fullName(u.firstName, u.lastName) || u.email, prev ? 'Перегенерация рендера' : 'Рендер по эскизу', 'Рендер',
+      JSON.stringify({ calculationId: c.id, calculation: c.title, client: c.client_name, image: r.title, comment: comment || undefined }),
+    ]);
     return { image: imageJson(r) };
   });
 
@@ -192,7 +212,7 @@ export async function registerKp(app: FastifyInstance, d: KpDeps): Promise<void>
       materials,
       benefits: Array.isArray(info.benefits) ? strList(info.benefits, 8) : kpBenefits(materials),
       images: imgs.map(imageJson),
-      imageId: imgs.find((x) => x.in_kp)?.id ?? null,
+      imageId: imgs.find((x) => x.in_kp)?.id ?? imgs[0]?.id ?? null,
       price,
     };
   }

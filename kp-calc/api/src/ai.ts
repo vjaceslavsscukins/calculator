@@ -28,17 +28,20 @@ export function completionsUrl(base: string): string {
 
 export interface Material { role: string; value: string }
 
-/** Промт рендера: сохранить расстановку, пропорции и цвета эскиза; фотореалистичный интерьер; материалы из расчёта. */
-export function renderPrompt(kindTitle: string, title: string, materials: Material[]): string {
-  const list = materials.map((m) => `- ${m.role}: ${m.value}`).join('\n') || '- материалы по эскизу';
+/**
+ * Промт рендера: базовый промт из настроек (правит владелец) + изделие + материалы расчёта + что поправить (комментарий менеджера).
+ * При перегенерации к эскизу прикладывается предыдущий рендер.
+ */
+export function renderPrompt(o: { base: string; kindTitle: string; title: string; materials: Material[]; comment?: string; withPrevious?: boolean }): string {
+  const list = o.materials.map((m) => `- ${m.role}: ${m.value}`).join('\n') || '- материалы по эскизу';
   return [
-    `Сделай фотореалистичную визуализацию мебели по приложенному эскизу: ${kindTitle.toLowerCase()} «${title}».`,
-    'Строго сохрани расстановку модулей, количество и размеры фасадов, пропорции и цвета эскиза. Ничего не добавляй и не убирай из мебели.',
-    'Покажи мебель в светлом современном интерьере, мягкий дневной свет, ракурс как на эскизе, без людей, без текста и водяных знаков.',
-    'Материалы и комплектация:',
-    list,
+    o.base.trim(),
     '',
-    'Photorealistic interior render of custom furniture based on the attached sketch. Keep the exact layout, module count, front sizes, proportions and colours of the sketch; do not add or remove furniture. Calm modern interior, soft daylight, same camera angle as the sketch, no people, no text, no watermark. Use the materials listed above.',
+    `Изделие: ${o.kindTitle.toLowerCase()} «${o.title}».`,
+    'Материалы и комплектация из расчёта:',
+    list,
+    ...(o.withPrevious ? ['', 'Первая картинка — эскиз (главный источник расстановки и размеров), вторая — предыдущая визуализация: возьми её за основу и измени только то, что указано ниже.'] : []),
+    ...(o.comment?.trim() ? ['', `Что поправить: ${o.comment.trim()}`] : []),
   ].join('\n');
 }
 
@@ -113,7 +116,7 @@ async function postJson(url: string, key: string, body: unknown, timeoutMs: numb
 }
 
 /** Рендер: эскиз + промт → картинка. */
-export async function renderImage(env: AiEnv, sketch: { mime: string; data: Buffer }, prompt: string): Promise<{ mime: string; data: Buffer }> {
+export async function renderImage(env: AiEnv, images: { mime: string; data: Buffer }[], prompt: string): Promise<{ mime: string; data: Buffer }> {
   if (!renderConfigured(env)) throw new AiError(503, RENDER_OFF);
   const json = await postJson(completionsUrl(env.RENDER_API_URL as string), env.RENDER_API_KEY as string, {
     model: env.RENDER_MODEL,
@@ -122,7 +125,7 @@ export async function renderImage(env: AiEnv, sketch: { mime: string; data: Buff
       role: 'user',
       content: [
         { type: 'text', text: prompt },
-        { type: 'image_url', image_url: { url: `data:${sketch.mime};base64,${sketch.data.toString('base64')}` } },
+        ...images.map((im) => ({ type: 'image_url', image_url: { url: `data:${im.mime};base64,${im.data.toString('base64')}` } })),
       ],
     }],
   }, 180_000);
