@@ -413,34 +413,53 @@ function isBackWall(r: Row, catalog: CatalogView | null): boolean {
   return g?.name === HDF_GROUP;
 }
 
+const LINK_GROUP = '__link';
+
+/** Группы прайса для левого списка; если в блоке несколько категорий (ЛДСП корпус, Фасады) — разделены заголовками. */
+function GroupOptions({ groups }: { groups: CatalogGroupView[] }) {
+  const cats = [...new Set(groups.map((g) => g.category))];
+  const opts = (list: CatalogGroupView[]) => list.map((x) => <option key={x.id} value={x.id}>{x.name}</option>);
+  if (cats.length < 2) return <>{opts(groups)}</>;
+  return <>{cats.map((c) => <optgroup key={c} label={c}>{opts(groups.filter((g) => g.category === c))}</optgroup>)}</>;
+}
+
+/**
+ * Выбор позиции в две ступени, как в книге: слева группа прайса (Egger, AGT…), справа — артикулы только этой группы.
+ * Позиции со status (например «нет в новом прайсе») не предлагаем; уже выбранную показываем, чтобы не потерять.
+ */
 function ItemSelect({ value, groups, onChange, label, links }: {
   value: string | null | undefined; groups: CatalogGroupView[]; onChange: (id: string) => void; label: string; links?: LdspLink[] | null;
 }) {
-  // Позиции со status (например «нет в новом прайсе») не предлагаем; уже выбранную показываем, чтобы не потерять.
   const isLink = !!value && value.startsWith(LINK);
-  const cur = value && !isLink ? groups.flatMap((g) => g.items.map((it) => ({ g, it }))).find((x) => x.it.id === value) : undefined;
+  const curGroup = value && !isLink ? groups.find((g) => g.items.some((it) => it.id === value)) : undefined;
   const lostLink = isLink && !links?.some((l) => LINK + l.id === value);
+  const shown = groups.filter((g) => g.id === curGroup?.id || g.items.some((it) => !it.status));
+  // группа, выбранная слева, пока артикул справа ещё не выбран
+  const [pick, setPick] = useState('');
+  const only = !links && shown.length === 1 ? shown[0].id : '';
+  const gid = pick || (isLink ? LINK_GROUP : curGroup?.id) || only;
+  const g = gid && gid !== LINK_GROUP ? shown.find((x) => x.id === gid) : undefined;
+  const items = g ? g.items.filter((it) => !it.status || it.id === value) : [];
+  const inGroup = gid === LINK_GROUP ? isLink : !!curGroup && curGroup.id === gid;
+  const choose = (v: string) => { setPick(''); onChange(v); };
   return (
-    <select className="in" aria-label={label} value={value ?? ''} onChange={(e) => onChange(e.target.value)}>
-      {!value && <option value="">— выберите позицию —</option>}
-      {value && !isLink && !cur && <option value={value}>Позиция не найдена в прайсе</option>}
-      {lostLink && <option value={value!}>В цвет корпуса: строка ЛДСП не найдена</option>}
-      {links && (
-        <optgroup label="В цвет корпуса">
-          {links.map((l) => <option key={l.id} value={LINK + l.id}>{l.label}</option>)}
-          {!links.length && <option value="" disabled>Сначала выберите ЛДСП корпуса в расчёте</option>}
-        </optgroup>
-      )}
-      {groups.map((g) => {
-        const items = g.items.filter((it) => !it.status || it.id === value);
-        if (!items.length) return null;
-        return (
-          <optgroup key={g.id} label={g.name}>
-            {items.map((it) => <option key={it.id} value={it.id}>{it.name}{it.status ? ` (${it.status})` : ''}</option>)}
-          </optgroup>
-        );
-      })}
-    </select>
+    <div className="pick2">
+      <select className="in" aria-label={`${label}: группа`} value={gid} onChange={(e) => setPick(e.target.value)}>
+        {!gid && <option value="">— группа —</option>}
+        {value && !isLink && !curGroup && !pick && <option value="">Позиция не найдена в прайсе</option>}
+        {links && <option value={LINK_GROUP}>В цвет корпуса</option>}
+        <GroupOptions groups={shown} />
+      </select>
+      <select className="in" aria-label={label} value={inGroup ? value ?? '' : ''} disabled={!gid} onChange={(e) => e.target.value && choose(e.target.value)}>
+        {!inGroup && <option value="">{gid ? '— выберите артикул —' : '← сначала группа'}</option>}
+        {gid === LINK_GROUP && <>
+          {lostLink && <option value={value!}>Строка ЛДСП не найдена</option>}
+          {links?.map((l) => <option key={l.id} value={LINK + l.id}>{l.label}</option>)}
+          {!links?.length && <option value="" disabled>Сначала выберите ЛДСП корпуса в расчёте</option>}
+        </>}
+        {items.map((it) => <option key={it.id} value={it.id}>{it.name}{it.status ? ` (${it.status})` : ''}</option>)}
+      </select>
+    </div>
   );
 }
 
@@ -588,19 +607,29 @@ function LightRow({ r, boss, roundTo }: { r: ViewRow; boss: boolean; roundTo: nu
 }
 
 function AddRow({ block, groups, cols, onAdd }: { block: BlockDef; groups: CatalogGroupView[]; cols: number; onAdd: (r: Row) => void }) {
+  const shown = groups.filter((g) => g.items.some((it) => !it.status));
+  const [gid, setGid] = useState('');
+  const g = shown.find((x) => x.id === gid);
   return (
     <tr className="add">
       <td colSpan={cols}>
-        {groups.length > 0 && (
-          <select className="in add-select" aria-label={`Добавить позицию: ${block.title}`} value="" onChange={(e) => {
-            if (e.target.value) onAdd({ id: newId(), block: block.id, pro100: null, qtyPro100: null, qty: 1, itemId: e.target.value });
-          }}>
-            <option value="">+ добавить из прайса…</option>
-            {groups.map((g) => {
-              const items = g.items.filter((it) => !it.status);
-              return items.length ? <optgroup key={g.id} label={g.name}>{items.map((it) => <option key={it.id} value={it.id}>{it.name}</option>)}</optgroup> : null;
-            })}
-          </select>
+        {shown.length > 0 && (
+          <span className="add-pick">
+            <select className="in" aria-label={`Добавить позицию: ${block.title}, группа`} value={gid} onChange={(e) => setGid(e.target.value)}>
+              <option value="">+ добавить из прайса: группа…</option>
+              <GroupOptions groups={shown} />
+            </select>
+            {g && (
+              <select className="in" aria-label={`Добавить позицию: ${block.title}`} value="" onChange={(e) => {
+                if (!e.target.value) return;
+                onAdd({ id: newId(), block: block.id, pro100: null, qtyPro100: null, qty: 1, itemId: e.target.value });
+                setGid('');
+              }}>
+                <option value="">— артикул —</option>
+                {g.items.filter((it) => !it.status).map((it) => <option key={it.id} value={it.id}>{it.name}</option>)}
+              </select>
+            )}
+          </span>
         )}
         <button className="link" type="button" onClick={() => onAdd({ id: newId(), block: block.id, pro100: null, qtyPro100: null, qty: 1, own: { name: '', unit: 'шт', price: 0 } })}>+ своя строка</button>
       </td>

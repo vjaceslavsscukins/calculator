@@ -135,7 +135,9 @@ th.num,td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:now
 .unit-t{display:inline-block;min-width:34px;text-align:left;font-size:13px;color:var(--p-muted)}
 .rowlabel{margin-bottom:3px;line-height:1.2}
 .in.qty.edited{border-color:var(--p-label);box-shadow:inset 3px 0 0 var(--p-label)}
-.add-select{width:auto!important;min-width:280px;max-width:420px!important;margin-right:14px}
+.add-pick{display:inline-flex;gap:6px;margin-right:14px;vertical-align:middle}
+.add-pick .in{width:auto!important;min-width:220px;max-width:340px!important}
+.pick2{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,3fr);gap:6px}
 .sub{display:block;font-size:11px;color:var(--p-muted);line-height:1.3;margin-top:2px;white-space:normal}
 .sub.mark{color:var(--p-label)}
 .real{display:flex;gap:4px;align-items:center;margin-top:4px}
