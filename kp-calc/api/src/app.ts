@@ -6,12 +6,12 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import cookie from '@fastify/cookie';
 import fastifyStatic from '@fastify/static';
 import type pg from 'pg';
-import { BLOCKS, KIND_TITLES, applyPro100, compute, indexCatalog, mergePro100, parsePro100 } from '../../engine/src/index.ts';
+import { BLOCKS, KIND_TITLES, applyPro100, compute, indexCatalog, mergePro100, normalizeSettings, parsePro100 } from '../../engine/src/index.ts';
 import type { CalcInput, Catalog, CatalogIndex, ProductKind, Settings } from '../../engine/src/index.ts';
 import { tx } from './db.ts';
 import { hashPassword, newToken, tokenHash, verifyPassword } from './security.ts';
 import {
-  HttpError, KINDS, STATUSES, catalogFor, cleanInput, cleanSettings, cleanUnparsed, emptyInput, parseKind, settingsFor, viewFor,
+  HttpError, KINDS, STATUSES, catalogFor, cleanInput, cleanSettings, cleanUnparsed, emptyInput, keepNoMarkup, parseKind, settingsFor, viewFor,
 } from './view.ts';
 import type { Role } from './view.ts';
 
@@ -130,7 +130,7 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
         items: byGroup.get(g.id) ?? [],
       })),
     };
-    cache = { v: m.v, rev: m.rev, catalog, idx: indexCatalog(catalog), settings: s.data };
+    cache = { v: m.v, rev: m.rev, catalog, idx: indexCatalog(catalog), settings: normalizeSettings(s.data) };
     return cache;
   }
 
@@ -262,7 +262,7 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
 
   app.get('/api/settings', async (req) => {
     const { rows: [s] } = await pool.query('select data, rev from settings where id = 1');
-    return settingsFor(me(req).role, s.data, s.rev);
+    return settingsFor(me(req).role, normalizeSettings(s.data), s.rev);
   });
 
   app.put('/api/settings', async (req: any) => {
@@ -276,8 +276,9 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
       const { rows: [s] } = await c.query('update settings set data = $1, rev = rev + 1, updated_at = now(), updated_by = $2 where id = 1 returning data, rev',
         [JSON.stringify(next), u.id]);
       const changes: Record<string, { before: unknown; after: unknown }> = {};
+      const was = normalizeSettings(cur.data);
       for (const k of Object.keys(next) as (keyof Settings)[]) {
-        if (JSON.stringify(cur.data[k]) !== JSON.stringify(next[k])) changes[k] = { before: cur.data[k], after: next[k] };
+        if (JSON.stringify(was[k]) !== JSON.stringify(next[k])) changes[k] = { before: was[k], after: next[k] };
       }
       await audit(c, u, 'Изменение настроек', 'Коэффициенты', changes);
       return { settings: s.data, rev: s.rev };
@@ -450,7 +451,7 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
   }
   const totalsOf = (v: ReturnType<typeof compute>) => ({
     cost: v.cost, prod: v.prod, retail: v.retail, discount: v.discount, furnitureAfterDiscount: v.furnitureAfterDiscount,
-    delivery: v.delivery, total: v.total, margin: v.margin, costByGroup: v.costByGroup,
+    montage: v.montage, delivery: v.delivery, total: v.total, margin: v.margin, costByGroup: v.costByGroup,
   });
   async function calcResponse(u: User, r: any) {
     const { result } = await computeView(r.input);
@@ -501,7 +502,9 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
     const title = b.title !== undefined ? text(b.title, 200) || cur.title : cur.title;
     let status = cur.status;
     if (b.status !== undefined) { if (!STATUSES.includes(b.status)) throw new HttpError(400, 'Неизвестный статус'); status = b.status; }
-    const input = b.input !== undefined ? cleanInput(b.input, cur.kind as ProductKind, settings) : cur.input;
+    let input: CalcInput = b.input !== undefined ? cleanInput(b.input, cur.kind as ProductKind, settings) : cur.input;
+    // «без наценки» меняют только руководитель и владелец
+    if (u.role === 'manager' && b.input !== undefined) input = { ...input, rows: keepNoMarkup(input.rows, cur.input?.rows ?? []) };
     const unparsed = b.unparsed !== undefined ? cleanUnparsed(b.unparsed) : cur.unparsed;
     const { result } = await computeView(input);
     const saved = await tx(pool, async (c) => {

@@ -16,8 +16,28 @@ export const CITIES = ['Москва', 'Краснодар'];
 // Любое число из базы приходит числом (int8 — счётчики, их хватает).
 pg.types.setTypeParser(20, (v: string) => Number(v));
 
+/**
+ * TLS к PostgreSQL (облачная база Timeweb и т. п.): DATABASE_SSL=1/true или sslmode=require (prefer, verify-ca, verify-full)
+ * в строке подключения → ssl { rejectUnauthorized: false }. По умолчанию TLS выключен (локальная база, docker compose).
+ * sslmode убирается из строки: иначе pg подставит свою проверку сертификата поверх нашей.
+ */
+export function pgConnection(url: string, sslFlag: string | undefined = process.env.DATABASE_SSL): pg.PoolConfig {
+  const flag = /^(1|true|yes|on)$/i.test((sslFlag ?? '').trim());
+  let connectionString = url, mode = '';
+  try {
+    const u = new URL(url);
+    mode = (u.searchParams.get('sslmode') ?? '').toLowerCase();
+    if (mode && mode !== 'disable') {
+      u.searchParams.delete('sslmode');
+      connectionString = u.toString();
+    }
+  } catch { /* не URL (например, key=value) — оставляем как есть */ }
+  const ssl = flag || ['require', 'prefer', 'verify-ca', 'verify-full'].includes(mode);
+  return ssl ? { connectionString, ssl: { rejectUnauthorized: false } } : { connectionString };
+}
+
 export function createPool(connectionString: string, options: pg.PoolConfig = {}): pg.Pool {
-  return new pg.Pool({ connectionString, max: 10, ...options });
+  return new pg.Pool({ ...pgConnection(connectionString), max: 10, ...options });
 }
 
 /** Транзакция: fn получает клиента, при ошибке — откат. */

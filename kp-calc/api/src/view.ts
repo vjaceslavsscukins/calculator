@@ -1,4 +1,5 @@
 // Приведение входа расчёта к форме CalcInput и вырезание себестоимости из ответов менеджеру.
+import { SWITCH_NONE, normalizeSettings } from '../../engine/src/index.ts';
 import type { CalcInput, CalcResult, Catalog, LightInput, ProductKind, Row, RowResult, Settings } from '../../engine/src/index.ts';
 import type { Pro100Line } from '../../engine/src/index.ts';
 
@@ -41,7 +42,32 @@ function cleanRow(r: any): Row {
   if (r.itemId != null) row.itemId = str(r.itemId, 100) || null;
   if (r.own != null) row.own = typeof r.own === 'object' ? { name: str(r.own.name), unit: str(r.own.unit, 30), price: num(r.own.price) } : null;
   if (r.realMaterial != null) row.realMaterial = str(r.realMaterial, 500) || null;
+  if (r.linkTo != null) row.linkTo = str(r.linkTo, 100) || null;
+  if (r.web != null) {
+    row.web = typeof r.web === 'object'
+      ? { url: cleanUrl(r.web.url), name: str(r.web.name), price: Math.max(0, num(r.web.price)), unit: str(r.web.unit, 30) || 'шт' }
+      : null;
+  }
+  if (r.noMarkup === true) row.noMarkup = true;
   return row;
+}
+
+/** Ссылка на товар: только http(s), иначе пусто (в интерфейсе она открывается в новой вкладке). */
+function cleanUrl(v: unknown): string {
+  const u = str(v, 2000).trim();
+  return /^https?:\/\//i.test(u) ? u : '';
+}
+
+/**
+ * «Без наценки» меняют только руководитель и владелец. От менеджера: у существующих строк — прежнее значение,
+ * у новых — false (менеджер видит признак, но поменять его не может).
+ */
+export function keepNoMarkup(rows: Row[], prev: Row[]): Row[] {
+  const was = new Map(prev.map((r) => [r.id, r.noMarkup === true]));
+  return rows.map((r) => {
+    const { noMarkup, ...rest } = r;
+    return was.get(r.id) ? { ...rest, noMarkup: true } : rest;
+  });
 }
 
 /** Вход от интерфейса → CalcInput. Вид изделия задаёт расчёт, а не тело запроса. */
@@ -57,9 +83,15 @@ export function cleanInput(raw: any, kind: ProductKind, s: Settings): CalcInput 
     light: {
       enabled: l.enabled === true,
       profileId: str(l.profileId, 50) || emptyLight(s).profileId,
-      segments: segs.map((x: any) => ({ name: str(x?.name, 100), lengthM: num(x?.lengthM), switchId: str(x?.switchId, 50) })),
+      segments: segs.map((x: any) => {
+        const seg: LightInput['segments'][number] = { name: str(x?.name, 100), lengthM: num(x?.lengthM), switchId: str(x?.switchId, 50) };
+        const profileId = str(x?.profileId, 50);
+        if (profileId) seg.profileId = profileId;
+        return seg;
+      }),
     },
     discountPct: num(raw.discountPct),
+    ...(raw.deliveryRub != null && raw.deliveryRub !== '' ? { deliveryRub: Math.max(0, num(raw.deliveryRub)) } : {}),
   };
 }
 
@@ -95,7 +127,8 @@ export function viewFor(role: Role, v: CalcResult): unknown {
 export function settingsFor(role: Role, s: Settings, rev: number): unknown {
   if (role !== 'manager') return { ...s, rev };
   return {
-    deliveryPct: s.deliveryPct,
+    montagePct: s.montagePct,
+    deliveryDefaultRub: s.deliveryDefaultRub,
     roundTo: s.roundTo,
     light: {
       tape: { name: s.light.tape.name },
@@ -132,13 +165,14 @@ export function cleanSettings(raw: any): Settings {
     return { id: str(x.id, 50), name: str(x.name), price: pos(x.price, `${name}: цена`, true) };
   });
   const t = L.tape ?? {};
-  return {
+  return normalizeSettings({
     kProd: pos(raw.kProd, 'наценка производства'),
     kShop: pos(raw.kShop, 'наценка магазина'),
     waste: pos(raw.waste, 'отходы'),
     edgePerM2: pos(raw.edgePerM2, 'кромка', true),
     ldspSheetArea: pos(raw.ldspSheetArea, 'площадь листа ЛДСП'),
-    deliveryPct: pos(raw.deliveryPct, 'доставка и монтаж', true),
+    montagePct: pos(raw.montagePct, 'монтаж, %', true),
+    deliveryDefaultRub: pos(raw.deliveryDefaultRub, 'доставка по умолчанию', true),
     lightReserve: pos(raw.lightReserve, 'запас мощности', true),
     roundTo: pos(raw.roundTo, 'шаг округления'),
     light: {
@@ -151,7 +185,8 @@ export function cleanSettings(raw: any): Settings {
       },
       profiles: named(L.profiles, 'профили'),
       psus: list(L.psus, 'блоки питания').map((x: any) => ({ watt: pos(x?.watt, 'мощность блока питания'), price: pos(x?.price, 'цена блока питания', true) })),
-      switches: named(L.switches, 'выключатели'),
+      // «Нет (напрямую к слаботочке)» есть всегда, цена 0, не редактируется и не удаляется
+      switches: named(list(L.switches, 'выключатели').filter((x: any) => x?.id !== SWITCH_NONE), 'выключатели'),
     },
-  };
+  });
 }

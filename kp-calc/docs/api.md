@@ -1,6 +1,6 @@
 # Калькулятор КП: API (договорённость между `api/` и `web/`)
 
-Версия 1, 28.10.2026. Расчёт цены — только в `engine/` (`compute`), сервер вызывает его и отдаёт результат с учётом роли. Интерфейс сам цену не считает.
+Версия 2, 28.10.2026 (изменения — в конце, раздел «Версия 2»). Расчёт цены — только в `engine/` (`compute`), сервер вызывает его и отдаёт результат с учётом роли. Интерфейс сам цену не считает.
 
 Все ответы JSON. Ошибки: `{ "error": "текст для человека на русском" }` с кодом 400/401/403/404/409. Деньги — числа в рублях без округления (округляет интерфейс до `settings.roundTo` только при выводе).
 
@@ -29,7 +29,7 @@
 ## Справочники
 
 - `GET /api/meta` → `{kinds: [{id:'kitchen', title}, {id:'cabinet', title}], blocks: BLOCKS (из engine), cities: [{id, name}]}`.
-- `GET /api/settings` → owner/head: весь `Settings` (из engine) + `rev`; manager: `{deliveryPct, roundTo, light: {tape: {name}, profiles: [{id,name}], switches: [{id,name}]}}`.
+- `GET /api/settings` → owner/head: весь `Settings` (из engine) + `rev`; manager: `{montagePct, deliveryDefaultRub, roundTo, light: {tape: {name}, profiles: [{id,name}], switches: [{id,name}]}}`. Старые настройки сервер приводит к новой форме (`normalizeSettings` движка): `deliveryPct` → `montagePct`, `deliveryDefaultRub` = 0, выключатель `none` первым.
 - `PUT /api/settings` (owner) `{rev, settings}` → `{settings, rev}`; 409 при чужой правке. Запись в журнал.
 
 ## Пользователи (owner)
@@ -54,7 +54,7 @@
 Статусы: `draft` (черновик), `saved` (сохранён), `in_kp` (в КП), `kp_sent` (КП отправлено), `contract` (договор), `archived`.
 
 - `GET /api/calculations?status=&q=` → `{calculations: [CalcSummary]}` (видимость как у клиентов).
-- `POST /api/calculations` `{clientId, title, kind}` → `{calculation, view}` (пустой расчёт: `rows: []`, подсветка выключена, скидка 0).
+- `POST /api/calculations` `{clientId, title, kind}` → `{calculation, view}` (пустой расчёт: `rows: []`, подсветка выключена, скидка 0, доставка по умолчанию).
 - `GET /api/calculations/:id` → `{calculation, view}`.
 - `PUT /api/calculations/:id` `{rev, title?, status?, input, unparsed}` → `{calculation, view}`; 409 `{error, rev, updatedAt, updatedBy}`, если расчёт уже изменили (не затирать). Сервер пересчитывает `view` и хранит итог для реестра.
 - `POST /api/calculations/:id/copy` → `{calculation, view}` (новый расчёт «… (копия)» у того же клиента).
@@ -63,7 +63,7 @@
 
 `calculation` = `{id, clientId, clientName, title, kind, status, rev, input: CalcInput, unparsed: Pro100Line[], updatedAt, updatedBy}`.
 
-`view` = `CalcResult` из engine; для manager из него удалены: у строк `unitCost`, `cost`, `prod`, `costNote`; на верхнем уровне `cost`, `prod`, `margin`, `costByGroup`. У строк подсветки для manager остаются только `name`, `unit`, `qty`, `retail`.
+`view` = `CalcResult` из engine (в т. ч. `montage` — монтаж, `delivery` — доставка, `total` = мебель со скидкой + монтаж + доставка; `margin` — без монтажа и доставки); для manager из него удалены: у строк `unitCost`, `cost`, `prod`, `costNote`; на верхнем уровне `cost`, `prod`, `margin`, `costByGroup`. У строк подсветки для manager остаются только `name`, `unit`, `qty`, `retail`.
 
 ## Прайс
 
@@ -115,3 +115,17 @@
 - **Загрузка Excel-прайса** — кнопка «Загрузить Excel» на экране «Прайсы» неактивна с подписью «скоро» (по этому документу это следующая итерация).
 - **Уточнить в документе:** `id` пользователей, клиентов и городов — числа, а не строки (интерфейс шлёт `cityId` числом). У владельца, созданного из `OWNER_EMAIL`, `cityId` и `cityName` равны `null`: интерфейс в этом случае подставляет первый город из `/api/meta`.
 - **Желательно:** снятие позиции с продажи (`status`) в интерфейсе прайса пока не выведено: показывается только текст пометки. PATCH для этого уже есть, сделаем кнопку по запросу владельца.
+
+## Версия 2 (правки владельца, 28.10.2026)
+
+Расчёт по-прежнему только в `engine/`. Новые поля:
+
+- **Задняя стенка «в цвет корпуса».** `Row.linkTo` — `id` строки расчёта, где выбран ЛДСП корпуса (группа категории «ЛДСП корпус»). Цена за м², единица и название (`В цвет корпуса: <группа>: <позиция>`) берутся от позиции той строки, количество — своё; `costGroup` = «ЛДСП корпус». Источник не найден или в нём не ЛДСП → предупреждение и себестоимость 0. `linkTo` важнее `itemId`. Интерфейс предлагает это в строке ХДФ (PRO100 `ХДФ` или группа «ХДФ (задняя стенка)»).
+- **Блок «Ссылки с сайтов»** (`id: 'web'`, кухня и шкаф, после «Свободные строки»). Строка: `Row.web = {url, name, price, unit: 'шт'}` (`price` — цена закупки за штуку), `qty`. Наценки обычные, `costGroup` = «Покупное по ссылкам». `url` — только `http(s)://`, иначе сервер сохраняет пустую строку. `web.price` в `calculation.input` менеджер видит (это его ввод), себестоимость в `view` — по правилам роли.
+- **Без наценки.** `Row.noMarkup?: boolean` у свободной строки (`own`) и ссылки (`web`): `prod = retail = cost`. У строк прайса флаг не действует. Менять может только head/owner: при `PUT` от менеджера сервер берёт прежнее значение у строк с тем же `id` и `false` у новых. В `calculation.input` признак отдаётся всем (это не цена).
+- **Подсветка.** `LightSegment.profileId?` — профиль зоны; без него — `LightInput.profileId` (профиль по умолчанию для новых зон и старых расчётов). Строки профиля: одна на тип, `id` = `light-profile-<id>`, количество — сумма длин. Выключатель `none` — «Нет (подключение напрямую к слаботочке)»: есть в настройках всегда, цена 0, `PUT /api/settings` не даёт его удалить или изменить. Зоны с `none` не дают ни выключателя, ни мощности для блока питания; лента и профиль считаются по всем зонам. `LightResult.directM` — длина зон «напрямую», `watt` — мощность только зон с выключателем.
+- **Монтаж и доставка раздельно.** `Settings.montagePct` (по умолчанию 10, % от розницы мебели) и `Settings.deliveryDefaultRub` (по умолчанию 0) вместо `deliveryPct`. `CalcInput.deliveryRub?: number | null` — доставка суммой в расчёте (`null`/нет — `deliveryDefaultRub`; 0 — без доставки). Скидка на монтаж и доставку не действует. В реестре (`totals`) сохраняются `montage` и `delivery`.
+- **PRO100: мелкий крепёж молча пропускается** (`PRO100_IGNORED` в `engine/src/pro100.ts`: Евровинт, Полкодержатель, Ножка, Саморез, Конфирмат, Шкант, Стяжка, Заглушка, Минификс, Эксцентрик, Дюбель, Шуруп, Гвоздь — по началу названия, без учёта регистра, пробелов и подчёркиваний): не попадает ни в строки, ни в `unparsed`.
+- **Прайс.** Группа «Крепёж (крабы)» переименована в «Навесы для подвесных шкафов» (шт), добавлена позиция «Усиленный навес» 800 ₽ (миграция `002_…sql` для существующей базы, `data/catalog.json` для новой). Строка PRO100 `Комплект_крабов` по-прежнему идёт в «Фурнитуру».
+- **Миграция `002`** переводит сохранённые настройки: `deliveryPct` → `montagePct`, `deliveryDefaultRub` = 0, выключатель `none` первым.
+- **TLS к PostgreSQL:** `DATABASE_SSL=1` (или `sslmode=require` в `DATABASE_URL`) → `ssl: {rejectUnauthorized: false}`; по умолчанию выключено.

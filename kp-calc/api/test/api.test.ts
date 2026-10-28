@@ -1,13 +1,14 @@
 // Тесты сервера против настоящего PostgreSQL. Без DATABASE_URL — пропуск.
 import { after, before, describe, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { buildApp } from '../src/app.ts';
 import { compute, DEFAULT_SETTINGS } from '../../engine/src/index.ts';
 import type { CalcInput, Catalog } from '../../engine/src/index.ts';
-import { CATALOG_FILE, seed } from '../src/db.ts';
+import { CATALOG_FILE, pgConnection, seed } from '../src/db.ts';
 import { OWNER, SKIP, agent, keysDeep, makeUser, setup } from './helpers.ts';
 import type { Agent, Ctx } from './helpers.ts';
 
@@ -232,7 +233,8 @@ describe('сервер калькулятора КП', { skip: SKIP }, () => {
     assertNoCost(cat, 'прайс');
     const s = (await m1.get('/api/settings')).body;
     assertNoCost(s, 'настройки');
-    assert.deepEqual(Object.keys(s).sort(), ['deliveryPct', 'light', 'roundTo']);
+    assert.deepEqual(Object.keys(s).sort(), ['deliveryDefaultRub', 'light', 'montagePct', 'roundTo']);
+    assert.equal(s.light.switches[0].id, 'none');
     // pro100 и реестр — тоже без цен
     assertNoCost((await m1.post('/api/pro100/parse', { kind: 'kitchen', text: 'Петли 4 шт' })).body, 'pro100');
     assertNoCost((await m1.get('/api/calculations')).body, 'реестр');
@@ -273,7 +275,7 @@ describe('сервер калькулятора КП', { skip: SKIP }, () => {
 
   test('/api/pro100/parse: разбор, «Не разобрано», умолчание — последний выбор этого пользователя, слияние', async () => {
     // m1 уже сохранил строку «ЛДСП_верх» с позицией ldsp
-    const text = 'ЛДСП_верх\t6,5\tм²\nПетли 12 шт\nЕвровинт\t64\tшт\nмусор';
+    const text = 'ЛДСП_верх\t6,5\tм²\nПетли 12 шт\nЕвровинт\t64\tшт\nМойка\t1\tшт\nмусор';
     const r = await m1.post('/api/pro100/parse', { kind: 'kitchen', text });
     assert.equal(r.status, 200);
     const up = r.body.rows.find((x: any) => x.pro100 === 'ЛДСП_верх');
@@ -281,7 +283,7 @@ describe('сервер калькулятора КП', { skip: SKIP }, () => {
     assert.equal(up.qty, 6.5);
     assert.equal(up.block, 'up');
     assert.equal(r.body.rows.find((x: any) => x.pro100 === 'Петли').itemId, null);
-    assert.deepEqual(r.body.unparsed, [{ name: 'Евровинт', qty: 64, unit: 'шт' }]);
+    assert.deepEqual(r.body.unparsed, [{ name: 'Мойка', qty: 1, unit: 'шт' }], 'мелкий крепёж (Евровинт) молча пропущен');
     assert.deepEqual(r.body.skipped, ['мусор']);
     // у другого менеджера своего умолчания нет
     const other = await m2.post('/api/pro100/parse', { kind: 'kitchen', text });
@@ -297,6 +299,71 @@ describe('сервер калькулятора КП', { skip: SKIP }, () => {
     await h1.patch(`/api/catalog/items/${ldsp}`, { status: null });
     assert.equal((await m1.post('/api/pro100/parse', { kind: 'kitchen', text })).body.rows[0].itemId, ldsp);
     assert.equal((await m1.post('/api/pro100/parse', { kind: 'kitchen' })).status, 400);
+  });
+
+  test('«без наценки»: ставят руководитель и владелец, менеджер не может ни поставить, ни снять', async () => {
+    const c = (await m1.post('/api/calculations', { clientId: clientA, title: 'Без наценки', kind: 'kitchen' })).body.calculation;
+    const own = { id: 'o1', block: 'free', qty: 1, own: { name: 'Мойка', unit: 'шт', price: 10000 } };
+    const web = { id: 'w1', block: 'web', qty: 2, web: { url: 'https://example.com/tap', name: 'Смеситель', price: 7000, unit: 'шт' } };
+    const light = { enabled: false, profileId: 'inset', segments: [] };
+    // менеджер пытается поставить сам — сервер сохраняет false
+    let r = await m1.put(`/api/calculations/${c.id}`, { rev: c.rev, input: { kind: 'kitchen', rows: [{ ...own, noMarkup: true }, web], light, discountPct: 0 } });
+    assert.equal(r.status, 200, r.raw);
+    assert.ok(!r.body.calculation.input.rows[0].noMarkup);
+    assert.equal(r.body.view.rows[0].retail, 10000 * 3.6);
+    // руководитель ставит
+    const rows = r.body.calculation.input.rows.map((x: any) => ({ ...x, noMarkup: true }));
+    r = await h1.put(`/api/calculations/${c.id}`, { rev: r.body.calculation.rev, input: { ...r.body.calculation.input, rows } });
+    assert.deepEqual(r.body.calculation.input.rows.map((x: any) => x.noMarkup), [true, true]);
+    assert.equal(r.body.view.rows[0].retail, 10000);
+    assert.equal(r.body.view.rows[1].retail, 14000);
+    assert.equal(r.body.view.costByGroup['Покупное по ссылкам'], 14000);
+    // менеджер видит признак, правит строку, но снять признак не может; новая строка — без признака
+    const got = (await m1.get(`/api/calculations/${c.id}`)).body;
+    assert.equal(got.calculation.input.rows[0].noMarkup, true);
+    assertNoCost(got.view, 'расчёт со ссылками');
+    const edited = got.calculation.input.rows.map((x: any) => ({ ...x, noMarkup: false, qty: 3 }));
+    edited.push({ id: 'o2', block: 'free', qty: 1, own: { name: 'Ещё', unit: 'шт', price: 100 }, noMarkup: true });
+    r = await m1.put(`/api/calculations/${c.id}`, { rev: got.calculation.rev, input: { ...got.calculation.input, rows: edited } });
+    assert.deepEqual(r.body.calculation.input.rows.map((x: any) => [x.qty, !!x.noMarkup]), [[3, true], [3, true], [1, false]]);
+    // ссылка: только http(s)
+    r = await m1.put(`/api/calculations/${c.id}`, { rev: r.body.calculation.rev, input: { ...r.body.calculation.input, rows: [{ ...web, web: { ...web.web, url: 'javascript:alert(1)' } }] } });
+    assert.equal(r.body.calculation.input.rows[0].web.url, '');
+  });
+
+  test('монтаж % и доставка суммой: в расчёте и в реестре; ХДФ «в цвет корпуса»; зоны подсветки с профилем и «Нет»', async () => {
+    const input: CalcInput = {
+      kind: 'kitchen',
+      rows: [
+        { id: 'l', block: 'low', qty: 6, itemId: ldsp },
+        { id: 'h', block: 'low', pro100: 'ХДФ', qtyPro100: 3, qty: 3, linkTo: 'l' },
+      ],
+      light: { enabled: true, profileId: 'inset', segments: [
+        { name: 'Под верхними', lengthM: 3, switchId: 'wave', profileId: 'surface' },
+        { name: 'Витрина', lengthM: 1, switchId: 'none' },
+      ] },
+      discountPct: 10,
+      deliveryRub: 5000,
+    };
+    const expected = JSON.parse(JSON.stringify(compute(input, catalogJson, DEFAULT_SETTINGS)));
+    const v = (await owner.post('/api/compute', { input })).body.view;
+    assert.deepEqual(v, expected);
+    assert.equal(v.delivery, 5000);
+    assert.equal(v.montage, v.retail * 0.1);
+    assert.equal(v.total, v.furnitureAfterDiscount + v.montage + 5000);
+    assert.equal(v.rows[1].unitCost, v.rows[0].unitCost);
+    assert.ok(v.rows.some((r: any) => r.id === 'light-profile-surface') && v.rows.some((r: any) => r.id === 'light-profile-inset'));
+    assert.ok(!v.rows.some((r: any) => r.id === 'light-sw-none'));
+    // без суммы доставки — по умолчанию из настроек (0)
+    assert.equal((await owner.post('/api/compute', { input: { ...input, deliveryRub: null } })).body.view.delivery, 0);
+    const c = (await m1.post('/api/calculations', { clientId: clientA, title: 'Доставка', kind: 'kitchen' })).body.calculation;
+    const p = await m1.put(`/api/calculations/${c.id}`, { rev: c.rev, input });
+    assert.equal(p.body.calculation.input.deliveryRub, 5000);
+    assert.equal(p.body.calculation.input.light.segments[0].profileId, 'surface');
+    assert.equal(p.body.calculation.input.rows[1].linkTo, 'l');
+    assert.equal(p.body.view.total, expected.total);
+    const { rows: [k] } = await ctx.pool.query('select totals from calculations where id = $1', [c.id]);
+    assert.equal(k.totals.montage, expected.montage); assert.equal(k.totals.delivery, 5000);
   });
 
   test('правка цены: журнал «было → стало» и новый пересчёт', async () => {
@@ -352,6 +419,44 @@ describe('сервер калькулятора КП', { skip: SKIP }, () => {
     assert.equal((await m2.get(`/api/calculations/${calcA}`)).status, 200);
   });
 
+  test('миграция 002: deliveryPct → montagePct, «Нет» в выключателях, крабы → «Навесы для подвесных шкафов» + «Усиленный навес»', async () => {
+    const { rows: [cur] } = await ctx.pool.query('select data from settings where id = 1');
+    const old: any = { ...cur.data, deliveryPct: 12, light: { ...cur.data.light, switches: cur.data.light.switches.filter((w: any) => w.id !== 'none') } };
+    delete old.montagePct; delete old.deliveryDefaultRub;
+    await ctx.pool.query('update settings set data = $1 where id = 1', [JSON.stringify(old)]);
+    // старые данные читаются и до миграции
+    const before = (await owner.get('/api/settings')).body;
+    assert.equal(before.montagePct, 12); assert.equal(before.light.switches[0].id, 'none'); assert.ok(!('deliveryPct' in before));
+    const g = catalogJson.groups.find((x) => x.name === 'Навесы для подвесных шкафов')!;
+    assert.deepEqual(g.items.map((i) => [i.name, i.price]), [['Комплект крабов', 260], ['Усиленный навес', 800]]);
+    await ctx.pool.query(`update catalog_groups set name = 'Крепёж (крабы)', unit = 'компл' where id = $1`, [g.id]);
+    await ctx.pool.query(`delete from catalog_items where group_id = $1 and name = 'Усиленный навес'`, [g.id]);
+    const v0 = (await owner.get('/api/catalog')).body.version;
+    const dir = fileURLToPath(new URL('../src/migrations/', import.meta.url));
+    const file = (await readdir(dir)).find((f) => f.startsWith('002_'))!;
+    await ctx.pool.query(await readFile(dir + file, 'utf8'));
+    const { rows: [s] } = await ctx.pool.query('select data from settings where id = 1');
+    assert.equal(s.data.montagePct, 12); assert.equal(s.data.deliveryDefaultRub, 0); assert.ok(!('deliveryPct' in s.data));
+    assert.deepEqual(s.data.light.switches.map((w: any) => w.id), ['none', ...DEFAULT_SETTINGS.light.switches.slice(1).map((w) => w.id)]);
+    const cat = (await owner.get('/api/catalog')).body;
+    const ng = cat.groups.find((x: any) => x.id === g.id);
+    assert.equal(ng.name, 'Навесы для подвесных шкафов'); assert.equal(ng.unit, 'шт');
+    assert.deepEqual(ng.items.map((i: any) => [i.name, i.price]), [['Комплект крабов', 260], ['Усиленный навес', 800]]);
+    assert.equal(cat.version, v0 + 1);
+    // повторный прогон ничего не дублирует и версию не трогает
+    await ctx.pool.query(await readFile(dir + file, 'utf8'));
+    const again = (await owner.get('/api/catalog')).body;
+    assert.equal(again.version, v0 + 1);
+    assert.equal(again.groups.find((x: any) => x.id === g.id).items.length, 2);
+    // «Нет» нельзя убрать или переоценить через PUT /api/settings
+    const { rev, ...settings } = (await owner.get('/api/settings')).body;
+    const r = await owner.put('/api/settings', { rev, settings: { ...settings, light: { ...settings.light, switches: [{ id: 'none', name: 'X', price: 99 }] } } });
+    assert.equal(r.status, 200, r.raw);
+    assert.deepEqual(r.body.settings.light.switches, [{ id: 'none', name: 'Нет (подключение напрямую к слаботочке)', price: 0 }]);
+    // вернуть настройки по умолчанию для следующих тестов
+    await owner.put('/api/settings', { rev: r.body.rev, settings: DEFAULT_SETTINGS });
+  });
+
   test('production: web/dist отдаётся как SPA, /api — JSON', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'kp-web-'));
     await mkdir(join(dir, 'assets'));
@@ -372,5 +477,17 @@ describe('сервер калькулятора КП', { skip: SKIP }, () => {
       await app.close();
       await rm(dir, { recursive: true, force: true });
     }
+  });
+});
+
+describe('TLS к PostgreSQL (DATABASE_SSL, sslmode)', () => {
+  test('по умолчанию выключен; DATABASE_SSL=1/true или sslmode=require — ssl без проверки сертификата', () => {
+    const url = 'postgres://u:p@db.example:5432/kp';
+    assert.deepEqual(pgConnection(url, undefined), { connectionString: url });
+    assert.deepEqual(pgConnection(url, '0'), { connectionString: url });
+    assert.deepEqual(pgConnection(url, '1'), { connectionString: url, ssl: { rejectUnauthorized: false } });
+    assert.deepEqual(pgConnection(url, 'TRUE'), { connectionString: url, ssl: { rejectUnauthorized: false } });
+    assert.deepEqual(pgConnection(`${url}?sslmode=require`, undefined), { connectionString: url, ssl: { rejectUnauthorized: false } });
+    assert.deepEqual(pgConnection(`${url}?sslmode=disable`, undefined), { connectionString: `${url}?sslmode=disable` });
   });
 });
