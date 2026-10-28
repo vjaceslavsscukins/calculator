@@ -25,9 +25,18 @@ function docOf(c: Calculation): Doc {
     rows: c.input?.rows ?? [],
     light: c.input?.light ?? { enabled: false, profileId: '', segments: [] },
     discountPct: c.input?.discountPct ?? 0,
+    deliveryRub: c.input?.deliveryRub ?? null,
   };
   return { title: c.title, status: c.status, input, unparsed: c.unparsed ?? [] };
 }
+
+const HDF_GROUP = 'ХДФ (задняя стенка)';
+
+/** Строка ЛДСП корпуса, которую можно взять «в цвет корпуса» для задней стенки. */
+export interface LdspLink { id: string; label: string }
+
+/** Ссылка в выпадающем списке: «link:<id строки>». */
+const LINK = 'link:';
 
 /** Группы прайса, из которых можно выбирать в блоке (BLOCKS движка: категории и отдельные группы фурнитуры). */
 function groupsFor(block: BlockDef | undefined, catalog: CatalogView | null): CatalogGroupView[] {
@@ -186,6 +195,19 @@ export function CalculationPage() {
   };
 
   const blocks = useMemo(() => (doc ? meta?.blocks?.[doc.input.kind] ?? [] : []), [meta, doc?.input.kind]); // eslint-disable-line react-hooks/exhaustive-deps
+  // строки с ЛДСП корпуса — варианты «в цвет корпуса» для задней стенки
+  const ldspLinks = useMemo<LdspLink[]>(() => {
+    if (!doc || !catalog) return [];
+    const byItem = new Map<string, { g: CatalogGroupView; name: string }>();
+    for (const g of catalog.groups) if (g.category === 'ЛДСП корпус') for (const it of g.items) byItem.set(it.id, { g, name: it.name });
+    const list = doc.input.rows.filter((r) => !r.own && !r.web && !r.linkTo && r.itemId && byItem.has(r.itemId));
+    return list.map((r) => {
+      const title = blocks.find((b) => b.id === r.block)?.title ?? r.block;
+      const same = list.filter((x) => x.block === r.block).length > 1;
+      const it = byItem.get(r.itemId!)!;
+      return { id: r.id, label: `ЛДСП в цвет корпуса: как в блоке „${title}“${same ? ` (${it.name})` : ''}` };
+    });
+  }, [doc, catalog, blocks]);
   const viewById = useMemo(() => {
     const m = new Map<string, ViewRow>();
     for (const r of view?.rows ?? []) if (r.id) m.set(r.id, r);
@@ -247,7 +269,7 @@ export function CalculationPage() {
                 <col />
                 <col style={{ width: 134 }} />
                 {boss && <col style={{ width: 92 }} />}{boss && <col style={{ width: 98 }} />}
-                <col style={{ width: 98 }} /><col style={{ width: 66 }} />
+                <col style={{ width: 98 }} /><col style={{ width: boss ? 104 : 66 }} />
               </colgroup>
               <thead>
                 <tr>
@@ -268,15 +290,30 @@ export function CalculationPage() {
                   }
                   const allowed = groupsFor(b, catalog);
                   const rows = doc.input.rows.filter((r) => r.block === b.id);
+                  if (b.id === 'web') {
+                    return [head,
+                      ...rows.map((r) => (
+                        <WebRow key={r.id} row={r} vr={viewById.get(r.id)} boss={boss} roundTo={roundTo}
+                          onChange={(p) => editRow(r.id, p)}
+                          onRemove={() => editInput((i) => ({ ...i, rows: i.rows.filter((x) => x.id !== r.id) }))} />
+                      )),
+                      <tr className="add" key="a-web"><td colSpan={cols}>
+                        <button className="link" type="button" onClick={() => editInput((i) => ({
+                          ...i, rows: [...i.rows, { id: newId(), block: 'web', pro100: null, qtyPro100: null, qty: 1, web: { url: '', name: '', price: 0, unit: 'шт' } }],
+                        }))}>+ ссылка</button>
+                      </td></tr>,
+                    ];
+                  }
                   return [head,
                     ...rows.map((r) => (
                       <CalcRow key={r.id} row={r} vr={viewById.get(r.id)} groups={allowed.length ? allowed : catalog?.groups ?? []} boss={boss} roundTo={roundTo}
+                        links={isBackWall(r, catalog) ? ldspLinks.filter((l) => l.id !== r.id) : null}
                         onChange={(p) => editRow(r.id, p)}
                         onDup={() => editInput((i) => {
                           const at = i.rows.findIndex((x) => x.id === r.id);
                           const copyRow: Row = r.own
                             ? { id: newId(), block: r.block, pro100: null, qtyPro100: null, qty: 1, own: { ...r.own } }
-                            : { id: newId(), block: r.block, pro100: null, qtyPro100: null, qty: 1, itemId: r.itemId ?? null };
+                            : { id: newId(), block: r.block, pro100: null, qtyPro100: null, qty: 1, itemId: r.itemId ?? null, linkTo: r.linkTo ?? null };
                           return { ...i, rows: [...i.rows.slice(0, at + 1), copyRow, ...i.rows.slice(at + 1)] };
                         })}
                         onRemove={() => editInput((i) => ({ ...i, rows: i.rows.filter((x) => x.id !== r.id) }))}
@@ -330,7 +367,12 @@ export function CalculationPage() {
           {!!view?.discount && <div className="trow small"><span>Скидка</span><b>−{rub(view.discount, roundTo)}</b></div>}
           <div className="trow"><span>Мебель со скидкой</span><b>{rub(view?.furnitureAfterDiscount, roundTo)}</b></div>
           <div className="hr" />
-          <div className="trow"><span>Доставка и монтаж {settings ? `${num(settings.deliveryPct)} %` : ''}<em>без скидки</em></span><b>{rub(view?.delivery, roundTo)}</b></div>
+          <div className="trow"><span>Монтаж {settings && settings.montagePct != null ? `${num(settings.montagePct)} %` : ''}<em>без скидки</em></span><b>{rub(view?.montage, roundTo)}</b></div>
+          <div className="disc">
+            <label htmlFor="delivery">Доставка, ₽<em className="hint">без скидки</em></label>
+            <NumInput id="delivery" digits={0} value={doc.input.deliveryRub ?? settings?.deliveryDefaultRub ?? 0}
+              onValue={(n) => editInput((i) => ({ ...i, deliveryRub: Math.max(0, n) }))} />
+          </div>
           <div className="total"><span>Итого клиенту</span><b>{rub(view?.total, roundTo)}</b></div>
           {boss && view?.margin != null && <div className="trow"><span>Маржа<em>руководитель</em></span><b>{rub(view.margin, roundTo)}</b></div>}
           <button className="btn solid" type="button" onClick={saveNow} disabled={saveState === 'saving' || !!conflict}>Сохранить расчёт</button>
@@ -358,13 +400,32 @@ export function CalculationPage() {
   );
 }
 
-function ItemSelect({ value, groups, onChange, label }: { value: string | null | undefined; groups: CatalogGroupView[]; onChange: (id: string) => void; label: string }) {
+/** Строка задней стенки: PRO100 «ХДФ», позиция из группы «ХДФ (задняя стенка)» или уже «в цвет корпуса». */
+function isBackWall(r: Row, catalog: CatalogView | null): boolean {
+  if (r.own || r.web) return false;
+  if (r.linkTo || r.pro100 === 'ХДФ') return true;
+  const g = r.itemId ? catalog?.groups.find((x) => x.items.some((it) => it.id === r.itemId)) : undefined;
+  return g?.name === HDF_GROUP;
+}
+
+function ItemSelect({ value, groups, onChange, label, links }: {
+  value: string | null | undefined; groups: CatalogGroupView[]; onChange: (id: string) => void; label: string; links?: LdspLink[] | null;
+}) {
   // Позиции со status (например «нет в новом прайсе») не предлагаем; уже выбранную показываем, чтобы не потерять.
-  const cur = value ? groups.flatMap((g) => g.items.map((it) => ({ g, it }))).find((x) => x.it.id === value) : undefined;
+  const isLink = !!value && value.startsWith(LINK);
+  const cur = value && !isLink ? groups.flatMap((g) => g.items.map((it) => ({ g, it }))).find((x) => x.it.id === value) : undefined;
+  const lostLink = isLink && !links?.some((l) => LINK + l.id === value);
   return (
     <select className="in" aria-label={label} value={value ?? ''} onChange={(e) => onChange(e.target.value)}>
       {!value && <option value="">— выберите позицию —</option>}
-      {value && !cur && <option value={value}>Позиция не найдена в прайсе</option>}
+      {value && !isLink && !cur && <option value={value}>Позиция не найдена в прайсе</option>}
+      {lostLink && <option value={value!}>В цвет корпуса: строка ЛДСП не найдена</option>}
+      {links && (
+        <optgroup label="В цвет корпуса">
+          {links.map((l) => <option key={l.id} value={LINK + l.id}>{l.label}</option>)}
+          {!links.length && <option value="" disabled>Сначала выберите ЛДСП корпуса в расчёте</option>}
+        </optgroup>
+      )}
       {groups.map((g) => {
         const items = g.items.filter((it) => !it.status || it.id === value);
         if (!items.length) return null;
@@ -378,8 +439,17 @@ function ItemSelect({ value, groups, onChange, label }: { value: string | null |
   );
 }
 
-function CalcRow({ row, vr, groups, boss, roundTo, onChange, onDup, onRemove }: {
-  row: Row; vr: ViewRow | undefined; groups: CatalogGroupView[]; boss: boolean; roundTo: number;
+/** Галочка «без наценки»: только руководитель и владелец (сервер не даёт менеджеру её менять). */
+function NoMarkup({ row, onChange }: { row: Row; onChange: (p: Partial<Row>) => void }) {
+  return (
+    <label className="nomark" title="Розница = себестоимость: наценки производства и магазина не применяются">
+      <input type="checkbox" checked={!!row.noMarkup} onChange={(e) => onChange({ noMarkup: e.target.checked })} />без наценки
+    </label>
+  );
+}
+
+function CalcRow({ row, vr, groups, boss, roundTo, links, onChange, onDup, onRemove }: {
+  row: Row; vr: ViewRow | undefined; groups: CatalogGroupView[]; boss: boolean; roundTo: number; links: LdspLink[] | null;
   onChange: (p: Partial<Row>) => void; onDup: () => void; onRemove: () => void;
 }) {
   const edited = !!row.pro100 && row.qtyPro100 != null && row.qty !== row.qtyPro100;
@@ -399,7 +469,8 @@ function CalcRow({ row, vr, groups, boss, roundTo, onChange, onDup, onRemove }: 
     label = row.pro100 ? <span className="pro">{row.pro100}</span> : null;
     mat = (
       <>
-        <ItemSelect value={row.itemId} groups={groups} label="Позиция прайса" onChange={(itemId) => onChange({ itemId: itemId || null })} />
+        <ItemSelect value={row.linkTo ? LINK + row.linkTo : row.itemId} groups={groups} label="Позиция прайса" links={links}
+          onChange={(v) => onChange(v.startsWith(LINK) ? { linkTo: v.slice(LINK.length), itemId: null } : { itemId: v || null, linkTo: null })} />
         {row.realMaterial != null ? (
           <span className="real">
             <input className="in" aria-label="Реальный материал" placeholder="Реальный материал для КП и спецификации" value={row.realMaterial} onChange={(e) => onChange({ realMaterial: e.target.value })} />
@@ -430,8 +501,48 @@ function CalcRow({ row, vr, groups, boss, roundTo, onChange, onDup, onRemove }: 
       {boss && <td className="num">{vr?.cost != null ? rub(vr.cost, roundTo) : '—'}</td>}
       <td className="num">{vr ? rub(vr.retail, roundTo) : '—'}</td>
       <td className="num nowrap">
+        {boss && row.own && <NoMarkup row={row} onChange={onChange} />}
         <button className="link" type="button" onClick={onDup}>+ вид</button>
         {!row.pro100 && <button className="x" type="button" aria-label="Удалить строку" onClick={onRemove}>×</button>}
+      </td>
+    </tr>
+  );
+}
+
+/** Товар по ссылке с сайта: ссылка, название, цена закупки за штуку, количество. */
+function WebRow({ row, vr, boss, roundTo, onChange, onRemove }: {
+  row: Row; vr: ViewRow | undefined; boss: boolean; roundTo: number; onChange: (p: Partial<Row>) => void; onRemove: () => void;
+}) {
+  const web = row.web ?? { url: '', name: '', price: 0, unit: 'шт' };
+  const warn = vr?.warnings?.filter(Boolean) ?? [];
+  const href = /^https?:\/\//i.test(web.url.trim()) ? web.url.trim() : '';
+  return (
+    <tr className={warn.length ? 'bad' : undefined}>
+      <td>
+        <div className="weburl">
+          <input className="in" aria-label="Ссылка на товар" placeholder="https://… ссылка на товар" value={web.url} onChange={(e) => onChange({ web: { ...web, url: e.target.value } })} />
+          {href
+            ? <a className="open" href={href} target="_blank" rel="noopener noreferrer" aria-label="Открыть ссылку в новой вкладке" title="Открыть в новой вкладке">↗</a>
+            : <span className="open off" aria-hidden="true">↗</span>}
+        </div>
+        <div className="own">
+          <input className="in" aria-label="Название товара" value={web.name} placeholder="Название" onChange={(e) => onChange({ web: { ...web, name: e.target.value } })} />
+          <label className="own-price"><NumInput className="in" aria-label="Цена по ссылке за штуку, ₽" digits={2} value={web.price} onValue={(n) => onChange({ web: { ...web, price: Math.max(0, n) } })} /><span>₽ за шт</span></label>
+        </div>
+        {warn.length > 0 && <span className="sub mark">{warn.join(', ')}</span>}
+      </td>
+      <td className="num">
+        <span className="qtybox">
+          <NumInput className="in qty" aria-label="Количество" value={row.qty} onValue={(qty) => onChange({ qty: Math.max(0, qty) })} />
+          <span className="unit-t">шт</span>
+        </span>
+      </td>
+      {boss && <td className="num">{vr?.unitCost != null ? rubUnit(vr.unitCost) : '—'}</td>}
+      {boss && <td className="num">{vr?.cost != null ? rub(vr.cost, roundTo) : '—'}</td>}
+      <td className="num">{vr ? rub(vr.retail, roundTo) : '—'}</td>
+      <td className="num nowrap">
+        {boss && <NoMarkup row={row} onChange={onChange} />}
+        <button className="x" type="button" aria-label="Удалить ссылку" onClick={onRemove}>×</button>
       </td>
     </tr>
   );
@@ -478,6 +589,8 @@ function LightEditor({ doc, view, settings, onChange }: {
   const L = settings?.light;
   const profiles = L?.profiles ?? [];
   const switches = L?.switches ?? [];
+  // по умолчанию — первый настоящий выключатель, а не «Нет (напрямую)»
+  const firstSwitch = switches.find((w) => w.id !== 'none')?.id ?? switches[0]?.id ?? '';
   const lr = view?.light;
   const reserve = settings && 'lightReserve' in settings && typeof settings.lightReserve === 'number' ? settings.lightReserve : null;
   const setSeg = (k: number, p: Partial<CalcInput['light']['segments'][number]>) =>
@@ -491,28 +604,31 @@ function LightEditor({ doc, view, settings, onChange }: {
           <input type="checkbox" checked={light.enabled} onChange={(e) => onChange({
             ...light, enabled: e.target.checked,
             profileId: light.profileId || profiles[0]?.id || '',
-            segments: e.target.checked && !light.segments.length ? [{ name: 'Под верхними шкафами', lengthM: 0, switchId: switches[0]?.id ?? '' }] : light.segments,
+            segments: e.target.checked && !light.segments.length ? [{ name: 'Под верхними шкафами', lengthM: 0, switchId: firstSwitch, profileId: light.profileId || profiles[0]?.id || '' }] : light.segments,
           })} />
           Есть подсветка
         </label>
       </div>
-      <p className="note">Вы задаёте профиль и участки. Мощность, блок питания и выключатели считаются сами. Паз включён в цену профиля.</p>
+      <p className="note">Вы задаёте участки: длину, профиль и включение. Мощность, блок питания и выключатели считаются сами; участки «Нет (напрямую к слаботочке)» — без выключателя и блока питания. Паз включён в цену профиля.</p>
       {light.enabled && (
         <>
           <div className="lgrid">
             <label>Лента<span className="fixed">{L?.tape.name ?? '—'}</span></label>
-            <label>Профиль
-              <select className="in" value={light.profileId} onChange={(e) => onChange({ ...light, profileId: e.target.value })}>
+            <label>Профиль для новых участков
+              <select className="in" aria-label="Профиль для новых участков" value={light.profileId} onChange={(e) => onChange({ ...light, profileId: e.target.value })}>
                 {profiles.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
             </label>
           </div>
           <div className="seglist">
-            <div className="segrow seghead"><span>Участок</span><span>Длина, м</span><span>Включение</span><span /></div>
+            <div className="segrow seghead"><span>Участок</span><span>Длина, м</span><span>Профиль</span><span>Включение</span><span /></div>
             {light.segments.map((s, k) => (
               <div className="segrow" key={k}>
                 <input className="in" aria-label="Участок" value={s.name} onChange={(e) => setSeg(k, { name: e.target.value })} />
                 <NumInput className="in" aria-label="Длина, м" digits={2} value={s.lengthM} onValue={(n) => setSeg(k, { lengthM: Math.max(0, n) })} />
+                <select className="in" aria-label="Профиль" value={s.profileId || light.profileId} onChange={(e) => setSeg(k, { profileId: e.target.value })}>
+                  {profiles.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
                 <select className="in" aria-label="Включение" value={s.switchId} onChange={(e) => setSeg(k, { switchId: e.target.value })}>
                   {switches.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
                 </select>
@@ -520,13 +636,14 @@ function LightEditor({ doc, view, settings, onChange }: {
               </div>
             ))}
           </div>
-          <button className="link" type="button" onClick={() => onChange({ ...light, segments: [...light.segments, { name: 'Новый участок', lengthM: 1, switchId: switches[0]?.id ?? '' }] })}>+ участок</button>
+          <button className="link" type="button" onClick={() => onChange({ ...light, segments: [...light.segments, { name: 'Новый участок', lengthM: 1, switchId: firstSwitch, profileId: light.profileId || profiles[0]?.id || '' }] })}>+ участок</button>
           {lr && (
             <div className="lsum">
               <span>Лента <b>{num(lr.lengthM)} м</b></span>
               <span>Мощность <b>{num(lr.watt, 1)} Вт</b></span>
               <span>С запасом{reserve != null ? ` ${num(reserve * 100, 0)} %` : ''} <b>{num(lr.needWatt, 0)} Вт</b></span>
-              <span>Блок питания <b>{lr.psuCount > 1 ? `${lr.psuCount} × ` : ''}{lr.psuWatt} Вт</b></span>
+              <span>Блок питания <b>{lr.psuCount ? `${lr.psuCount > 1 ? `${lr.psuCount} × ` : ''}${lr.psuWatt} Вт` : 'не нужен'}</b></span>
+              {!!lr.directM && <span>Напрямую к слаботочке <b>{num(lr.directM)} м</b></span>}
             </div>
           )}
           {lr?.warnings.map((w, k) => <div className="warn" key={k}>{w}</div>)}

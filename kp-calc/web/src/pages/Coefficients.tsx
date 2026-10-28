@@ -65,7 +65,8 @@ export function CoefficientsPage() {
             {field('Отходы ЛДСП, ×', n(s.waste, (v) => set({ waste: v })))}
             {field('Кромка, ₽ на м² ЛДСП', n(s.edgePerM2, (v) => set({ edgePerM2: v })))}
             {field('Площадь листа ЛДСП, м²', n(s.ldspSheetArea, (v) => set({ ldspSheetArea: v })))}
-            {field('Доставка и монтаж, % от розницы', n(s.deliveryPct, (v) => set({ deliveryPct: v })))}
+            {field('Монтаж, % от розницы', n(s.montagePct, (v) => set({ montagePct: Math.max(0, v) }), 2))}
+            {field('Доставка по умолчанию, ₽', n(s.deliveryDefaultRub, (v) => set({ deliveryDefaultRub: Math.max(0, v) }), 0))}
             {field('Запас мощности подсветки, %', <NumInput digits={1} value={Math.round(s.lightReserve * 1000) / 10} onValue={(v) => set({ lightReserve: v / 100 })} />)}
             {field('Округление сумм при выводе, ₽', n(s.roundTo, (v) => set({ roundTo: Math.max(1, Math.round(v)) }), 0))}
           </div>
@@ -127,7 +128,13 @@ export function CoefficientsPage() {
           <table className="utab">
             <thead><tr><th>Название</th><th className="num">Цена, ₽</th><th /></tr></thead>
             <tbody>
-              {s.light.switches.map((w, k) => (
+              {s.light.switches.map((w, k) => w.id === 'none' ? (
+                <tr key={w.id}>
+                  <td>{w.name}<span className="sub">есть всегда: без выключателя и блока питания</span></td>
+                  <td className="num">0</td>
+                  <td />
+                </tr>
+              ) : (
                 <tr key={w.id}>
                   <td><input className="cell" value={w.name} onChange={(e) => setL({ switches: s.light.switches.map((x, j) => (j === k ? { ...x, name: e.target.value } : x)) })} /></td>
                   <td className="num"><NumInput className="cell num" digits={2} value={w.price} onValue={(v) => setL({ switches: s.light.switches.map((x, j) => (j === k ? { ...x, price: v } : x)) })} /></td>

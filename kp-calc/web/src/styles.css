@@ -156,7 +156,7 @@ th.num,td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:now
 .lgrid label{display:flex;flex-direction:column;gap:4px;color:var(--p-muted)}
 .fixed{height:32px;display:flex;align-items:center;border:1px dashed var(--p-line);padding:0 8px;color:var(--p-text)}
 .seglist{margin:12px 0 6px;display:flex;flex-direction:column;gap:6px;font-size:13px}
-.segrow{display:grid;grid-template-columns:minmax(0,1fr) 90px minmax(0,1fr) 28px;gap:8px;align-items:center}
+.segrow{display:grid;grid-template-columns:minmax(0,1fr) 80px minmax(0,1fr) minmax(0,1fr) 28px;gap:8px;align-items:center}
 .segrow .in{width:100%;min-width:0}
 .seghead{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--p-muted)}
 .lsum{margin-top:12px;display:flex;flex-wrap:wrap;gap:8px 22px;font-size:13px;color:var(--p-muted);font-variant-numeric:tabular-nums}
@@ -239,3 +239,13 @@ select.cell option{color:#262625;background:#f7f6f3}
 .link-dark{color:var(--rose)}
 
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+/* v2: ссылки с сайтов, «без наценки», доставка, участки подсветки с профилем */
+.weburl{display:flex;gap:6px;align-items:center;margin-bottom:6px}
+.weburl .in{flex:1;min-width:0}
+.weburl .open{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border:1px solid var(--p-line);border-radius:var(--r);color:var(--p-label);text-decoration:none;font-size:14px;flex:none}
+.weburl .open:hover{border-color:var(--p-strong)}
+.weburl .open.off{opacity:.35}
+.nomark{display:flex;align-items:center;justify-content:flex-end;gap:4px;font-size:10px;letter-spacing:.04em;color:var(--p-muted);white-space:nowrap;cursor:pointer;margin-bottom:2px}
+.nomark input{width:13px;height:13px;margin:0;accent-color:var(--accent)}
+.disc label .hint{display:block;font-style:normal;font-size:10px;line-height:1.3;letter-spacing:.12em;text-transform:uppercase;color:var(--rose)}
+.disc #delivery{width:96px}

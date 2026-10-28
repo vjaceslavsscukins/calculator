@@ -81,7 +81,7 @@
 
 - `GET /healthz` → `ok`.
 - В production сервер отдаёт собранный интерфейс из `web/dist` (SPA: неизвестные пути → `index.html`).
-- Переменные окружения: `DATABASE_URL`, `OWNER_EMAIL`, `OWNER_PASSWORD`, `PUBLIC_URL` (для ссылок-приглашений), `PORT` (по умолчанию 8787), `NODE_ENV`.
+- Переменные окружения: `DATABASE_URL`, `OWNER_EMAIL`, `OWNER_PASSWORD`, `PUBLIC_URL` (для ссылок-приглашений), `PORT` (по умолчанию 8787), `NODE_ENV`, `DATABASE_SSL` (1/true — TLS к PostgreSQL).
 
 ## Уточнения сервера
 

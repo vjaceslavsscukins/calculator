@@ -25,7 +25,7 @@ function details(d: unknown): string {
 const KEY_TITLES: Record<string, string> = {
   price: 'цена', name: 'название', status: 'пометка', email: 'почта', role: 'роль', cityId: 'город', disabled: 'отключён',
   firstName: 'имя', lastName: 'фамилия', kProd: 'наценка производства', kShop: 'наценка магазина', waste: 'отходы',
-  edgePerM2: 'кромка, ₽/м²', ldspSheetArea: 'площадь листа', deliveryPct: 'доставка и монтаж, %', lightReserve: 'запас мощности',
+  edgePerM2: 'кромка, ₽/м²', ldspSheetArea: 'площадь листа', deliveryPct: 'доставка и монтаж, %', montagePct: 'монтаж, %', deliveryDefaultRub: 'доставка по умолчанию, ₽', lightReserve: 'запас мощности',
   roundTo: 'округление', light: 'подсветка',
 };
 const fmt = (v: unknown) => (v == null ? '—' : typeof v === 'object' ? JSON.stringify(v) : String(v));

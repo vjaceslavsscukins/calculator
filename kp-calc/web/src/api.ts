@@ -98,7 +98,10 @@ export interface CatalogView { version?: number; groups: CatalogGroupView[] }
 
 /** Настройки для менеджера: без цен и наценок. */
 export interface SettingsPublic {
-  deliveryPct: number;
+  /** Монтаж, % от розницы мебели. */
+  montagePct: number;
+  /** Доставка по умолчанию, ₽. */
+  deliveryDefaultRub: number;
   roundTo: number;
   kProd?: number;
   kShop?: number;
