@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parsePro100, applyPro100, mergePro100 } from '../src/index.ts';
+import { parsePro100, applyPro100, mergePro100, isIgnoredPro100 } from '../src/index.ts';
 
 const TEXT = `ЛДСП_верх\t5,87\tм²
 Фасад_верх\t3.48\tм²
@@ -24,7 +24,7 @@ test('строки попадают в блоки по виду изделия, 
   const k = applyPro100('kitchen', parsePro100(TEXT).lines, { 'Петли': 'blum' }, id);
   assert.deepEqual(k.rows.map((r) => [r.pro100, r.block, r.qty]), [['ЛДСП_верх', 'up', 5.87], ['Фасад_верх', 'up', 3.48], ['ЛДСП_низ', 'low', 6.2], ['Петли', 'hw', 12]]);
   assert.equal(k.rows[3].itemId, 'blum');
-  assert.deepEqual(k.unparsed.map((u) => u.name), ['Евровинт', 'Полкодержатель']);
+  assert.deepEqual(k.unparsed.map((u) => u.name), [], 'мелкий крепёж молча пропускается');
   const c = applyPro100('cabinet', parsePro100(TEXT).lines, {}, id);
   assert.deepEqual(c.rows.map((r) => r.block), ['body', 'facade', 'body', 'hw']);
 });
@@ -42,4 +42,18 @@ test('повторная вставка: исправленное вручную
   const inc = applyPro100('kitchen', [{ name: 'Петли', qty: 14, unit: 'шт' }, { name: 'ЛДСП_верх', qty: 6, unit: 'м²' }, { name: 'Сушка', qty: 1, unit: 'шт' }]).rows;
   const m = mergePro100(old, inc);
   assert.deepEqual(m.map((r) => [r.pro100, r.qty, r.qtyPro100, r.itemId ?? null]), [['Петли', 16, 14, 'blum'], ['ЛДСП_верх', 6, 6, 'w1000'], ['Сушка', 1, 1, null]]);
+});
+
+test('мелкий крепёж (Евровинт, Ножка, Саморез…) молча пропускается, без учёта регистра и подчёркиваний; остальное — в «Не разобрано»', () => {
+  const r = applyPro100('kitchen', [
+    { name: 'ЕВРОВИНТ', qty: 64, unit: 'шт' }, { name: 'Ножка_регулируемая', qty: 8, unit: 'шт' }, { name: 'саморез 4x16', qty: 100, unit: 'шт' },
+    { name: 'Конфирмат', qty: 40, unit: 'шт' }, { name: 'Шкант', qty: 30, unit: 'шт' }, { name: 'Стяжка_межсекционная', qty: 4, unit: 'шт' },
+    { name: 'Заглушка', qty: 40, unit: 'шт' }, { name: 'Полкодержатель', qty: 16, unit: 'шт' },
+    { name: 'Мойка', qty: 1, unit: 'шт' }, { name: 'Петли', qty: 4, unit: 'шт' },
+  ]);
+  assert.deepEqual(r.unparsed.map((u) => u.name), ['Мойка']);
+  assert.deepEqual(r.rows.map((x) => x.pro100), ['Петли']);
+  assert.equal(isIgnoredPro100('Евро_винт'), true);
+  assert.equal(isIgnoredPro100('Ручка_низ'), false);
+  assert.equal(isIgnoredPro100(' Евровинт 7x50 '), true);
 });

@@ -13,18 +13,20 @@ export interface BlockDef {
 const HW: BlockDef = { id: 'hw', title: 'Фурнитура', categories: ['Фурнитура'] };
 const LIGHT: BlockDef = { id: 'light', title: 'Подсветка', categories: [] };
 const FREE: BlockDef = { id: 'free', title: 'Свободные строки', categories: [] };
+/** Товары по ссылкам с сайтов: цена закупки за штуку, наценки обычные. */
+const WEB: BlockDef = { id: 'web', title: 'Ссылки с сайтов', categories: [] };
 
 export const BLOCKS: Record<ProductKind, BlockDef[]> = {
   kitchen: [
     { id: 'up', title: 'Верхний блок', categories: ['ЛДСП корпус', 'Фасады'], fittingGroups: ['ХДФ (задняя стенка)'] },
     { id: 'low', title: 'Нижний блок', categories: ['ЛДСП корпус', 'Фасады'], fittingGroups: ['ХДФ (задняя стенка)'] },
     { id: 'top', title: 'Столешница, стеновая панель, плинтус', categories: ['Столешницы', 'Стеновые панели', 'Плинтус'] },
-    HW, LIGHT, FREE,
+    HW, LIGHT, FREE, WEB,
   ],
   cabinet: [
     { id: 'body', title: 'Корпус', categories: ['ЛДСП корпус'], fittingGroups: ['ХДФ (задняя стенка)'] },
     { id: 'facade', title: 'Фасады', categories: ['Фасады'] },
-    HW, LIGHT, FREE,
+    HW, LIGHT, FREE, WEB,
   ],
 };
 

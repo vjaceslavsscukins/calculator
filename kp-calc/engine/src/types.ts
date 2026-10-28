@@ -46,8 +46,10 @@ export interface Settings {
   edgePerM2: number;
   /** Площадь листа ЛДСП, м² (2800×2070 = 5,796). */
   ldspSheetArea: number;
-  /** Доставка и монтаж, % от розницы мебели (скидка на них не действует). */
-  deliveryPct: number;
+  /** Монтаж, % от розницы мебели (скидка на него не действует). */
+  montagePct: number;
+  /** Доставка по умолчанию, ₽ (менеджер может задать свою сумму в расчёте). */
+  deliveryDefaultRub: number;
   /** Запас мощности блока питания подсветки, доля (0,3 = 30 %). */
   lightReserve: number;
   /** Шаг округления при выводе, ₽. */
@@ -71,9 +73,23 @@ export interface Row {
   own?: { name: string; unit: string; price: number } | null;
   /** «Реальный материал» для КП и спецификации, если в прайсе нет нужного. */
   realMaterial?: string | null;
+  /**
+   * Задняя стенка «ЛДСП в цвет корпуса»: id строки расчёта, где выбран ЛДСП.
+   * Цена, единица и название берутся от позиции той строки, количество — своё.
+   */
+  linkTo?: string | null;
+  /** Товар по ссылке с сайта (блок «Ссылки с сайтов»): price — цена закупки за штуку. */
+  web?: { url: string; name: string; price: number; unit: string } | null;
+  /** Без наценки (только свободная строка и ссылка с сайта): розница = себестоимость. Ставит руководитель или владелец. */
+  noMarkup?: boolean;
 }
 
-export interface LightSegment { name: string; lengthM: number; switchId: string }
+/** Выключатель «Нет (подключение напрямую к слаботочке)»: ни выключателя, ни блока питания для зоны. */
+export const SWITCH_NONE = 'none';
+
+/** Зона подсветки. profileId не задан — берётся LightInput.profileId (старые расчёты). */
+export interface LightSegment { name: string; lengthM: number; switchId: string; profileId?: string }
+/** profileId — профиль по умолчанию для новых зон и для зон без своего профиля. */
 export interface LightInput { enabled: boolean; profileId: string; segments: LightSegment[] }
 
 export interface CalcInput {
@@ -82,6 +98,8 @@ export interface CalcInput {
   light: LightInput;
   /** Скидка, % от розницы мебели. */
   discountPct: number;
+  /** Доставка, ₽ (null или не задано — Settings.deliveryDefaultRub). */
+  deliveryRub?: number | null;
 }
 
 export interface RowResult {
@@ -102,6 +120,9 @@ export interface RowResult {
 
 export interface LightResult {
   lengthM: number;
+  /** Длина зон, подключённых напрямую к слаботочке (без выключателя и блока питания), м. */
+  directM: number;
+  /** Мощность зон с блоком питания, Вт (зоны «напрямую» не входят). */
   watt: number;
   needWatt: number;
   psuWatt: number;
@@ -114,15 +135,20 @@ export interface CalcResult {
   rows: RowResult[];
   light: LightResult | null;
   blocks: { block: string; title: string; retail: number }[];
-  /** Себестоимость по группам (ЛДСП корпус, Фасады, Столешницы и панели, Фурнитура, Подсветка, Свободные строки). */
+  /** Себестоимость по группам (ЛДСП корпус, Фасады, Столешницы и панели, Фурнитура, Подсветка, Свободные строки, Покупное по ссылкам). */
   costByGroup: Record<string, number>;
   cost: number;
   prod: number;
   retail: number;
   discount: number;
   furnitureAfterDiscount: number;
+  /** Монтаж: % от розницы мебели, без скидки. */
+  montage: number;
+  /** Доставка суммой, без скидки. */
   delivery: number;
+  /** Мебель со скидкой + монтаж + доставка. */
   total: number;
+  /** Мебель со скидкой − себестоимость (монтаж и доставка не входят). */
   margin: number;
   warnings: string[];
 }

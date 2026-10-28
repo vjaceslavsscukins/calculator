@@ -27,8 +27,21 @@ export const PRO100_MAP: Record<string, { kitchen: string; cabinet: string }> = 
   'Комплект_крабов': { kitchen: 'hw', cabinet: 'hw' },
 };
 
+/**
+ * Мелкий крепёж из PRO100 в КП не показываем: такие строки молча пропускаются (ни в строки, ни в «Не разобрано»).
+ * Сравнение по началу названия без учёта регистра, ё/е, пробелов и подчёркиваний («Ножка_регулируемая» → «Ножка»).
+ */
+export const PRO100_IGNORED = [
+  'Евровинт', 'Полкодержатель', 'Ножка', 'Саморез', 'Конфирмат', 'Шкант', 'Стяжка', 'Заглушка',
+  'Минификс', 'Эксцентрик', 'Дюбель', 'Шуруп', 'Гвоздь',
+];
+
 const key = (s: string) => s.trim().toLowerCase().replace(/ё/g, 'е').replace(/[\s_]+/g, '_');
 const MAP_BY_KEY = new Map(Object.keys(PRO100_MAP).map((k) => [key(k), k]));
+const bare = (s: string) => key(s).replace(/_/g, '');
+const IGNORED_KEYS = PRO100_IGNORED.map(bare);
+/** Строка PRO100 — мелкий крепёж, который не показываем. */
+export const isIgnoredPro100 = (name: string) => { const k = bare(name); return IGNORED_KEYS.some((i) => k.startsWith(i)); };
 
 /** Разбирает текст, вставленный из PRO100 или из листа Excel (табуляция, «;» или пробелы). Десятичная запятая допускается. */
 export function parsePro100(text: string): Pro100Parse {
@@ -56,7 +69,7 @@ export function applyPro100(kind: ProductKind, lines: Pro100Line[], defaults: Re
   const unparsed: Pro100Line[] = [];
   for (const l of lines) {
     const known = MAP_BY_KEY.get(key(l.name));
-    if (!known) { unparsed.push(l); continue; }
+    if (!known) { if (!isIgnoredPro100(l.name)) unparsed.push(l); continue; }
     agg.set(known, Math.round(((agg.get(known) ?? 0) + l.qty) * 1000) / 1000);
   }
   const rows: Row[] = [...agg].map(([name, qty]) => ({
