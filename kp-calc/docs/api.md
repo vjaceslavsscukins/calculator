@@ -1,6 +1,6 @@
 # Калькулятор КП: API (договорённость между `api/` и `web/`)
 
-Версия 2, 28.10.2026 (изменения — в конце, раздел «Версия 2»). Расчёт цены — только в `engine/` (`compute`), сервер вызывает его и отдаёт результат с учётом роли. Интерфейс сам цену не считает.
+Версия 2, 28.10.2026 (изменения — в конце, разделы «Версия 2» и «Этап 2»). Расчёт цены — только в `engine/` (`compute`), сервер вызывает его и отдаёт результат с учётом роли. Интерфейс сам цену не считает.
 
 Все ответы JSON. Ошибки: `{ "error": "текст для человека на русском" }` с кодом 400/401/403/404/409. Деньги — числа в рублях без округления (округляет интерфейс до `settings.roundTo` только при выводе).
 
@@ -111,7 +111,7 @@
 
 От `web/` (28.10.2026). Новых эндпоинтов интерфейс не придумывал; в интерфейсе стоят заглушки.
 
-- **Собрать КП** — эндпоинтов КП пока нет. В панели итогов расчёта кнопка «Собрать КП · скоро» неактивна. Нужны, когда дойдём до этапа КП: `POST /api/kp` `{clientId, calculationIds, …}` и снимок цен.
+- **Собрать КП** — сделано на этапе 2 (раздел «Этап 2»).
 - **Загрузка Excel-прайса** — кнопка «Загрузить Excel» на экране «Прайсы» неактивна с подписью «скоро» (по этому документу это следующая итерация).
 - **Уточнить в документе:** `id` пользователей, клиентов и городов — числа, а не строки (интерфейс шлёт `cityId` числом). У владельца, созданного из `OWNER_EMAIL`, `cityId` и `cityName` равны `null`: интерфейс в этом случае подставляет первый город из `/api/meta`.
 - **Желательно:** снятие позиции с продажи (`status`) в интерфейсе прайса пока не выведено: показывается только текст пометки. PATCH для этого уже есть, сделаем кнопку по запросу владельца.
@@ -129,3 +129,62 @@
 - **Прайс.** Группа «Крепёж (крабы)» переименована в «Навесы для подвесных шкафов» (шт), добавлена позиция «Усиленный навес» 800 ₽ (миграция `002_…sql` для существующей базы, `data/catalog.json` для новой). Строка PRO100 `Комплект_крабов` по-прежнему идёт в «Фурнитуру».
 - **Миграция `002`** переводит сохранённые настройки: `deliveryPct` → `montagePct`, `deliveryDefaultRub` = 0, выключатель `none` первым.
 - **TLS к PostgreSQL:** `DATABASE_SSL=1` (или `sslmode=require` в `DATABASE_URL`) → `ssl: {rejectUnauthorized: false}`; по умолчанию выключено.
+
+## Этап 2: картинки, рендер, ссылки с сайтов, КП, страница по ссылке, уведомления (28.10.2026)
+
+Цены КП — только из `engine/` (`kpItemPrice`, `kpTotals`, `engine/src/kp.ts`); там же `kpMaterials` (список «Материалы и комплектация» по строкам расчёта) и `kpBenefits` (плашки). КП хранит **снимок** (цены, тексты, картинки, данные компании и менеджера) и после формирования не меняется; правка — новая версия. Миграция `003_kp.sql`.
+
+### Пользователь
+`user` дополнен полями `phone` и `position` (для блока «Ваш персональный менеджер» в КП). `POST /api/users` и `PATCH /api/users/:id` (владелец) принимают `phone`, `position`.
+
+### Настройки
+`Settings.renderPrompt` — базовый промт рендера (правит владелец в «Коэффициенты → Рендер по эскизу»; пусто → промт по умолчанию из движка). Менеджеру не отдаётся.
+
+### Картинки расчёта
+`image` = `{id, kind: 'sketch'|'render'|'cover', title, mime, size, inKp, createdAt, url}`.
+- `GET /api/calculations/:id/images` → `{images, renderEnabled}`.
+- `POST /api/calculations/:id/images` — тело запроса = файл (`Content-Type: image/png|image/jpeg|image/webp`, до 10 МБ, тип проверяется по первым байтам), имя — заголовок `X-File-Name` (urlencoded) → `{image}`. 400 — не картинка, 413 — больше 10 МБ.
+- `GET /api/images/:id` → байты (доступ — по видимости клиента расчёта; фото обложки — всем вошедшим).
+- `PATCH /api/images/:id` `{inKp?, title?}` → `{image}`; `DELETE /api/images/:id` — скрыть из расчёта (в сформированных КП картинка остаётся).
+- Хранилище: если заданы `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY`, `S3_SECRET_KEY` (+ `S3_REGION`, `S3_PREFIX`) — S3-совместимое (Timeweb, `@aws-sdk/client-s3`, path-style), иначе таблица `image_blobs` (bytea). У картинки запоминается, где она лежит.
+
+### Рендер по эскизу
+- `POST /api/calculations/:id/render` `{imageId, previousId?, comment?}` → `{image}` («Рендер N», `inKp: false` — какую взять в КП, отмечает менеджер). Промт: `Settings.renderPrompt` + изделие + «Материалы и комплектация» + «Что поправить: comment». `previousId` (перегенерация) — предыдущий рендер прикладывается вторым изображением. В журнал: «Рендер по эскизу» / «Перегенерация рендера» (кто, расчёт, клиент, комментарий).
+- Провайдер: `RENDER_PROVIDER=openai-compatible` (по умолчанию), `RENDER_API_URL` (база шлюза `…/v1` или полный `…/chat/completions`), `RENDER_API_KEY`, `RENDER_MODEL`. Запрос — `chat/completions` с `modalities: ['image','text']`, картинки во входе — `image_url` с data:URL. Ответ разбирается: `choices[0].message.images[].image_url.url`, `content` строкой с data:URL или ссылкой, `content` массивом частей, `data[].b64_json`/`url`, `candidates[].content.parts[].inline_data`.
+- Без ключа — **503** `{error: "Рендер не подключён: нужен ключ нейросети в настройках сервера"}`. Ошибки шлюза — 502/504 с понятным текстом (неверный ключ, нет денег, перегрузка, не вернула картинку).
+
+### Ссылки с сайтов
+- `POST /api/link-preview` `{url}` → `{name, price?, currency?, image?}`. Сервер скачивает страницу: только http/https, без логина в ссылке, таймаут 8 с, до 2 МБ (в т. ч. после распаковки), до 4 перенаправлений. **SSRF:** имя хоста резолвится, любой частный/локальный/служебный адрес (127/8, 10/8, 172.16/12, 192.168/16, 169.254/16, 100.64/10, 0/8, ::1, fc00::/7, fe80::/10, IPv4 внутри IPv6 и т. п.) — 400 «Адрес запрещён»; соединение идёт ровно на проверенный адрес; каждое перенаправление проверяется заново. Разбор: JSON-LD `Product` (`name`, `offers.price`/`lowPrice`, `priceCurrency`, `image`), `og:title`, `og:image`, `product:price:amount`, `itemprop=price`, `<title>`; кодировка из заголовка или `<meta charset>`.
+- `LINK_PREVIEW_ALLOW_PRIVATE=1` — разрешить локальные адреса. **Только для тестов**, на сервере не задавать.
+- Интерфейс: при вставке ссылки (или уходе из поля) подставляет название и цену в рублях, если поля пустые; менеджер правит.
+
+### Сборка КП
+- `GET /api/clients/:id/kp-draft?base=<kpId>` → `{client, items: [{calculationId, kind, calcTitle, status, title, dims, about, materials, benefits, images, imageId, price}], base, validUntil (+14 дней), aiText}`. Умолчания — из `calculations.kp_info` (тексты прошлого КП) или из расчёта; с `base` — тексты из снимка того КП.
+- `POST /api/calculations/:id/kp-text` `{title, dims, materials, benefits}` → `{text, source: 'ai'|'template', note?}`. Нейросеть — если заданы `AI_TEXT_API_URL`, `AI_TEXT_API_KEY`, `AI_TEXT_MODEL` (стиль DESIGN.md §8); иначе или при ошибке — шаблон по материалам.
+- `POST /api/kp/preview` `{clientId, calculationIds}` → `{items: [{calculationId, price}], totals}` (по текущему прайсу).
+- `POST /api/kp` `{clientId, baseKpId?, theme: 'dark'|'light', validUntil: 'ГГГГ-ММ-ДД', items: [{calculationId, title, dims, about, materials: [{role, value}], benefits, imageId|null}]}` → `{kp}`. 1–20 изделий одного клиента, порядок — как в `items`. Номер `КП-0001` по порядку (`kp_number_seq`); с `baseKpId` — тот же номер, версия +1. Токен ссылки — 32 случайных байта (43 символа base64url). Статусы расчётов `draft`/`saved` → `in_kp`.
+- `KpSummary` = `{id, number, version, clientId, clientName, url, total, theme, validUntil, createdAt, createdBy, sentAt, views, firstViewedAt, lastViewedAt, approvedAt, items: [{calculationId, title}]}`.
+- `GET /api/clients/:id/kps` → `{kps}` (новые сверху); `GET /api/kp/:id` → `{kp, snapshot, clientPhone, events, versions}`.
+- `POST /api/kp/:id/sent` `{channel: 'link'|'whatsapp'|'telegram'|'pdf'}` → `{kp}`: `sentAt` (первый раз), событие, статусы расчётов → `kp_sent`.
+- Снимок цен: `price` изделия = `{retail, discountPct, discount, price, montage, delivery, total}`, `totals` = `{goods, discount, discountPct|null, furniture, montage, delivery, total}`. Себестоимости и наценок в снимке нет.
+
+### Страница КП по ссылке (без входа)
+- `GET /p/:token` — HTML по утверждённому макету `mockups/kp-example.html` (обложка, «Почему Культура Групп», изделия, стоимость, гарантии, следующий шаг). `?theme=light|dark` — вид (по умолчанию из КП), `?preview=1` — просмотр менеджера (открытия не считаются, кнопки ничего не шлют), `?print=1` — сразу печать. Печать: A4 альбомная, светлый вид, страница на лист. На странице только имя и город клиента. Заголовки: CSP с nonce, `noindex`, `no-store`, запрет фреймов. Неизвестный токен — 404 «Предложение не найдено».
+- `GET /p/:token/img/:imageId` — картинка, только если она есть в снимке этого КП.
+- `POST /p/:token/open` — открытие: `views + 1`, время первого и последнего; первое открытие → уведомление менеджеру. IP и прочее не пишем.
+- `POST /p/:token/action` `{type: 'approve'|'question', message?}` — «Утвердить проект» / «Задать вопрос менеджеру» (вопрос до 1000 символов) → событие и уведомление менеджеру клиента. Не больше 20 действий в час на КП (429).
+
+### Уведомления
+- `GET /api/notifications` → `{items: [{id, type: 'open'|'approve'|'question', text, kpId, clientId, createdAt, read}], unread}` (последние 30, свои).
+- `POST /api/notifications/read` `{ids?}` → `{}` (без `ids` — все).
+
+### Компания (постоянная часть КП)
+- `GET /api/company` → `{company, rev, coverUrl}`; `PUT /api/company` (владелец) `{rev, company}` → то же, 409 при чужой правке.
+- `POST /api/company/cover` (владелец, тело — картинка) / `DELETE /api/company/cover` — фото обложки.
+- `company` = `{name, coverTitle, addresses: [{city, lines}], phone, lead, facts: [{big, text}], boxes: [{title, text}], includes, extra, notIncluded, warrantyBig, warrantyText, terms, payment, fix, steps, coverImageId}`. По умолчанию — факты из `docs/kp-format.md` (гарантия 10 лет, 55 рабочих дней, 60 % / 40 %). Изменения действуют только на новые КП.
+
+### Интерфейс
+- Расчёт: блок «Эскизы и рендеры» (загрузка, «в КП», «Сделать рендер» / «Перегенерировать» с полем «Что поправить»), подтягивание по ссылке, кнопка «Собрать КП». Подсветка: профиль выбирается только у участка (общий «профиль для новых участков» убран; `LightInput.profileId` остаётся в данных для старых расчётов).
+- Клиент: список КП с версиями и открытиями, «Собрать КП» → `/clients/:id/kp/new` (`?calc=`, `?base=` — новая версия).
+- КП `/kp/:id`: «Скопировать ссылку», «Отправить в WhatsApp» (`wa.me/<телефон клиента цифрами>?text=…`), «Отправить в Telegram» (`t.me/share/url?url=…&text=…`), «Открыть как клиент», «Скачать PDF» (печать браузера), «Новая версия», события и версии.
+- Колокольчик в шапке (обновление раз в 30 с); владелец: «Настройки → Компания в КП», должность и телефон в «Пользователях».
