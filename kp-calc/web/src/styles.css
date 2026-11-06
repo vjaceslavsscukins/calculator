@@ -433,3 +433,9 @@ select.cell option{color:#262625;background:#f7f6f3}
 .combo-list li.sel{font-weight:600}
 .combo-list li.none{color:var(--p-muted);cursor:default}
 .add-pick .combo{min-width:240px}
+/* ссылка «другой материал» — только у строки под мышью или в фокусе */
+.calc-table tr .realbtn{opacity:0;transition:opacity .15s}
+.calc-table tr:hover .realbtn,.calc-table tr:focus-within .realbtn,.realbtn:focus-visible{opacity:1}
+.unparsed.top{margin:0 0 10px;border-left:3px solid var(--accent);padding:8px 12px;background:rgba(125,30,43,.06)}
+.link-plain{border:0;background:none;padding:0;color:inherit;text-decoration:underline;cursor:pointer;font:inherit}
+.ok.small{font-size:13px;padding:6px 10px}

@@ -59,6 +59,7 @@ body{font:15px/1.55 var(--f-body);-webkit-print-color-adjust:exact;print-color-a
 .eb{font:500 12px/1 var(--f-body);letter-spacing:.16em;text-transform:uppercase;color:var(--accent);margin-bottom:8px}
 .cover{background:var(--graphite);color:var(--on-dark);min-height:620px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0;padding:0}
 .cover .l{padding:clamp(24px,4vw,52px);display:flex;flex-direction:column;gap:20px}
+.cover.nophoto{grid-template-columns:minmax(0,1fr);min-height:420px}
 .cover .lg{height:46px;width:auto;align-self:flex-start}
 .cover h1{font:400 clamp(30px,4.2vw,56px)/1.08 var(--f-head);text-transform:uppercase;margin:auto 0 0;letter-spacing:.005em}
 .cover h1 i{font-style:normal;color:#b32d47}
@@ -221,7 +222,7 @@ export function renderKpPage(k: KpSnapshot, o: KpPageOptions): string {
   const title = c.coverTitle.replace(/\.$/, '');
   let page = 1;
 
-  const cover = `<section class="page cover" aria-label="Обложка">
+  const cover = `<section class="page cover${c.coverImageId ? '' : ' nophoto'}" aria-label="Обложка">
     <div class="l">
       ${logo()}
       <h1>${esc(title).replace(/ с /, '<br>с ')}<i>.</i></h1>
@@ -231,7 +232,7 @@ export function renderKpPage(k: KpSnapshot, o: KpPageOptions): string {
         ${c.phone ? `<div><b>Телефон</b>${esc(c.phone)}</div>` : ''}
       </div>
     </div>
-    <div class="r">${c.coverImageId ? `<img src="${esc(imgUrl(c.coverImageId))}" alt="Шоурум ${esc(c.name)}">` : '<span>Шоурум Культура Групп</span>'}</div>
+    ${c.coverImageId ? `<div class="r"><img src="${esc(imgUrl(c.coverImageId))}" alt="Шоурум ${esc(c.name)}"></div>` : ''}
   </section>`;
 
   const why = `<section class="page" aria-label="Почему ${esc(c.name)}">
@@ -247,7 +248,8 @@ export function renderKpPage(k: KpSnapshot, o: KpPageOptions): string {
   const sumRows = k.items.map((it) => `<tr><td>${esc(it.title)}</td><td class="n">${rubText(it.price.retail, step)}</td></tr>`).join('')
     + (t.discount > 0 ? `<tr class="disc"><td>Скидка${t.discountPct != null ? ` ${pct(t.discountPct)}` : ''}</td><td class="n">−${rubText(t.discount, step)}</td></tr><tr><td>Мебель со скидкой</td><td class="n">${rubText(t.furniture, step)}</td></tr>` : '')
     + (t.montage > 0 ? `<tr><td>Монтаж</td><td class="n">${rubText(t.montage, step)}</td></tr>` : '')
-    + (t.delivery > 0 ? `<tr><td>Доставка</td><td class="n">${rubText(t.delivery, step)}</td></tr>` : '')
+    // доставку пишем всегда: суммой или «по согласованию», чтобы клиент не решил, что она бесплатная
+    + (t.delivery > 0 ? `<tr><td>Доставка</td><td class="n">${rubText(t.delivery, step)}</td></tr>` : '<tr><td>Доставка</td><td class="n">по согласованию с менеджером</td></tr>')
     + `<tr class="tot"><td>Итого</td><td class="n">${rubText(t.total, step)}</td></tr>`;
   const sum = `<section class="page" aria-label="Стоимость">
     ${head('Стоимость проекта', 'Всё, что входит в это предложение')}

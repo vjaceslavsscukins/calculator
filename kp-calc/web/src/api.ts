@@ -33,6 +33,7 @@ export interface Meta {
   kinds: { id: ProductKind; title: string }[];
   blocks: Record<ProductKind, BlockDef[]>;
   cities: City[];
+  ai?: { render: boolean; text: boolean };
 }
 
 /** Для менеджера сервер вырезает себестоимость, поэтому эти поля необязательны. */

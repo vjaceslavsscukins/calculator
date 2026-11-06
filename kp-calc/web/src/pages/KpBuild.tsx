@@ -156,6 +156,7 @@ export function KpBuildPage() {
               {t.discount > 0 && <div className="trow"><span>Мебель со скидкой</span><b>{rub(t.furniture, roundTo)}</b></div>}
               <div className="trow"><span>Монтаж</span><b>{rub(t.montage, roundTo)}</b></div>
               <div className="trow"><span>Доставка</span><b>{rub(t.delivery, roundTo)}</b></div>
+              {!(t.delivery > 0) && <p className="foot">Доставка 0 ₽ — в КП будет «по согласованию с менеджером». Сумму можно поставить в расчёте.</p>}
               <div className="total"><span>Итого клиенту</span><b>{rub(t.total, roundTo)}</b></div>
             </>
           ) : <p className="foot">Отметьте расчёты — здесь появится итог.</p>}

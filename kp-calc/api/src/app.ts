@@ -10,6 +10,7 @@ import { BLOCKS, KIND_TITLES, applyPro100, compute, discountOverLimit, indexCata
 import type { CalcInput, Catalog, CatalogIndex, ProductKind, Settings } from '../../engine/src/index.ts';
 import { tx } from './db.ts';
 import { registerKp } from './kp.ts';
+import { renderConfigured, textConfigured } from './ai.ts';
 import { registerSpec } from './spec.ts';
 import { registerBoard } from './board.ts';
 import type { KpDeps } from './kp.ts';
@@ -299,6 +300,8 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
     kinds: KINDS.map((id) => ({ id, title: KIND_TITLES[id] })),
     blocks: BLOCKS,
     cities: await cities(),
+    // подключены ли нейросети: без ключа кнопка рендера неактивна, текст «Об изделии» — по шаблону
+    ai: { render: renderConfigured(opts.env ?? process.env), text: textConfigured(opts.env ?? process.env) },
   }));
 
   app.get('/api/settings', async (req) => {

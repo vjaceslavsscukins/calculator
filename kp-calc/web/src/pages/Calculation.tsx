@@ -6,7 +6,7 @@ import {
   api, ApiError, seesCost, STATUS_TITLES,
   type BlockDef, type CalcInput, type Calculation, type CatalogGroupView, type CatalogView, type Pro100Line, type Row, type Status, type View, type ViewRow,
 } from '../api.ts';
-import { pro100Fits } from '../../../engine/src/pro100.ts';
+import { pro100Fits, pro100Unit } from '../../../engine/src/pro100.ts';
 import { ItemCombo, type ComboItem } from '../components/ItemCombo.tsx';
 import { useApp } from '../app.tsx';
 import { ErrorNote } from '../components/Layout.tsx';
@@ -70,6 +70,7 @@ export function CalculationPage() {
   const [saveState, setSaveState] = useState<SaveState>('saved');
   const [saveErr, setSaveErr] = useState<string | null>(null);
   const [savedAt, setSavedAt] = useState<Date | null>(null);
+  const [doneMsg, setDoneMsg] = useState<string | null>(null);
   const [conflict, setConflict] = useState<Conflict | null>(null);
   const [computeErr, setComputeErr] = useState<string | null>(null);
   const [pasteOpen, setPasteOpen] = useState(false);
@@ -192,9 +193,12 @@ export function CalculationPage() {
     save();
   };
 
+  // расчёт и так сохраняется сам через 1,5 с после правки; кнопка отмечает его готовым (статус «Сохранён») и сохраняет сразу
   const saveNow = () => {
     if (doc?.status === 'draft') edit((d) => ({ ...d, status: 'saved' }));
     save();
+    setDoneMsg(doc?.status === 'draft' ? 'Расчёт готов и сохранён — его можно добавить в КП.' : 'Сохранено.');
+    setTimeout(() => setDoneMsg(null), 5000);
   };
 
   const copy = async () => {
@@ -233,8 +237,18 @@ export function CalculationPage() {
   const pill = saveState === 'saving' ? 'сохраняем…'
     : saveState === 'dirty' ? 'есть несохранённые правки'
     : saveState === 'error' ? 'не сохранено'
-    : savedAt ? `сохранено ${time(savedAt)}` : 'сохранено';
+    : savedAt ? `сохранено автоматически ${time(savedAt)}` : 'сохранено автоматически';
   const cols = boss ? 6 : 4;
+  // «Проверьте»: строки без материала — одной строкой с названиями, остальные предупреждения без повторов
+  const NO_ITEM = 'Не выбрана позиция прайса';
+  const rowName = (r: Row) => r.pro100 ?? r.own?.name ?? r.web?.name ?? 'строка';
+  const noItem = doc.input.rows.filter((r) => viewById.get(r.id)?.warnings?.includes(NO_ITEM));
+  const otherWarn = [...new Set((view?.warnings ?? []).filter((w) => !w.includes(NO_ITEM)))];
+  const goRow = (id: string) => {
+    const el = document.getElementById(`row-${id}`);
+    el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    (el?.querySelector('input,select') as HTMLElement | null)?.focus({ preventScroll: true });
+  };
   const lightRows = view?.light?.rows ?? [];
 
   return (
@@ -277,6 +291,11 @@ export function CalculationPage() {
           <section className="panel" aria-label="Расчёт">
             <h2>Материалы и фурнитура</h2>
             <p className="note">Количество пришло из PRO100, его можно исправить. В каждом блоке — строка из прайса или своя; «+ вид» добавляет ещё одну позицию того же типа.</p>
+            {doc.unparsed.length > 0 && (
+              <div className="unparsed top" role="status">
+                <b>Не разобрано из PRO100 ({doc.unparsed.length}):</b> {doc.unparsed.map((u) => u.name).join(', ')} — решите внизу таблицы: «своей строкой» или «не учитывать».
+              </div>
+            )}
             <table className="calc-table">
               <colgroup>
                 <col />
@@ -375,7 +394,7 @@ export function CalculationPage() {
           {boss && view?.prod != null && <div className="trow"><span>Производственная</span><b>{rub(view.prod, roundTo)}</b></div>}
           <div className="trow"><span>Розница</span><b>{rub(view?.retail, roundTo)}</b></div>
           <div className="disc">
-            <label htmlFor="disc">Скидка, %{discMax < 100 && <em>до {num(discMax)} %</em>}</label>
+            <label htmlFor="disc">Скидка, %{discMax < 100 && <em className="hint">не больше {num(discMax)} %</em>}</label>
             <NumInput id="disc" digits={2} value={doc.input.discountPct} onValue={(n) => editInput((i) => ({ ...i, discountPct: Math.min(100, Math.max(0, n)) }))} />
           </div>
           {doc.input.discountPct > discMax && <div className="trow small"><span className="mark">Скидка больше {num(discMax)} % — {user?.role === 'manager' ? 'поставит руководитель' : 'только владелец'}. Расчёт не сохранится.</span></div>}
@@ -390,7 +409,9 @@ export function CalculationPage() {
           </div>
           <div className="total"><span>Итого клиенту</span><b>{rub(view?.total, roundTo)}</b></div>
           {boss && view?.margin != null && <div className="trow"><span>Маржа<em>руководитель</em></span><b>{rub(view.margin, roundTo)}</b></div>}
-          <button className="btn solid" type="button" onClick={saveNow} disabled={saveState === 'saving' || !!conflict}>Сохранить расчёт</button>
+          <button className="btn solid" type="button" onClick={saveNow} disabled={saveState === 'saving' || !!conflict}
+            title="Правки сохраняются сами. Кнопка отмечает расчёт готовым">{doc.status === 'draft' ? 'Расчёт готов' : saveState === 'dirty' ? 'Сохранить сейчас' : 'Сохранено ✓'}</button>
+          {doneMsg && <div className="ok small" role="status">{doneMsg}</div>}
           <button className="btn" type="button" onClick={async () => {
             if (verRef.current !== savedVerRef.current) await save();
             nav(`/clients/${calc.clientId}/kp/new?calc=${calc.id}`);
@@ -398,10 +419,13 @@ export function CalculationPage() {
           {boss && settings && 'kProd' in settings && settings.kProd != null && (
             <p className="foot">Наценки: производство ×{num(settings.kProd)}, магазин ×{num(settings.kShop ?? 0)}, одни на всё.{user?.role === 'owner' && <> <Link to="/settings/coefficients">Изменить</Link></>}</p>
           )}
-          {!!view?.warnings.length && (
+          {(noItem.length > 0 || otherWarn.length > 0) && (
             <div className="warnlist">
               <span>Проверьте</span>
-              {view.warnings.map((w, k) => <div key={k}>{w}</div>)}
+              {noItem.length > 0 && <div>Не выбран материал ({noItem.length}): {noItem.map((r, k) => (
+                <span key={r.id}>{k > 0 && ', '}<button className="link-plain" type="button" onClick={() => goRow(r.id)}>{rowName(r)}</button></span>
+              ))}</div>}
+              {otherWarn.map((w, k) => <div key={k}>{w}</div>)}
             </div>
           )}
         </aside>
@@ -524,14 +548,15 @@ function CalcRow({ row, vr, groups, boss, roundTo, links, onChange, onDup, onRem
             <button className="x" type="button" aria-label="Убрать реальный материал" onClick={() => onChange({ realMaterial: null })}>×</button>
           </span>
         ) : (
-          <button className="link" type="button" onClick={() => onChange({ realMaterial: '' })}>другой материал</button>
+          <button className="link realbtn" type="button" title="Если нужного материала нет в прайсе — впишите, что писать в КП и спецификации" onClick={() => onChange({ realMaterial: '' })}>другой материал</button>
         )}
       </>
     );
-    unit = <span className="unit-t">{vr?.unit ?? ''}</span>;
+    // пока позиция не выбрана — единица, в которой PRO100 дал количество (м², м.п., шт)
+    unit = <span className="unit-t">{!row.itemId && !row.linkTo && row.pro100 ? pro100Unit(row.pro100) : vr?.unit ?? ''}</span>;
   }
   return (
-    <tr className={warn.length ? 'bad' : undefined}>
+    <tr id={`row-${row.id}`} className={warn.length ? 'bad' : undefined}>
       <td>
         {label && <div className="rowlabel">{label}</div>}{mat}
         {boss && vr?.costNote && <span className="sub">себестоимость м²: {vr.costNote}</span>}
@@ -679,7 +704,8 @@ function LightEditor({ doc, view, settings, onChange }: {
           <input type="checkbox" checked={light.enabled} onChange={(e) => onChange({
             ...light, enabled: e.target.checked,
             profileId: light.profileId || profiles[0]?.id || '',
-            segments: e.target.checked && !light.segments.length ? [{ name: 'Под верхними шкафами', lengthM: 0, switchId: firstSwitch, profileId: firstProfile }] : light.segments,
+            // первый участок — под верхними шкафами, длина по столешнице из PRO100
+            segments: e.target.checked && !light.segments.length ? [{ name: 'Под верхними шкафами', lengthM: doc.input.rows.find((r) => r.pro100 === 'Столешница')?.qty ?? 0, switchId: firstSwitch, profileId: firstProfile }] : light.segments,
           })} />
           Есть подсветка
         </label>

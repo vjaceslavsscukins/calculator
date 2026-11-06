@@ -53,6 +53,14 @@ export const PRO100_GROUPS: Record<string, { categories?: string[]; groups?: str
   'Комплект_крабов': { groups: ['навес'] },
 };
 
+/** Единица строки PRO100 (как её даёт PRO100) — показываем, пока позиция прайса не выбрана. */
+export function pro100Unit(name: string | null | undefined): string {
+  if (!name) return '';
+  if (/^(ЛДСП_|Фасад_|ХДФ)/.test(name)) return 'м²';
+  if (/^(Столешница|Фартук|Плинтус|Цоколь|Профиль_GOLA)/.test(name)) return 'м.п.';
+  return 'шт';
+}
+
 /** Подходит ли группа прайса строке PRO100. Неизвестная строка — подходит любая. */
 export function pro100Fits(pro100: string | null | undefined, g: { category: string; name: string }): boolean {
   const rule = pro100 ? PRO100_GROUPS[pro100] : undefined;

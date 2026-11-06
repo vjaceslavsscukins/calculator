@@ -2,12 +2,15 @@
 import { useEffect, useRef, useState } from 'react';
 import { api, type ImageInfo } from '../api.ts';
 import { ErrorNote } from './Layout.tsx';
+import { useApp } from '../app.tsx';
 import { dateTime, errText } from '../format.ts';
 
 const TYPES = ['image/png', 'image/jpeg', 'image/webp'];
 const MAX = 10 * 1024 * 1024;
 
 export function ImagesPanel({ calcId }: { calcId: string }) {
+  const { meta } = useApp();
+  const renderOff = meta?.ai?.render === false;
   const [images, setImages] = useState<ImageInfo[] | null>(null);
   const [renderEnabled, setRenderEnabled] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -104,10 +107,12 @@ export function ImagesPanel({ calcId }: { calcId: string }) {
           <label className="wide">Что поправить <em>необязательно</em>
             <input className="in" value={comment} onChange={(e) => setComment(e.target.value)} placeholder="Например: фасады темнее, убрать окно" maxLength={1000} />
           </label>
-          <button className="btn small dark" type="button" onClick={render} disabled={busy === 'render'}>
+          <button className="btn small dark" type="button" onClick={render} disabled={busy === 'render' || renderOff}
+            title={renderOff ? 'Нейросеть для рендера ещё не подключена (ключ в настройках сервера)' : undefined}>
             {busy === 'render' ? 'Рисуем… до 2 минут' : prevId || comment.trim() ? 'Перегенерировать' : 'Сделать рендер'}
           </button>
         </div>
+        {renderOff && <p className="foot">Рендер появится, когда подключим нейросеть. Эскиз уже можно отметить «в КП».</p>}
         {renderMsg && <div className="render-msg" role="status">{renderMsg}</div>}
       </div>
     </section>
