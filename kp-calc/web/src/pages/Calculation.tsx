@@ -7,6 +7,7 @@ import {
   type BlockDef, type CalcInput, type Calculation, type CatalogGroupView, type CatalogView, type Pro100Line, type Row, type Status, type View, type ViewRow,
 } from '../api.ts';
 import { pro100Fits } from '../../../engine/src/pro100.ts';
+import { ItemCombo, type ComboItem } from '../components/ItemCombo.tsx';
 import { useApp } from '../app.tsx';
 import { ErrorNote } from '../components/Layout.tsx';
 import { NumInput } from '../components/NumInput.tsx';
@@ -426,6 +427,8 @@ function isBackWall(r: Row, catalog: CatalogView | null): boolean {
 }
 
 const LINK_GROUP = '__link';
+const toCombo = (items: CatalogGroupView['items'], g: CatalogGroupView | undefined): ComboItem[] =>
+  g ? items.map((it) => ({ id: it.id, name: it.name, group: g.name, status: it.status ?? undefined })) : [];
 
 /** Группы прайса для левого списка; если в блоке несколько категорий (ЛДСП корпус, Фасады) — разделены заголовками. */
 function GroupOptions({ groups }: { groups: CatalogGroupView[] }) {
@@ -467,15 +470,18 @@ function ItemSelect({ value, groups, onChange, label, links }: {
           <GroupOptions groups={shown} />
         </select>
       )}
-      <select className="in" aria-label={label} value={inGroup ? value ?? '' : ''} disabled={!gid} onChange={(e) => e.target.value && choose(e.target.value)}>
-        {!inGroup && <option value="">{gid ? '— выберите артикул —' : '← сначала группа'}</option>}
-        {gid === LINK_GROUP && <>
+      {gid === LINK_GROUP ? (
+        <select className="in" aria-label={label} value={inGroup ? value ?? '' : ''} onChange={(e) => e.target.value && choose(e.target.value)}>
+          {!inGroup && <option value="">— выберите строку ЛДСП —</option>}
           {lostLink && <option value={value!}>Строка ЛДСП не найдена</option>}
           {links?.map((l) => <option key={l.id} value={LINK + l.id}>{l.label}</option>)}
           {!links?.length && <option value="" disabled>Сначала выберите ЛДСП корпуса в расчёте</option>}
-        </>}
-        {items.map((it) => <option key={it.id} value={it.id}>{it.name}{it.status ? ` (${it.status})` : ''}</option>)}
-      </select>
+        </select>
+      ) : (
+        <ItemCombo value={inGroup ? value : null} label={label} onPick={choose}
+          groupItems={toCombo(items, g)} allItems={shown.flatMap((x) => toCombo(x.items, x))}
+          placeholder={gid ? 'артикул или поиск…' : 'поиск по артикулу…'} />
+      )}
     </div>
   );
 }
@@ -636,16 +642,10 @@ function AddRow({ block, groups, cols, onAdd }: { block: BlockDef; groups: Catal
               <option value="">+ добавить из прайса: группа…</option>
               <GroupOptions groups={shown} />
             </select>
-            {g && (
-              <select className="in" aria-label={`Добавить позицию: ${block.title}`} value="" onChange={(e) => {
-                if (!e.target.value) return;
-                onAdd({ id: newId(), block: block.id, pro100: null, qtyPro100: null, qty: 1, itemId: e.target.value });
-                setGid('');
-              }}>
-                <option value="">— артикул —</option>
-                {g.items.filter((it) => !it.status).map((it) => <option key={it.id} value={it.id}>{it.name}</option>)}
-              </select>
-            )}
+            <ItemCombo value={null} label={`Добавить позицию: ${block.title}`}
+              groupItems={g ? toCombo(g.items, g) : []} allItems={shown.flatMap((x) => toCombo(x.items, x))}
+              placeholder={g ? 'артикул или поиск…' : 'или найти по артикулу…'}
+              onPick={(id) => { onAdd({ id: newId(), block: block.id, pro100: null, qtyPro100: null, qty: 1, itemId: id }); setGid(''); }} />
           </span>
         )}
         <button className="link" type="button" onClick={() => onAdd({ id: newId(), block: block.id, pro100: null, qtyPro100: null, qty: 1, own: { name: '', unit: 'шт', price: 0 } })}>+ своя строка</button>
