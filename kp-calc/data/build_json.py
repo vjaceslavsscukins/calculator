@@ -22,7 +22,7 @@ for cat in ['ЛДСП корпус','Фасады','Столешницы','Ст�
         key = (cat, grp)
         if key not in idx:
             idx[key] = {'id': f'g{len(groups)+1}', 'category': cat, 'name': grp,
-                        'unit': 'м²' if rule=='sheet' else ('шт' if cat=='Стеновые панели' else unit),
+                        'unit': 'м²' if rule=='sheet' else ('м.п.' if cat in ('Стеновые панели','Плинтус') else unit),
                         'rule': rule, 'items': []}
             if rule == 'sheet': idx[key]['sheetArea'] = SHEET.get(grp, 5.796)
             groups.append(idx[key])
