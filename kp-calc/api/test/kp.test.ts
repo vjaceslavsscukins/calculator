@@ -307,7 +307,8 @@ describe('КП: картинки, снимок, страница по ссылк
     assert.match(html, /Анна Смирнова/);
     assert.match(html, /Кухня с островом/);
     assert.match(html, /\+7 900 111-22-33/, 'телефон менеджера есть');
-    assert.ok(!html.includes('916'), 'телефона клиента нет');
+    // телефон клиента целиком в любом написании (цифры «916» сами по себе бывают в случайных номерах картинок)
+    assert.ok(!/555[\s-]?44[\s-]?33|9165554433/.test(html), 'телефона клиента нет');
     assert.ok(!/себестоим|unitCost|costByGroup|"cost"|"margin"|маржа|kProd|наценк/i.test(html), 'себестоимости нет');
     assert.match(html, /data-kp="light"/);
     assert.match((await guest.get(`/p/${token}?theme=dark`)).raw, /data-kp="dark"/);

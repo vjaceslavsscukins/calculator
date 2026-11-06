@@ -13,6 +13,7 @@ import { registerKp } from './kp.ts';
 import { renderConfigured, textConfigured } from './ai.ts';
 import { registerSpec } from './spec.ts';
 import { registerBoard } from './board.ts';
+import { registerPriceImport } from './priceimport.ts';
 import type { KpDeps } from './kp.ts';
 import { hashPassword, newToken, tokenHash, verifyPassword } from './security.ts';
 import {
@@ -691,6 +692,8 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
   await registerSpec(app, { pool, pricing, me, visibleCalc });
   // ========== Реестр КП и приборная панель ==========
   await registerBoard(app, { pool, me, need, scope });
+  // ========== Загрузка прайса файлом ==========
+  await registerPriceImport(app, { pool, need, pricing, audit, bumpCatalog });
 
   // ========== Интерфейс (SPA) ==========
   const spa = opts.production && opts.webDist && existsSync(opts.webDist);
