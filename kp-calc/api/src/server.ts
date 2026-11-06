@@ -2,6 +2,7 @@
 import { fileURLToPath } from 'node:url';
 import { buildApp } from './app.ts';
 import { createPool, migrate, seed } from './db.ts';
+import { startReminders } from './reminders.ts';
 
 const env = process.env;
 // Подключение к базе: либо одной строкой DATABASE_URL, либо по частям DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME —
@@ -44,9 +45,11 @@ const app = await buildApp({
 
 const port = Number(env.PORT) || 8787;
 await app.listen({ port, host: env.HOST || '0.0.0.0' });
+const stopReminders = startReminders(pool, (m) => console.log(m));
 
 for (const sig of ['SIGTERM', 'SIGINT'] as const) {
   process.once(sig, async () => {
+    stopReminders();
     await app.close().catch(() => {});
     await pool.end().catch(() => {});
     process.exit(0);
