@@ -4,6 +4,7 @@
 import type { CalcInput, Settings } from './types.ts';
 import type { CatalogIndex } from './calc.ts';
 import { isLdspRow } from './calc.ts';
+import { pro100Category } from './pro100.ts';
 
 export interface SpecField { label: string; value: string }
 export interface SpecSection { title: string; fields: SpecField[] }
@@ -58,7 +59,9 @@ export function specDraft(input: CalcInput, idx: CatalogIndex, s: Settings, o: {
   const uniqJoin = (xs: string[]) => [...new Set(xs.filter(Boolean))].join('; ');
   const cat = (r: CalcInput['rows'][number]) => idx.item(r.itemId)?.group;
   const inBlocks = (blocks: string[]) => rows.filter((r) => blocks.includes(r.block) && !r.own && !r.web);
-  const ofCategory = (list: typeof rows, c: string) => uniqJoin(list.filter((r) => !r.linkTo && cat(r)?.category === c).map((r) => nameOf(r.id, true)));
+  // строка PRO100 «ЛДСП_*» — всегда корпус, «Фасад_*» — фасад, даже если выбрана группа другой категории
+  const catOf = (r: CalcInput['rows'][number]) => pro100Category(r.pro100) ?? cat(r)?.category;
+  const ofCategory = (list: typeof rows, c: string) => uniqJoin(list.filter((r) => !r.linkTo && catOf(r) === c).map((r) => nameOf(r.id, true)));
   const backWall = (list: typeof rows) => uniqJoin(list.map((r) => {
     if (r.linkTo) {
       const src = input.rows.find((x) => x.id === r.linkTo);
@@ -70,6 +73,8 @@ export function specDraft(input: CalcInput, idx: CatalogIndex, s: Settings, o: {
   const hwOf = (test: (g: string) => boolean) => hwRows.filter((r) => test(cat(r)?.name.toLowerCase() ?? ''));
   const handles = uniqJoin(hwOf((g) => g.includes('ручк') || g.includes('gola')).map((r) => nameOf(r.id, false)));
 
+  // задняя стенка из PRO100 приходит одной строкой (в нижний блок) — если у части своей нет, берём общую
+  const allBack = backWall(rows.filter((r) => !r.own && !r.web));
   const part = (title: string, blocks: string[]): SpecSection => {
     const list = inBlocks(blocks);
     return {
@@ -80,7 +85,7 @@ export function specDraft(input: CalcInput, idx: CatalogIndex, s: Settings, o: {
         { label: 'Обратная сторона фасада', value: '' },
         { label: 'Направление текстуры', value: '' },
         { label: 'Корпус (цвет, артикул, производитель)', value: ofCategory(list, 'ЛДСП корпус') },
-        { label: 'Задняя стенка (ХДФ / ЛДСП, цвет)', value: backWall(list) },
+        { label: 'Задняя стенка (ХДФ / ЛДСП, цвет)', value: backWall(list) || allBack },
         { label: 'Ручки (тип, количество, цвет)', value: handles },
       ],
     };

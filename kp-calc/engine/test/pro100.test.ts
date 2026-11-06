@@ -57,3 +57,18 @@ test('мелкий крепёж (Евровинт, Ножка, Саморез…
   assert.equal(isIgnoredPro100('Ручка_низ'), false);
   assert.equal(isIgnoredPro100(' Евровинт 7x50 '), true);
 });
+
+test('группы для строки PRO100: петли — только петли, выкатной механизм — ящики, ЛДСП — корпус, неизвестная — любая', async () => {
+  const { pro100Fits } = await import('../src/index.ts');
+  const g = (category: string, name: string) => ({ category, name });
+  assert.equal(pro100Fits('Петли', g('Фурнитура', 'Петли')), true);
+  assert.equal(pro100Fits('Петли', g('Фурнитура', 'Подъёмники')), false);
+  assert.equal(pro100Fits('Выкатной_механизм', g('Фурнитура', 'Ящики и направляющие')), true);
+  assert.equal(pro100Fits('Выкатной_механизм', g('Фурнитура', 'Петли')), false);
+  assert.equal(pro100Fits('ЛДСП_верх', g('ЛДСП корпус', 'ЛДСП Egger')), true);
+  assert.equal(pro100Fits('ЛДСП_верх', g('Фасады', 'ЛДСП Egger (фасад)')), false);
+  assert.equal(pro100Fits('Фасад_низ', g('Фасады', 'AGT Supramat')), true);
+  assert.equal(pro100Fits('ХДФ', g('Фурнитура', 'ХДФ (задняя стенка)')), true);
+  assert.equal(pro100Fits('Плинтус', g('Плинтус', 'Плинтус')), true);
+  assert.equal(pro100Fits(null, g('Фурнитура', 'Петли')), true);
+});

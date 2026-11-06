@@ -422,3 +422,4 @@ select.cell option{color:#262625;background:#f7f6f3}
 .seg.big button{padding:9px 12px}
 .hidden{display:none!important}
 .docs-list a small{display:block;font-size:12px;color:var(--p-muted)}
+.group-fixed{display:flex;align-items:center;background:transparent;border-style:dashed;color:var(--p-muted);overflow:hidden;white-space:nowrap;text-overflow:ellipsis}

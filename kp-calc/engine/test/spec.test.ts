@@ -68,3 +68,17 @@ test('обязательные поля шапки', () => {
   assert.deepEqual(specMissing({ contractNo: 'К-1', clientName: ' ' }), ['Дата договора', 'ФИО клиента', 'Адрес объекта']);
   assert.deepEqual(specMissing({ contractNo: 'К-1', contractDate: '2026-10-29', clientName: 'Анна', address: 'Москва' }), []);
 });
+
+test('строка PRO100 «ЛДСП_верх» — корпус, даже если выбран ЛДСП из группы фасадов; задняя стенка из PRO100 — в обе части', () => {
+  const cat2: Catalog = { groups: [...catalog.groups, { id: 'gf', category: 'Фасады', name: 'ЛДСП Egger (фасад)', unit: 'м²', rule: 'sheet', items: [{ id: 'wf', name: 'W960 Белый', price: 5100 }] }] };
+  const idx2 = indexCatalog(cat2);
+  const d = specDraft(input([
+    { id: 'a', block: 'up', pro100: 'ЛДСП_верх', qty: 3, itemId: 'wf' },
+    { id: 'b', block: 'low', pro100: 'ЛДСП_низ', qty: 4, itemId: 'w' },
+    { id: 'h', block: 'low', pro100: 'ХДФ', qty: 4, itemId: 'hdf' },
+  ]), idx2, S, { title: 'Кухня' });
+  assert.equal(field(d, 'Верхние модули', 'Корпус'), 'ЛДСП Egger (фасад), W960 Белый');
+  assert.equal(field(d, 'Верхние модули', 'Фасад'), '');
+  assert.equal(field(d, 'Верхние модули', 'Задняя стенка'), 'ХДФ белый');
+  assert.equal(field(d, 'Нижние модули', 'Задняя стенка'), 'ХДФ белый');
+});

@@ -3,6 +3,7 @@
 import type { CalcInput, CalcResult, Settings } from './types.ts';
 import type { CatalogIndex } from './calc.ts';
 import { isLdspRow } from './calc.ts';
+import { pro100Category } from './pro100.ts';
 
 /** Цена изделия в КП: розница («было»), скидка, мебель со скидкой («стало»), монтаж и доставка отдельно. */
 export interface KpItemPrice {
@@ -120,7 +121,7 @@ export function kpMaterials(input: CalcInput, idx: CatalogIndex, s: Settings): K
     }
     const f = idx.item(r.itemId);
     if (!f) continue;
-    const role = roleOf(f.group.category, f.group.name, r.block, input.kind);
+    const role = roleOf(pro100Category(r.pro100) ?? f.group.category, f.group.name, r.block, input.kind);
     if (!role) continue;
     const value = valueOf(r.id);
     if (!value) continue;

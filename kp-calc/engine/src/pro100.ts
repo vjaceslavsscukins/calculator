@@ -28,6 +28,48 @@ export const PRO100_MAP: Record<string, { kitchen: string; cabinet: string }> = 
 };
 
 /**
+ * Какие группы прайса подходят строке PRO100: категория целиком или группы фурнитуры по началу названия.
+ * Так в выпадающем списке у «Петли» — только петли, у «ЛДСП_верх» — только ЛДСП корпуса, а не всё подряд.
+ */
+export const PRO100_GROUPS: Record<string, { categories?: string[]; groups?: string[] }> = {
+  'ЛДСП_верх': { categories: ['ЛДСП корпус'] },
+  'ЛДСП_низ': { categories: ['ЛДСП корпус'] },
+  'Фасад_верх': { categories: ['Фасады'] },
+  'Фасад_низ': { categories: ['Фасады'] },
+  'ХДФ': { groups: ['хдф'] },
+  'Столешница': { categories: ['Столешницы'] },
+  'Фартук': { categories: ['Стеновые панели'] },
+  'Плинтус': { categories: ['Плинтус'], groups: ['плинтус'] },
+  'Петли': { groups: ['петл'] },
+  'Подъемный_механизм': { groups: ['подъём', 'подъем'] },
+  'Выкатной_механизм': { groups: ['ящик', 'направляющ'] },
+  'Цоколь': { groups: ['цоколь'] },
+  'Профиль_GOLA_G12': { groups: ['профиль gola', 'gola'] },
+  'Профиль_GOLA_G13': { groups: ['профиль gola', 'gola'] },
+  'Ручка_верх': { groups: ['ручк'] },
+  'Ручка_низ': { groups: ['ручк'] },
+  'Бутылочница': { groups: ['бутылочниц'] },
+  'Сушка': { groups: ['сушк'] },
+  'Комплект_крабов': { groups: ['навес'] },
+};
+
+/** Подходит ли группа прайса строке PRO100. Неизвестная строка — подходит любая. */
+export function pro100Fits(pro100: string | null | undefined, g: { category: string; name: string }): boolean {
+  const rule = pro100 ? PRO100_GROUPS[pro100] : undefined;
+  if (!rule) return true;
+  const name = g.name.toLowerCase();
+  return !!rule.categories?.includes(g.category) || (g.category === 'Фурнитура' && !!rule.groups?.some((p) => name.startsWith(p)));
+}
+
+/** Категория строки для КП и спецификации: по строке PRO100 (ЛДСП_* — корпус, Фасад_* — фасады), иначе по группе прайса. */
+export function pro100Category(pro100: string | null | undefined): string | null {
+  if (!pro100) return null;
+  if (pro100.startsWith('ЛДСП_')) return 'ЛДСП корпус';
+  if (pro100.startsWith('Фасад_')) return 'Фасады';
+  return null;
+}
+
+/**
  * Мелкий крепёж из PRO100 в КП не показываем: такие строки молча пропускаются (ни в строки, ни в «Не разобрано»).
  * Сравнение по началу названия без учёта регистра, ё/е, пробелов и подчёркиваний («Ножка_регулируемая» → «Ножка»).
  */

@@ -6,6 +6,7 @@ import {
   api, ApiError, seesCost, STATUS_TITLES,
   type BlockDef, type CalcInput, type Calculation, type CatalogGroupView, type CatalogView, type Pro100Line, type Row, type Status, type View, type ViewRow,
 } from '../api.ts';
+import { pro100Fits } from '../../../engine/src/pro100.ts';
 import { useApp } from '../app.tsx';
 import { ErrorNote } from '../components/Layout.tsx';
 import { NumInput } from '../components/NumInput.tsx';
@@ -38,6 +39,13 @@ export interface LdspLink { id: string; label: string }
 
 /** Ссылка в выпадающем списке: «link:<id строки>». */
 const LINK = 'link:';
+
+/** Группы для строки: у строки из PRO100 — только подходящие ей (у «Петли» — петли), иначе все группы блока. */
+function groupsForRow(r: Row, allowed: CatalogGroupView[]): CatalogGroupView[] {
+  if (!r.pro100) return allowed;
+  const fit = allowed.filter((g) => pro100Fits(r.pro100, g));
+  return fit.length ? fit : allowed;
+}
 
 /** Группы прайса, из которых можно выбирать в блоке (BLOCKS движка: категории и отдельные группы фурнитуры). */
 function groupsFor(block: BlockDef | undefined, catalog: CatalogView | null): CatalogGroupView[] {
@@ -308,7 +316,7 @@ export function CalculationPage() {
                   }
                   return [head,
                     ...rows.map((r) => (
-                      <CalcRow key={r.id} row={r} vr={viewById.get(r.id)} groups={allowed.length ? allowed : catalog?.groups ?? []} boss={boss} roundTo={roundTo}
+                      <CalcRow key={r.id} row={r} vr={viewById.get(r.id)} groups={groupsForRow(r, allowed.length ? allowed : catalog?.groups ?? [])} boss={boss} roundTo={roundTo}
                         links={isBackWall(r, catalog) ? ldspLinks.filter((l) => l.id !== r.id) : null}
                         onChange={(p) => editRow(r.id, p)}
                         onDup={() => editInput((i) => {
@@ -445,12 +453,17 @@ function ItemSelect({ value, groups, onChange, label, links }: {
   const choose = (v: string) => { setPick(''); onChange(v); };
   return (
     <div className="pick2">
-      <select className="in" aria-label={`${label}: группа`} value={gid} onChange={(e) => setPick(e.target.value)}>
-        {!gid && <option value="">— группа —</option>}
-        {value && !isLink && !curGroup && !pick && <option value="">Позиция не найдена в прайсе</option>}
-        {links && <option value={LINK_GROUP}>В цвет корпуса</option>}
-        <GroupOptions groups={shown} />
-      </select>
+      {only && (!value || curGroup) ? (
+        // группа одна (например, у «Петли» из PRO100) — выбирать нечего, показываем её названием
+        <span className="in group-fixed" title="Группа прайса для этой строки">{shown[0].name}</span>
+      ) : (
+        <select className="in" aria-label={`${label}: группа`} value={gid} onChange={(e) => setPick(e.target.value)}>
+          {!gid && <option value="">— группа —</option>}
+          {value && !isLink && !curGroup && !pick && <option value="">Позиция не найдена в прайсе</option>}
+          {links && <option value={LINK_GROUP}>В цвет корпуса</option>}
+          <GroupOptions groups={shown} />
+        </select>
+      )}
       <select className="in" aria-label={label} value={inGroup ? value ?? '' : ''} disabled={!gid} onChange={(e) => e.target.value && choose(e.target.value)}>
         {!inGroup && <option value="">{gid ? '— выберите артикул —' : '← сначала группа'}</option>}
         {gid === LINK_GROUP && <>
