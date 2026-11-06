@@ -233,7 +233,7 @@ describe('сервер калькулятора КП', { skip: SKIP }, () => {
     assertNoCost(cat, 'прайс');
     const s = (await m1.get('/api/settings')).body;
     assertNoCost(s, 'настройки');
-    assert.deepEqual(Object.keys(s).sort(), ['deliveryDefaultRub', 'light', 'montagePct', 'roundTo']);
+    assert.deepEqual(Object.keys(s).sort(), ['deliveryDefaultRub', 'discountMaxManager', 'light', 'montagePct', 'roundTo']);
     assert.equal(s.light.switches[0].id, 'none');
     // pro100 и реестр — тоже без цен
     assertNoCost((await m1.post('/api/pro100/parse', { kind: 'kitchen', text: 'Петли 4 шт' })).body, 'pro100');
@@ -342,7 +342,7 @@ describe('сервер калькулятора КП', { skip: SKIP }, () => {
         { name: 'Под верхними', lengthM: 3, switchId: 'wave', profileId: 'surface' },
         { name: 'Витрина', lengthM: 1, switchId: 'none' },
       ] },
-      discountPct: 10,
+      discountPct: 5,
       deliveryRub: 5000,
     };
     const expected = JSON.parse(JSON.stringify(compute(input, catalogJson, DEFAULT_SETTINGS)));

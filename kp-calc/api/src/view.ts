@@ -129,6 +129,7 @@ export function settingsFor(role: Role, s: Settings, rev: number): unknown {
   return {
     montagePct: s.montagePct,
     deliveryDefaultRub: s.deliveryDefaultRub,
+    discountMaxManager: s.discountMaxManager,
     roundTo: s.roundTo,
     light: {
       tape: { name: s.light.tape.name },
@@ -173,6 +174,8 @@ export function cleanSettings(raw: any): Settings {
     ldspSheetArea: pos(raw.ldspSheetArea, 'площадь листа ЛДСП'),
     montagePct: pos(raw.montagePct, 'монтаж, %', true),
     deliveryDefaultRub: pos(raw.deliveryDefaultRub, 'доставка по умолчанию', true),
+    discountMaxManager: raw.discountMaxManager === undefined ? undefined : Math.min(100, pos(raw.discountMaxManager, 'скидка менеджера, %', true)),
+    discountMaxHead: raw.discountMaxHead === undefined ? undefined : Math.min(100, pos(raw.discountMaxHead, 'скидка руководителя, %', true)),
     lightReserve: pos(raw.lightReserve, 'запас мощности', true),
     roundTo: pos(raw.roundTo, 'шаг округления'),
     renderPrompt: str(raw.renderPrompt, 4000).trim(),

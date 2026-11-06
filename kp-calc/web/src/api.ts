@@ -111,6 +111,9 @@ export interface SettingsPublic {
   /** Доставка по умолчанию, ₽. */
   deliveryDefaultRub: number;
   roundTo: number;
+  /** Лимит скидки менеджера, %; руководителю приходит ещё discountMaxHead. */
+  discountMaxManager?: number;
+  discountMaxHead?: number;
   kProd?: number;
   kShop?: number;
   light: {

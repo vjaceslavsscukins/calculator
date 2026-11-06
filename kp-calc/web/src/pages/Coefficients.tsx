@@ -67,6 +67,8 @@ export function CoefficientsPage() {
             {field('Площадь листа ЛДСП, м²', n(s.ldspSheetArea, (v) => set({ ldspSheetArea: v })))}
             {field('Монтаж, % от розницы', n(s.montagePct, (v) => set({ montagePct: Math.max(0, v) }), 2))}
             {field('Доставка по умолчанию, ₽', n(s.deliveryDefaultRub, (v) => set({ deliveryDefaultRub: Math.max(0, v) }), 0))}
+            {field('Скидка менеджера — не больше, %', n(s.discountMaxManager, (v) => set({ discountMaxManager: Math.min(100, Math.max(0, v)) }), 1))}
+            {field('Скидка руководителя — не больше, %', n(s.discountMaxHead, (v) => set({ discountMaxHead: Math.min(100, Math.max(0, v)) }), 1))}
             {field('Запас мощности подсветки, %', <NumInput digits={1} value={Math.round(s.lightReserve * 1000) / 10} onValue={(v) => set({ lightReserve: v / 100 })} />)}
             {field('Округление сумм при выводе, ₽', n(s.roundTo, (v) => set({ roundTo: Math.max(1, Math.round(v)) }), 0))}
           </div>

@@ -58,6 +58,8 @@ export function CalculationPage() {
   const nav = useNavigate();
   const { user, meta, settings, roundTo } = useApp();
   const boss = seesCost(user);
+  // лимит скидки роли (сервер проверяет то же): менеджер — до 5 %, руководитель — до 15 %, владелец — любая
+  const discMax = user?.role === 'owner' ? 100 : (user?.role === 'head' ? settings?.discountMaxHead : settings?.discountMaxManager) ?? 100;
 
   const [calc, setCalc] = useState<Calculation | null>(null);
   const [doc, setDoc] = useState<Doc | null>(null);
@@ -372,9 +374,10 @@ export function CalculationPage() {
           {boss && view?.prod != null && <div className="trow"><span>Производственная</span><b>{rub(view.prod, roundTo)}</b></div>}
           <div className="trow"><span>Розница</span><b>{rub(view?.retail, roundTo)}</b></div>
           <div className="disc">
-            <label htmlFor="disc">Скидка, %</label>
+            <label htmlFor="disc">Скидка, %{discMax < 100 && <em>до {num(discMax)} %</em>}</label>
             <NumInput id="disc" digits={2} value={doc.input.discountPct} onValue={(n) => editInput((i) => ({ ...i, discountPct: Math.min(100, Math.max(0, n)) }))} />
           </div>
+          {doc.input.discountPct > discMax && <div className="trow small"><span className="mark">Скидка больше {num(discMax)} % — {user?.role === 'manager' ? 'поставит руководитель' : 'только владелец'}. Расчёт не сохранится.</span></div>}
           {!!view?.discount && <div className="trow small"><span>Скидка</span><b>−{rub(view.discount, roundTo)}</b></div>}
           <div className="trow"><span>Мебель со скидкой</span><b>{rub(view?.furnitureAfterDiscount, roundTo)}</b></div>
           <div className="hr" />

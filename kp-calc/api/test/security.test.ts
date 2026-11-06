@@ -57,3 +57,36 @@ describe('безопасность', { skip: SKIP }, () => {
     assert.ok(mine.every((e: any) => e.entity !== 'Пользователи'));
   });
 });
+
+describe('лимит скидки', { skip: SKIP }, () => {
+  let ctx: Ctx, owner: Agent, m: Agent, h: Agent;
+  before(async () => {
+    ctx = await setup();
+    owner = agent(ctx.app);
+    await owner.login(OWNER.email, OWNER.password);
+    const msk = (await owner.get('/api/meta')).body.cities.find((c: any) => c.name === 'Москва').id;
+    m = (await makeUser(ctx.app, owner, { firstName: 'Мария', email: 'dm@kp.local', role: 'manager', cityId: msk })).agent;
+    h = (await makeUser(ctx.app, owner, { firstName: 'Елена', email: 'dh@kp.local', role: 'head', cityId: msk })).agent;
+  });
+  after(async () => { await ctx?.close(); });
+
+  test('менеджер до 5 %, руководитель до 15 %, владелец — любая; согласованную скидку менеджер может оставить', async () => {
+    const client = (await m.post('/api/clients', { name: 'Анна', phone: '+7 900 1' })).body.client.id;
+    let c = (await m.post('/api/calculations', { clientId: client, title: 'Кухня', kind: 'kitchen' })).body.calculation;
+    const put = async (a: Agent, pct: number) => {
+      const cur = (await a.get(`/api/calculations/${c.id}`)).body.calculation;
+      const r = await a.put(`/api/calculations/${c.id}`, { rev: cur.rev, input: { ...cur.input, discountPct: pct } });
+      if (r.status === 200) c = r.body.calculation;
+      return r;
+    };
+    assert.equal((await put(m, 5)).status, 200);
+    const over = await put(m, 6);
+    assert.equal(over.status, 403);
+    assert.match(over.body.error, /больше 5 % — только руководитель/);
+    assert.equal((await put(h, 15)).status, 200);
+    assert.equal((await put(h, 16)).status, 403);
+    assert.equal((await put(m, 15)).status, 200, 'менеджер сохраняет расчёт с уже согласованной скидкой');
+    assert.equal((await put(m, 14)).status, 403, 'но не меняет её выше своего лимита');
+    assert.equal((await put(owner, 40)).status, 200);
+  });
+});

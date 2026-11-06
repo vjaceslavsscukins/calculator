@@ -124,3 +124,12 @@ test('отрицательное и пустое количество счита
 test('округление только при выводе, до 100 ₽', () => {
   assert.equal(roundRub(391780), 391800); assert.equal(roundRub(391749), 391700);
 });
+
+test('лимит скидки: менеджер до 5 %, руководитель до 15 %, владелец — любая', async () => {
+  const { discountOverLimit, DEFAULT_SETTINGS: D } = await import('../src/index.ts');
+  assert.equal(discountOverLimit('manager', 5, D), null);
+  assert.match(discountOverLimit('manager', 5.5, D)!, /больше 5 %/);
+  assert.equal(discountOverLimit('head', 15, D), null);
+  assert.match(discountOverLimit('head', 16, D)!, /только владелец/);
+  assert.equal(discountOverLimit('owner', 40, D), null);
+});

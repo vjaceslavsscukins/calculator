@@ -6,7 +6,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import cookie from '@fastify/cookie';
 import fastifyStatic from '@fastify/static';
 import type pg from 'pg';
-import { BLOCKS, KIND_TITLES, applyPro100, compute, indexCatalog, mergePro100, normalizeSettings, parsePro100 } from '../../engine/src/index.ts';
+import { BLOCKS, KIND_TITLES, applyPro100, compute, discountOverLimit, indexCatalog, mergePro100, normalizeSettings, parsePro100 } from '../../engine/src/index.ts';
 import type { CalcInput, Catalog, CatalogIndex, ProductKind, Settings } from '../../engine/src/index.ts';
 import { tx } from './db.ts';
 import { registerKp } from './kp.ts';
@@ -548,6 +548,9 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
     let input: CalcInput = b.input !== undefined ? cleanInput(b.input, cur.kind as ProductKind, settings) : cur.input;
     // «без наценки» меняют только руководитель и владелец
     if (u.role === 'manager' && b.input !== undefined) input = { ...input, rows: keepNoMarkup(input.rows, cur.input?.rows ?? []) };
+    // скидка: менеджер — до 5 %, руководитель — до 15 % (настройки), владелец — любая; уже согласованную скидку можно оставить
+    const over = discountOverLimit(u.role, input.discountPct, settings);
+    if (over && input.discountPct !== (cur.input?.discountPct ?? 0)) throw new HttpError(403, over);
     const unparsed = b.unparsed !== undefined ? cleanUnparsed(b.unparsed) : cur.unparsed;
     const { result } = await computeView(input);
     const saved = await tx(pool, async (c) => {

@@ -113,7 +113,7 @@ describe('КП: картинки, снимок, страница по ссылк
       { id: 'a2', block: 'hw', qty: 10, itemId: itemHw },
     ],
     light: { enabled: false, profileId: 'inset', segments: [] },
-    discountPct: 10,
+    discountPct: 5,
     deliveryRub: 7000,
   });
 
@@ -265,7 +265,7 @@ describe('КП: картинки, снимок, страница по ссылк
     assert.ok(calcs.every((c: any) => c.status === 'in_kp'), 'статус расчётов — «в КП»');
     const det = await m1.get(`/api/kp/${kp.id}`);
     assert.equal(det.body.snapshot.manager.phone, '+7 900 111-22-33');
-    assert.equal(det.body.snapshot.items[0].price.discountPct, 10);
+    assert.equal(det.body.snapshot.items[0].price.discountPct, 5);
     assertNoCostKeys(det.body.snapshot, 'снимок КП');
     // второй КП того же клиента — новый номер, токен другой
     const r2 = await m1.post('/api/kp', { ...body, items: [body.items[1]] });

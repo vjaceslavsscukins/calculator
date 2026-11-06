@@ -21,6 +21,8 @@ export const DEFAULT_SETTINGS: Settings = {
   ldspSheetArea: 5.796,
   montagePct: 10,
   deliveryDefaultRub: 0,
+  discountMaxManager: 5,
+  discountMaxHead: 15,
   lightReserve: 0.3,
   roundTo: 100,
   light: {
@@ -57,6 +59,8 @@ export function normalizeSettings(raw: any): Settings {
     ...rest,
     montagePct: finite(src.montagePct) ? src.montagePct : finite(deliveryPct) ? deliveryPct : DEFAULT_SETTINGS.montagePct,
     deliveryDefaultRub: finite(src.deliveryDefaultRub) ? src.deliveryDefaultRub : DEFAULT_SETTINGS.deliveryDefaultRub,
+    discountMaxManager: finite(src.discountMaxManager) ? src.discountMaxManager : DEFAULT_SETTINGS.discountMaxManager,
+    discountMaxHead: finite(src.discountMaxHead) ? src.discountMaxHead : DEFAULT_SETTINGS.discountMaxHead,
     renderPrompt: typeof src.renderPrompt === 'string' && src.renderPrompt.trim() ? src.renderPrompt : DEFAULT_RENDER_PROMPT,
     light: { ...light, switches: [{ id: SWITCH_NONE, name: SWITCH_NONE_NAME, price: 0 }, ...switches] },
   };
