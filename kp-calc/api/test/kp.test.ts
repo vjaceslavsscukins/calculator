@@ -8,10 +8,10 @@ import { hostname } from 'node:os';
 import { lookup } from 'node:dns/promises';
 import { compute, DEFAULT_SETTINGS, kpItemPrice, kpTotals } from '../../engine/src/index.ts';
 import type { CalcInput, Catalog } from '../../engine/src/index.ts';
-import { CATALOG_FILE } from '../src/db.ts';
+import { CATALOG_FILE } from '../src/lib/db.ts';
 import { buildApp } from '../src/app.ts';
-import { checkUrl, isBotCheck, isPrivateAddress, linkPreview, parsePrice, parseProductHtml, tidyName } from '../src/linkpreview.ts';
-import { extractImage, RENDER_OFF } from '../src/ai.ts';
+import { checkUrl, isBotCheck, isPrivateAddress, linkPreview, parsePrice, parseProductHtml, tidyName } from '../src/lib/linkpreview.ts';
+import { extractImage, RENDER_OFF } from '../src/lib/ai.ts';
 import { OWNER, SKIP, agent, keysDeep, makeUser, setup } from './helpers.ts';
 import type { Agent, Ctx } from './helpers.ts';
 

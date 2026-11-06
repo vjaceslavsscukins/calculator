@@ -3,12 +3,12 @@
 // Файл разбирает браузер; сюда приходят строки «название — цена».
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type pg from 'pg';
-import { compute, indexCatalog, kpItemPrice } from '../../engine/src/index.ts';
-import type { Catalog, CatalogIndex, Settings } from '../../engine/src/index.ts';
-import { tx } from './db.ts';
+import { compute, indexCatalog, kpItemPrice } from '../../../engine/src/index.ts';
+import type { Catalog, CatalogIndex, Settings } from '../../../engine/src/index.ts';
+import { tx } from '../lib/db.ts';
 import { kpNumber } from './kpdata.ts';
-import { HttpError } from './view.ts';
-import type { Role } from './view.ts';
+import { HttpError } from '../lib/view.ts';
+import type { Role } from '../lib/view.ts';
 
 interface ImportUser { id: string; firstName: string; lastName: string; email: string; role: Role }
 export interface PriceImportDeps {

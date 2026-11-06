@@ -1,7 +1,7 @@
 // Напоминания менеджеру: открыто, но не утверждено; срок КП заканчивается. Каждое — один раз.
 import { after, before, describe, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { runReminders } from '../src/reminders.ts';
+import { runReminders } from '../src/modules/reminders.ts';
 import { OWNER, SKIP, agent, makeUser, setup } from './helpers.ts';
 import type { Agent, Ctx } from './helpers.ts';
 

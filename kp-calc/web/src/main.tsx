@@ -8,7 +8,7 @@ import { LoginPage } from './pages/Login.tsx';
 import { InvitePage } from './pages/Invite.tsx';
 import { ClientsPage } from './pages/Clients.tsx';
 import { ClientPage } from './pages/Client.tsx';
-import { CalculationPage } from './pages/Calculation.tsx';
+import { CalculationPage } from './pages/calculation/CalculationPage.tsx';
 import { CalculationsPage } from './pages/Calculations.tsx';
 import { PricesPage } from './pages/Prices.tsx';
 import { CoefficientsPage } from './pages/Coefficients.tsx';

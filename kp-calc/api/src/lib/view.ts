@@ -1,7 +1,7 @@
 // Приведение входа расчёта к форме CalcInput и вырезание себестоимости из ответов менеджеру.
-import { SWITCH_NONE, normalizeSettings } from '../../engine/src/index.ts';
-import type { CalcInput, CalcResult, Catalog, LightInput, ProductKind, Row, RowResult, Settings } from '../../engine/src/index.ts';
-import type { Pro100Line } from '../../engine/src/index.ts';
+import { SWITCH_NONE, normalizeSettings } from '../../../engine/src/index.ts';
+import type { CalcInput, CalcResult, Catalog, LightInput, ProductKind, Row, RowResult, Settings } from '../../../engine/src/index.ts';
+import type { Pro100Line } from '../../../engine/src/index.ts';
 
 export type Role = 'owner' | 'head' | 'manager';
 export const KINDS: ProductKind[] = ['kitchen', 'cabinet'];

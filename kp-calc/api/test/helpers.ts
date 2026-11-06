@@ -3,7 +3,7 @@ import { randomBytes } from 'node:crypto';
 import pg from 'pg';
 import type { FastifyInstance } from 'fastify';
 import { buildApp } from '../src/app.ts';
-import { createPool, migrate, seed } from '../src/db.ts';
+import { createPool, migrate, seed } from '../src/lib/db.ts';
 
 export const DB = process.env.DATABASE_URL;
 export const SKIP = DB ? false : 'нет DATABASE_URL: тесты сервера идут против настоящего PostgreSQL (см. README)';

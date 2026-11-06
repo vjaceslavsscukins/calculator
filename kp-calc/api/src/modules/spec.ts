@@ -1,9 +1,9 @@
 // Спецификация к договору: черновик из расчёта (specDraft движка), сохранение снимком, стоимость — только из compute.
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type pg from 'pg';
-import { compute, specDraft, specMissing } from '../../engine/src/index.ts';
-import type { CatalogIndex, Settings, SpecData, SpecHeader } from '../../engine/src/index.ts';
-import { HttpError } from './view.ts';
+import { compute, specDraft, specMissing } from '../../../engine/src/index.ts';
+import type { CatalogIndex, Settings, SpecData, SpecHeader } from '../../../engine/src/index.ts';
+import { HttpError } from '../lib/view.ts';
 
 export interface SpecDeps {
   pool: pg.Pool;

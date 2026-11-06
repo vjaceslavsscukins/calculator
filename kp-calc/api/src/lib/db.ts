@@ -2,16 +2,16 @@
 import { readFile, readdir } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import pg from 'pg';
-import { DEFAULT_SETTINGS } from '../../engine/src/index.ts';
-import type { Catalog } from '../../engine/src/index.ts';
+import { DEFAULT_SETTINGS } from '../../../engine/src/index.ts';
+import type { Catalog } from '../../../engine/src/index.ts';
 import { hashPassword } from './security.ts';
-import { DEFAULT_COMPANY } from './kpdata.ts';
+import { DEFAULT_COMPANY } from '../modules/kpdata.ts';
 
 export type Pool = pg.Pool;
 export type Db = pg.Pool | pg.PoolClient;
 
-const MIGRATIONS_DIR = fileURLToPath(new URL('./migrations/', import.meta.url));
-export const CATALOG_FILE = fileURLToPath(new URL('../../data/catalog.json', import.meta.url));
+const MIGRATIONS_DIR = fileURLToPath(new URL('../migrations/', import.meta.url));
+export const CATALOG_FILE = fileURLToPath(new URL('../../../data/catalog.json', import.meta.url));
 export const CITIES = ['Москва', 'Краснодар'];
 
 // Любое число из базы приходит числом (int8 — счётчики, их хватает).

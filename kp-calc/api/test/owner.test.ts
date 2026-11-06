@@ -1,7 +1,7 @@
 // Владелец из переменных окружения: пробелы и кавычки в значениях, аварийный сброс пароля OWNER_RESET=1.
 import { after, before, describe, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { seed } from '../src/db.ts';
+import { seed } from '../src/lib/db.ts';
 import { OWNER, SKIP, agent, setup } from './helpers.ts';
 import type { Ctx } from './helpers.ts';
 

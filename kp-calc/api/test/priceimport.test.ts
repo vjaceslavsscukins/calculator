@@ -3,8 +3,8 @@ import { after, before, describe, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import type { Catalog } from '../../engine/src/index.ts';
-import { CATALOG_FILE } from '../src/db.ts';
-import { cleanRows, diffGroup, nameKey } from '../src/priceimport.ts';
+import { CATALOG_FILE } from '../src/lib/db.ts';
+import { cleanRows, diffGroup, nameKey } from '../src/modules/priceimport.ts';
 import { OWNER, SKIP, agent, makeUser, setup } from './helpers.ts';
 import type { Agent, Ctx } from './helpers.ts';
 

@@ -3,20 +3,20 @@
 import { randomBytes } from 'node:crypto';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import type pg from 'pg';
-import { KIND_TITLES, compute, kpBenefits, kpItemPrice, kpMaterials, kpTotals } from '../../engine/src/index.ts';
-import type { CalcInput, CatalogIndex, ProductKind, Settings } from '../../engine/src/index.ts';
-import { AiError, RENDER_OFF, aboutText, renderConfigured, renderImage, renderPrompt, templateAbout, textConfigured } from './ai.ts';
-import type { AiEnv } from './ai.ts';
-import { tx } from './db.ts';
+import { KIND_TITLES, compute, kpBenefits, kpItemPrice, kpMaterials, kpTotals } from '../../../engine/src/index.ts';
+import type { CalcInput, CatalogIndex, ProductKind, Settings } from '../../../engine/src/index.ts';
+import { AiError, RENDER_OFF, aboutText, renderConfigured, renderImage, renderPrompt, templateAbout, textConfigured } from '../lib/ai.ts';
+import type { AiEnv } from '../lib/ai.ts';
+import { tx } from '../lib/db.ts';
 import { DEFAULT_COMPANY, cleanCompany, kpNumber, normalizeCompany } from './kpdata.ts';
 import type { KpSnapshot, KpSnapshotItem } from './kpdata.ts';
 import { renderKpPage } from './kppage.ts';
-import { LinkPreviewError, linkPreview } from './linkpreview.ts';
-import { newToken } from './security.ts';
-import { MAX_IMAGE, createStorage, sniffImage } from './storage.ts';
-import type { S3Env } from './storage.ts';
-import { HttpError } from './view.ts';
-import type { Role } from './view.ts';
+import { LinkPreviewError, linkPreview } from '../lib/linkpreview.ts';
+import { newToken } from '../lib/security.ts';
+import { MAX_IMAGE, createStorage, sniffImage } from '../lib/storage.ts';
+import type { S3Env } from '../lib/storage.ts';
+import { HttpError } from '../lib/view.ts';
+import type { Role } from '../lib/view.ts';
 
 export interface KpUser { id: string; firstName: string; lastName: string; email: string; role: Role; cityId: number | null; cityName: string | null }
 

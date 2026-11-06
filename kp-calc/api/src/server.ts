@@ -1,8 +1,8 @@
 // Точка входа: миграции, стартовое наполнение, HTTP-сервер. Ключи и пароли — только из переменных окружения.
 import { fileURLToPath } from 'node:url';
 import { buildApp } from './app.ts';
-import { createPool, migrate, seed } from './db.ts';
-import { startReminders } from './reminders.ts';
+import { createPool, migrate, seed } from './lib/db.ts';
+import { startReminders } from './modules/reminders.ts';
 
 const env = process.env;
 // Подключение к базе: либо одной строкой DATABASE_URL, либо по частям DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME —

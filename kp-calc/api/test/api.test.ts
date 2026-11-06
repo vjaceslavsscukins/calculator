@@ -8,7 +8,7 @@ import { join } from 'node:path';
 import { buildApp } from '../src/app.ts';
 import { compute, DEFAULT_SETTINGS } from '../../engine/src/index.ts';
 import type { CalcInput, Catalog } from '../../engine/src/index.ts';
-import { CATALOG_FILE, pgConnection, seed } from '../src/db.ts';
+import { CATALOG_FILE, pgConnection, seed } from '../src/lib/db.ts';
 import { OWNER, SKIP, agent, keysDeep, makeUser, setup } from './helpers.ts';
 import type { Agent, Ctx } from './helpers.ts';
 

@@ -3,8 +3,8 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type pg from 'pg';
 import { kpNumber } from './kpdata.ts';
-import { HttpError } from './view.ts';
-import type { Role } from './view.ts';
+import { HttpError } from '../lib/view.ts';
+import type { Role } from '../lib/view.ts';
 
 interface BoardUser { id: string; role: Role; cityId: number | null }
 export interface BoardDeps {

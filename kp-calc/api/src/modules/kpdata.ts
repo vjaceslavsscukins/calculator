@@ -1,7 +1,7 @@
 // Данные КП: постоянная часть («Компания» — обложка, адреса, факты, условия) и форма снимка КП.
 // Факты — из подтверждённых владельцем заметок (docs/kp-format.md): гарантия 10 лет, 55 рабочих дней, 60 % / 40 %.
-import type { KpItemPrice, KpTotals } from '../../engine/src/index.ts';
-import { HttpError } from './view.ts';
+import type { KpItemPrice, KpTotals } from '../../../engine/src/index.ts';
+import { HttpError } from '../lib/view.ts';
 
 export interface Company {
   name: string;
