@@ -65,9 +65,15 @@ export function ThemeSwitch() {
   );
 }
 
+const SIDE_KEY = 'kp.side.collapsed';
+const sideCollapsed = () => { try { return localStorage.getItem(SIDE_KEY) === '1'; } catch { return false; } };
+
 export function Layout() {
   const { user, setUser } = useApp();
   const nav = useNavigate();
+  // левое меню сворачивается кнопкой ☰ — на небольшом экране больше места под расчёт; положение запоминается
+  const [collapsed, setCollapsed] = useState(sideCollapsed);
+  const toggleSide = () => setCollapsed((v) => { try { localStorage.setItem(SIDE_KEY, v ? '0' : '1'); } catch { /* не запомним — не страшно */ } return !v; });
   if (!user) return null;
   const boss = user.role === 'owner' || user.role === 'head';
 
@@ -78,8 +84,9 @@ export function Layout() {
   };
 
   return (
-    <div className="shell">
+    <div className={`shell${collapsed ? ' collapsed' : ''}`}>
       <header className="top">
+        <button type="button" className="burger" aria-label={collapsed ? 'Показать меню' : 'Свернуть меню'} aria-expanded={!collapsed} title={collapsed ? 'Показать меню' : 'Свернуть меню'} onClick={toggleSide}>☰</button>
         <Logo />
         <span className="top-title">Калькулятор КП</span>
         <div className="top-tools">

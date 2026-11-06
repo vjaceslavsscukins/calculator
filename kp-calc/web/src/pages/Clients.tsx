@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { api, type Client } from '../api.ts';
 import { useApp } from '../app.tsx';
 import { ErrorNote } from '../components/Layout.tsx';
+import { FirstSteps } from '../components/FirstSteps.tsx';
 import { dateTime, errText } from '../format.ts';
 
 export function ClientsPage() {
@@ -26,6 +27,7 @@ export function ClientsPage() {
         <div><div className="eyebrow">Работа идёт от клиента</div><h1>Клиенты</h1></div>
         <div className="actions"><button className="btn solid" type="button" onClick={() => setAdding((v) => !v)}>Новый клиент</button></div>
       </div>
+      {list && !q && <FirstSteps clients={list.length} />}
       {adding && user && <NewClientForm defaultCityId={user.cityId ?? meta?.cities[0]?.id ?? 0} cities={meta?.cities ?? []} onDone={(c) => nav(`/clients/${c.id}`)} onCancel={() => setAdding(false)} />}
       <label className="field narrow">Поиск по имени или телефону
         <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Анна или +7 918…" />
