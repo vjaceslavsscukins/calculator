@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { api, type CatalogGroupView, type CatalogItemView, type CatalogView } from '../api.ts';
 import { ErrorNote } from '../components/Layout.tsx';
 import { NumInput } from '../components/NumInput.tsx';
+import { ImportHistory, PriceImport } from '../components/PriceImport.tsx';
 import { errText, rubUnit } from '../format.ts';
 
 export function PricesPage() {
@@ -10,10 +11,13 @@ export function PricesPage() {
   const [q, setQ] = useState('');
   const [err, setErr] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [ver, setVer] = useState(0);
 
   useEffect(() => {
     api.catalog().then((c) => { setCatalog(c); setSel((s) => s || c.groups[0]?.id || ''); }).catch((x) => setErr(errText(x)));
-  }, []);
+  }, [ver]);
+  const reload = () => setVer((v) => v + 1);
 
   const byCat = useMemo(() => {
     const m = new Map<string, CatalogGroupView[]>();
@@ -68,9 +72,11 @@ export function PricesPage() {
                   </div>
                   <div className="actions">
                     <button className="btn" type="button" onClick={() => setAdding((v) => !v)}>+ позиция</button>
-                    <span className="soon"><button className="btn" type="button" disabled>Загрузить Excel</button><small>скоро</small></span>
+                    <button className="btn" type="button" onClick={() => setImporting(true)}>Загрузить прайс</button>
                   </div>
                 </div>
+                <ImportHistory groupId={group.id} version={ver} onRolledBack={reload} />
+                {importing && <PriceImport group={group} onClose={() => setImporting(false)} onApplied={reload} />}
                 {adding && <AddItem groupId={group.id} onAdded={(it) => { replaceItem(it); setAdding(false); }} />}
                 <label className="field">Поиск в группе<input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Название, декор или артикул" /></label>
                 <table className="tab">

@@ -439,3 +439,20 @@ select.cell option{color:#262625;background:#f7f6f3}
 .unparsed.top{margin:0 0 10px;border-left:3px solid var(--accent);padding:8px 12px;background:rgba(125,30,43,.06)}
 .link-plain{border:0;background:none;padding:0;color:inherit;text-decoration:underline;cursor:pointer;font:inherit}
 .ok.small{font-size:13px;padding:6px 10px}
+/* загрузка прайса */
+.wide-modal{width:900px}
+.imp-src{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.imp-src label.btn{cursor:pointer}
+.paste.small{min-height:110px}
+.imp-cols{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end}
+.imp-cols .field{min-width:200px;color:var(--p-muted)}
+.imp-sum{display:flex;gap:18px;flex-wrap:wrap;font-size:14px}
+.imp-sum b{font:400 22px/1 var(--f-head);margin-right:4px}
+.imp-det{border:1px solid var(--p-line);padding:8px 12px;max-height:340px;overflow:auto}
+.imp-det summary{cursor:pointer;font-weight:600}
+.imp-kp{border-left:3px solid var(--accent);padding:8px 12px;background:rgba(125,30,43,.05)}
+.tab .up{color:var(--accent)}
+.tab .down{color:var(--ok)}
+.imp-hist{margin:6px 0 10px;font-size:13.5px}
+.imp-hist summary{cursor:pointer;color:var(--muted)}
+.modal .field select,.modal .field input{background:var(--p-input);color:var(--p-text);border:1px solid var(--p-strong);height:36px;padding:0 8px;border-radius:var(--r)}

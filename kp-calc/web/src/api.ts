@@ -309,6 +309,14 @@ export const api = {
   saveSpec: (calcId: string, body: { rev: number; data: SpecData; refreshTotal?: boolean }) =>
     request<SpecResponse>('PUT', `/api/calculations/${enc(calcId)}/spec`, body),
 
+  // загрузка прайса группы файлом
+  importPreview: (groupId: string, rows: { name: string; price: number }[]) =>
+    request<ImportPreview>('POST', `/api/catalog/groups/${enc(groupId)}/import/preview`, { rows }),
+  importApply: (groupId: string, rows: { name: string; price: number }[], markMissing: boolean) =>
+    request<{ importId: number; summary: ImportSummary; impact: KpImpact[] }>('POST', `/api/catalog/groups/${enc(groupId)}/import/apply`, { rows, markMissing }),
+  imports: (groupId: string) => request<{ imports: PriceImportInfo[] }>('GET', `/api/catalog/groups/${enc(groupId)}/imports`),
+  rollbackImport: (id: number) => request<object>('POST', `/api/catalog/imports/${id}/rollback`, {}),
+
   // реестр КП и приборная панель
   kps: (f: { q?: string; state?: string; managerId?: string } = {}) => request<{ kps: KpListItem[] }>('GET', `/api/kps${qs(f)}`),
   dashboard: (from?: string, to?: string) => request<Dashboard>('GET', `/api/dashboard${qs({ from, to })}`),
@@ -339,6 +347,23 @@ export interface Dashboard {
   managers: DashboardManager[];
   attention: (KpListItem & { reason: string })[];
 }
+
+export interface ImportSummary { added: number; changed: number; missing: number; restored: number; same: number }
+export interface KpImpact { kpId: string; number: string; client: string; validUntil: string; total: number; delta: number; pct: number }
+export interface ImportPreview {
+  group: { id: string; name: string; unit: string; rule: string };
+  diff: {
+    added: { name: string; price: number }[];
+    changed: { id: string; name: string; before: number; after: number; pct: number | null }[];
+    missing: { id: string; name: string; price: number }[];
+    restored: { id: string; name: string; price: number }[];
+    same: number;
+    duplicates: string[];
+  };
+  skipped: number;
+  impact: KpImpact[];
+}
+export interface PriceImportInfo { id: number; createdAt: string; summary: ImportSummary; by: string; rolledBackAt: string | null; canRollback: boolean }
 
 export interface SpecResponse {
   calculation: { id: string; title: string; kind: ProductKind; clientId: string; clientName: string };
