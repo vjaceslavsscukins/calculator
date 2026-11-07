@@ -115,7 +115,8 @@ export async function registerPriceImport(app: FastifyInstance, d: PriceImportDe
 
   const pricesAfter = (diff: ImportDiff) => new Map(diff.changed.map((c) => [c.id, c.after] as [string, number]));
 
-  app.post('/api/catalog/groups/:id/import/preview', async (req: any) => {
+  // большой прайс (до 5000 строк) — до 5 МБ
+  app.post('/api/catalog/groups/:id/import/preview', { bodyLimit: 5 * 1024 * 1024 }, async (req: any) => {
     d.need(req, 'owner', 'head');
     const { g, items } = await groupOf(pool, req.params.id);
     const { rows, duplicates, skipped } = cleanRows(req.body?.rows);
@@ -124,7 +125,7 @@ export async function registerPriceImport(app: FastifyInstance, d: PriceImportDe
     return { group: { id: g.id, name: g.name, unit: g.unit, rule: g.rule }, diff, skipped, impact: impact.map(({ managerId, ...x }) => x) };
   });
 
-  app.post('/api/catalog/groups/:id/import/apply', async (req: any) => {
+  app.post('/api/catalog/groups/:id/import/apply', { bodyLimit: 5 * 1024 * 1024 }, async (req: any) => {
     const u = d.need(req, 'owner', 'head');
     const markMissing = req.body?.markMissing !== false;
     const { rows, duplicates } = cleanRows(req.body?.rows);
