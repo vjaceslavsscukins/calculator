@@ -1,6 +1,5 @@
 // Вход: логин, выход, текущий пользователь, приглашения; защита от перебора паролей.
 // Подключается из app.ts; общие помощники (вход, видимость по роли, прайс) приходят в ctx.
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import type pg from 'pg';
 import { BLOCKS, KIND_TITLES, applyPro100, compute, discountOverLimit, indexCatalog, mergePro100, normalizeSettings, parsePro100 } from '../../../engine/src/index.ts';

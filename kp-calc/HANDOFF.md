@@ -27,17 +27,11 @@
 
 ## Устройство кода
 
-- `engine/` — движок расчёта (TypeScript, чистые функции, без сети): цена, подсветка, PRO100, сборка КП. **Цена считается только здесь.** Тесты `cd kp-calc/engine && npm test`.
-- `api/` — сервер (Node 22 запускает TS напрямую, Fastify 5, `pg`): вход, роли, клиенты, расчёты, прайс, настройки, журнал, КП, картинки, рендер, ссылки с сайтов, страница КП `/p/:token` (`src/kppage.ts`). Миграции в `api/src/migrations/`. Тесты против настоящего PostgreSQL.
-- `web/` — интерфейс (React 18 + TS + Vite), сборка в `web/dist`, её отдаёт сервер.
-- `data/` — `catalog.json` (стартовый прайс: 43 группы, ~930 позиций; при пустой базе грузится сам), `prices-draft.xlsx` (справочник из книги), скрипты `build_catalog.py`, `build_json.py`, `import_egger.py`, отчёты загрузок в `data/imports/`.
-- `docs/api.md` — договорённость по API (версии 1, 2, этап 2). `docs/screens/` — скриншоты.
-- `mockups/` — утверждённые макеты: `presentation.html` (презентация портала), `kp-example.html` (КП, светлое и тёмное).
-- `brand/` — шрифты Prata и Golos Text, логотип SVG/PNG. `DESIGN.md` — дизайн-система CULTURA + раздел 11 (как применять к порталу и КП).
+Карта проекта, запуск и «как сделать типичные вещи» — **`README.md`** (папка `kp-calc/`). Коротко: `engine/` — расчёт (цена только здесь), `api/src/` — сервер (`app.ts` + `core/`, `lib/`, `modules/` по разделам, `migrations/`), `web/src/` — интерфейс (`pages/`, `pages/calculation/`, `components/`), `data/` — стартовый прайс.
 
 ### Локальная проверка (облачная сессия)
 
-Скрипты лежали в scratchpad прошлой сессии и могли пропасть. Повторить: поднять PostgreSQL 16 из `/usr/lib/postgresql/16/bin` от пользователя `postgres` на 127.0.0.1:54329, базы `kp` и `kp_test`; тесты сервера: `cd kp-calc/api && DATABASE_URL=postgres://postgres@127.0.0.1:54329/kp_test npm test`; сервер: `DATABASE_URL=… OWNER_EMAIL=owner@example.com OWNER_PASSWORD=owner12345 node src/server.ts`; интерфейс: `cd kp-calc/web && npm run dev` (прокси на 8787). Playwright: `require('playwright')`, `chromium.launch()`.
+Скрипты лежали в scratchpad прошлой сессии и могли пропасть. Повторить: поднять PostgreSQL 16 из `/usr/lib/postgresql/16/bin` от пользователя `postgres` на 127.0.0.1:54329, базы `kp` и `kp_test`; тесты сервера: `cd kp-calc/api && DATABASE_URL=postgres://postgres@127.0.0.1:54329/kp_test npm test` (фоновые процессы облачной сессии могут гаснуть между командами — запускать базу в той же команде, что и тесты); сервер: `DATABASE_URL=… OWNER_EMAIL=owner@example.com OWNER_PASSWORD=owner12345 node src/server.ts`; интерфейс: `cd kp-calc/web && npm run dev` (прокси на 8787). Playwright: `require('playwright')`, `chromium.launch()`.
 
 ## Решения владельца (главное)
 
